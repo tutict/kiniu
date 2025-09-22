@@ -1,0 +1,7 @@
+# .idea directory
+.idea/
+
+# Build files
+*.iml
+.gitignore
+.gitattributes
