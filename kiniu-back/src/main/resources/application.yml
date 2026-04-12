@@ -1,0 +1,14 @@
+spring:
+  application:
+    name: kiniu-avg-game
+
+server:
+  port: 8080
+
+game:
+  story:
+    catalog-path: data/story-catalog.json
+  agents:
+    catalog-path: data/agent-catalog.json
+  sessions:
+    export-path: data/session-exports
