@@ -15,9 +15,9 @@ public class WorldState {
     private Map<String, Integer> affinityScores;
 
     public WorldState() {
-        this.currentScene = "opening";
-        this.currentNodeId = "opening.threshold";
-        this.storySeedNodeId = "opening.threshold";
+        this.currentScene = "agent-hub";
+        this.currentNodeId = "container.home";
+        this.storySeedNodeId = "container.home";
         this.flags = new LinkedHashSet<>();
         this.relationships = new LinkedHashMap<>();
         this.affinityScores = new LinkedHashMap<>();

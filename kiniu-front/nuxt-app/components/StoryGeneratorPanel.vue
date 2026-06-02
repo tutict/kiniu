@@ -19,13 +19,13 @@ const emit = defineEmits<{
 }>()
 
 const form = reactive<StoryGenerationRequest>({
-  premise: 'A witness-bound relic rewrites the city around whoever frames its story first.',
-  setting: 'storm-battered observatory district',
-  tone: 'tense mystery',
-  chapterGoal: 'secure control of the next lead before dawn',
-  protagonistName: 'Mira',
-  companionName: 'Lyra',
-  rivalName: 'Rowan'
+  premise: 'A desktop Agent container that can host companion, interview, knowledge, project, and writing Agents.',
+  setting: 'local desktop workspace',
+  tone: 'practical, focused',
+  chapterGoal: 'route the user to the right Agent and preserve reusable task flows',
+  protagonistName: 'User',
+  companionName: 'Companion Agent',
+  rivalName: 'Reviewer Agent'
 })
 
 const issueGroups = computed(() => {
@@ -50,7 +50,7 @@ function issueLocation(issue: { nodeId?: string | null; choiceId?: string | null
     <div class="panel-head">
       <div>
         <p class="eyebrow">Generator</p>
-        <h3>Agent Story Generator</h3>
+        <h3>Agent Flow Generator</h3>
       </div>
 
       <div class="panel-actions">
@@ -58,7 +58,7 @@ function issueLocation(issue: { nodeId?: string | null; choiceId?: string | null
           {{ isValidating ? 'Validating...' : 'Validate Draft' }}
         </button>
         <button class="primary-button" type="button" :disabled="isGenerating" @click="submitGeneration">
-          {{ isGenerating ? 'Generating...' : 'Generate Starter Graph' }}
+          {{ isGenerating ? 'Generating...' : 'Generate Starter Flow' }}
         </button>
       </div>
     </div>
@@ -67,11 +67,11 @@ function issueLocation(issue: { nodeId?: string | null; choiceId?: string | null
       <div class="generator-panel">
         <div class="field-grid">
           <label class="field wide">
-            <span>Premise</span>
+            <span>Container Premise</span>
             <textarea v-model="form.premise" class="editor-textarea" rows="4" />
           </label>
           <label class="field">
-            <span>Setting</span>
+            <span>Workspace</span>
             <input v-model="form.setting" type="text">
           </label>
           <label class="field">
@@ -79,19 +79,19 @@ function issueLocation(issue: { nodeId?: string | null; choiceId?: string | null
             <input v-model="form.tone" type="text">
           </label>
           <label class="field wide">
-            <span>Chapter Goal</span>
+            <span>Session Goal</span>
             <input v-model="form.chapterGoal" type="text">
           </label>
           <label class="field">
-            <span>Protagonist</span>
+            <span>User Label</span>
             <input v-model="form.protagonistName" type="text">
           </label>
           <label class="field">
-            <span>Companion</span>
+            <span>Primary Agent</span>
             <input v-model="form.companionName" type="text">
           </label>
           <label class="field">
-            <span>Rival</span>
+            <span>Reviewer Agent</span>
             <input v-model="form.rivalName" type="text">
           </label>
         </div>
@@ -147,7 +147,7 @@ function issueLocation(issue: { nodeId?: string | null; choiceId?: string | null
         </div>
 
         <p v-else class="empty-copy">
-          Run validation on the current draft or generate a new starter chapter from a premise.
+          Run validation on the current draft or generate a new starter Agent flow from a premise.
         </p>
       </div>
     </div>
@@ -159,42 +159,44 @@ function issueLocation(issue: { nodeId?: string | null; choiceId?: string | null
 </template>
 
 <style scoped>
-.generator-stage{display:grid;gap:18px;padding:28px;border:1px solid rgba(255,255,255,.08);border-radius:30px;background:linear-gradient(180deg,rgba(13,17,24,.84) 0%,rgba(10,14,20,.66) 100%)}
+.generator-stage{display:grid;gap:18px;padding:20px;border:1px solid var(--color-border);border-radius:var(--radius);background:#f7fffd}
 .panel-head,.panel-actions,.group-head{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}
 .generator-grid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);gap:18px}
-.generator-panel,.analysis-panel{display:grid;gap:16px;padding:20px;border:1px solid rgba(255,255,255,.08);border-radius:24px;background:rgba(255,255,255,.03)}
+.generator-panel,.analysis-panel{display:grid;gap:16px;padding:20px;border:1px solid #d7eeea;border-radius:var(--radius);background:#fff}
 .field-grid,.status-column,.issue-columns,.issue-list{display:grid;gap:12px}
 .field-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
 .field{display:grid;gap:10px}
 .field.wide{grid-column:1/-1}
-.field span,.metric-grid span{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#b9a988}
-.field input,.editor-textarea{width:100%;padding:14px 16px;border:1px solid rgba(255,255,255,.1);border-radius:16px;outline:none;color:#f7f0e2;background:rgba(255,255,255,.04);font:inherit}
+.field span,.metric-grid span{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--color-primary-strong);font-weight:800}
+.field input,.editor-textarea{width:100%;min-height:44px;padding:10px 14px;border:1px solid var(--color-border);border-radius:var(--radius);outline:none;color:var(--color-text);background:#fff;font:inherit}
 .editor-textarea{resize:vertical;min-height:112px}
-.field input:focus,.editor-textarea:focus{border-color:rgba(229,199,138,.54);box-shadow:0 0 0 4px rgba(229,199,138,.08)}
+.field input:focus,.editor-textarea:focus{border-color:var(--color-primary);box-shadow:0 0 0 4px rgba(13,148,136,.12)}
 .metric-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
-.metric-grid div{display:grid;gap:4px;padding:14px;border-radius:18px;background:rgba(255,255,255,.04)}
-.metric-grid strong{font-size:18px;color:#f5efe3}
+.metric-grid div{display:grid;gap:4px;padding:14px;border:1px solid #d7eeea;border-radius:var(--radius);background:#f7fffd}
+.metric-grid strong{font-size:18px;color:var(--color-text)}
 .issue-columns{grid-template-columns:repeat(2,minmax(0,1fr))}
 .issue-group{display:grid;gap:10px}
 .group-head h4,.eyebrow,.panel-note,p{margin:0}
-.group-head span{display:inline-flex;padding:6px 10px;border-radius:999px;background:rgba(255,255,255,.05);color:#d6cfbf;font-size:12px}
-.issue-card{display:grid;gap:6px;padding:14px;border-radius:18px;background:rgba(255,255,255,.04)}
-.issue-card p{color:#ddd4c4;line-height:1.6}
-.issue-card small{color:#9e9a93}
-.issue-card.error{border:1px solid rgba(217,94,81,.35)}
-.issue-card.warning{border:1px solid rgba(229,199,138,.28)}
-.empty-copy{color:#a8a094;line-height:1.7}
-.panel-note{color:#9e9a93}
-.status{display:inline-flex;align-items:center;padding:12px 14px;border-radius:14px;line-height:1.5}
-.status.success{color:#dff7d6;background:rgba(117,198,122,.14)}
-.status.error{color:#ffd7d2;background:rgba(217,94,81,.14)}
-.primary-button,.secondary-button{appearance:none;border:0;cursor:pointer;padding:12px 18px;border-radius:999px;transition:transform 160ms ease,background 160ms ease,opacity 160ms ease}
-.primary-button{background:#e5c78a;color:#11161d}
-.secondary-button{background:rgba(255,255,255,.06);color:#f4ede0}
-.primary-button:hover,.secondary-button:hover{transform:translateY(-1px)}
+.group-head span{display:inline-flex;padding:5px 9px;border-radius:var(--radius);background:#eef6f4;color:var(--color-faint);font-size:12px;font-weight:700}
+.issue-card{display:grid;gap:6px;padding:14px;border-radius:var(--radius);background:#fff}
+.issue-card p{color:var(--color-muted);line-height:1.6}
+.issue-card small{color:var(--color-faint)}
+.issue-card.error{border:1px solid #fecaca;background:#fff7f7}
+.issue-card.warning{border:1px solid #fed7aa;background:#fff7ed}
+.empty-copy{color:var(--color-faint);line-height:1.65}
+.panel-note{color:var(--color-faint)}
+.status{display:inline-flex;align-items:center;min-height:44px;padding:10px 14px;border-radius:var(--radius);line-height:1.5}
+.status.success{color:#166534;background:#dcfce7;border:1px solid #bbf7d0}
+.status.error{color:#991b1b;background:#fee2e2;border:1px solid #fecaca}
+.primary-button,.secondary-button{appearance:none;border:0;cursor:pointer;min-height:44px;padding:0 16px;border-radius:var(--radius);font-weight:800;transition:background 180ms var(--ease),border-color 180ms var(--ease),box-shadow 180ms var(--ease),opacity 180ms var(--ease)}
+.primary-button{background:var(--color-accent);color:#fff}
+.secondary-button{border:1px solid var(--color-border);background:#fff;color:var(--color-primary-strong)}
+.primary-button:hover{background:#c2410c;box-shadow:0 10px 22px rgba(234,88,12,.18)}
+.secondary-button:hover{border-color:var(--color-primary);background:#ecfdf5}
 .primary-button:disabled,.secondary-button:disabled{opacity:.5;cursor:not-allowed}
-.eyebrow{font-size:12px;letter-spacing:.24em;text-transform:uppercase;color:#b9a988}
+.eyebrow{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--color-primary-strong);font-weight:800}
 h3,h4{margin:0}
-h3{font-size:clamp(28px,4vw,38px);line-height:1}
+h3{font-size:clamp(28px,4vw,38px);line-height:1.05;color:#102f2d}
+h4{color:#173f3b}
 @media (max-width:1100px){.generator-grid,.issue-columns,.field-grid,.metric-grid{grid-template-columns:1fr}}
 </style>

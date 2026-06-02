@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import AgentDirectorPanel from './AgentDirectorPanel.vue'
+import SessionDebugPanel from './SessionDebugPanel.vue'
+import StoryGeneratorPanel from './StoryGeneratorPanel.vue'
+import StoryGraphCanvas from './StoryGraphCanvas.vue'
 import type {
   AgentCatalogResponse,
   SavedSandboxPlan,
@@ -124,7 +128,7 @@ function slugifySegment(value: string) {
 function buildSandboxNarrative(plan: SavedSandboxPlan, stepIndex: number) {
   const step = plan.steps[stepIndex]
   const lines = [
-    step.consequenceSummary || `${step.label} reshapes the scene.`,
+    step.consequenceSummary || `${step.label} reshapes the Agent session.`,
     `Intent: ${step.intent}`,
     `Risk: ${step.risk}`,
     `Mood: ${step.targetMood}`
@@ -143,7 +147,7 @@ function buildSandboxNarrative(plan: SavedSandboxPlan, stepIndex: number) {
   return `${plan.title} / Step ${stepIndex + 1}\n${lines.join('\n')}`
 }
 
-function updateSelectedNode(mutator: (node: StoryNodeView) => void, status = 'Draft saved locally.') {
+function updateSelectedNode(mutator: (node: StoryNodeView) => void, status = '任务流草稿已保存到本地。') {
   if (!props.draft || !selectedNode.value) return
   const node = props.draft.nodes.find(item => item.id === selectedNode.value?.id)
   if (!node) return
@@ -155,10 +159,10 @@ function createNodeDraft() {
   if (!props.draft) return
   const newNode: StoryNodeView = {
     id: `draft.node.${props.draft.nodes.length + 1}`,
-    sceneId: 'new-scene',
-    title: 'New Node',
+    sceneId: 'agent-hub',
+    title: 'New Flow Node',
     speakerId: 'narrator',
-    narrative: 'Describe the scene here.',
+    narrative: 'Describe what this Agent workspace should do.',
     tags: ['draft'],
     enterFlags: [],
     enterAffinityChanges: {},
@@ -166,7 +170,7 @@ function createNodeDraft() {
   }
   props.draft.nodes.unshift(newNode)
   selectedNodeId.value = newNode.id
-  emit('persistDraft', 'Created a new draft node.')
+  emit('persistDraft', '已创建新的任务流节点。')
 }
 
 function duplicateSelectedNode() {
@@ -177,15 +181,15 @@ function duplicateSelectedNode() {
   duplicate.tags = Array.from(new Set([...duplicate.tags, 'draft']))
   props.draft.nodes.unshift(duplicate)
   selectedNodeId.value = duplicate.id
-  emit('persistDraft', 'Duplicated the selected node.')
+  emit('persistDraft', '已复制当前任务流节点。')
 }
 
 function addChoiceToSelectedNode() {
   updateSelectedNode((node) => {
     node.choices.push({
       id: `choice-${Date.now()}`,
-      label: 'New Choice',
-      description: 'Describe what this choice does.',
+      label: 'New Action',
+      description: 'Describe what this next action does.',
       targetNodeId: node.id,
       requiredFlags: [],
       blockedFlags: [],
@@ -194,13 +198,13 @@ function addChoiceToSelectedNode() {
       flagsToAdd: [],
       affinityChanges: {}
     })
-  }, 'Added a new branch choice.')
+  }, '已添加新的下一步动作。')
 }
 
 function removeChoice(choiceId: string) {
   updateSelectedNode((node) => {
     node.choices = node.choices.filter(choice => choice.id !== choiceId)
-  }, 'Removed a branch choice.')
+  }, '已移除下一步动作。')
 }
 
 function updateNodeField(field: keyof StoryNodeView, value: string) {
@@ -297,7 +301,7 @@ function importSandboxPlan(planId: string) {
 
   props.draft.nodes.unshift(...importedNodes)
   selectedNodeId.value = importedNodes[0].id
-  emit('persistDraft', `Imported sandbox chain as ${importedNodes.length} candidate nodes.`)
+  emit('persistDraft', `已将沙盘链导入为 ${importedNodes.length} 个候选任务流节点。`)
 }
 </script>
 
@@ -306,14 +310,14 @@ function importSandboxPlan(planId: string) {
     <aside class="editor-sidebar">
       <div class="editor-sidebar-head">
         <div>
-          <p class="eyebrow">Story Graph</p>
-          <h2>Authoring Desk</h2>
+          <p class="eyebrow">Task Flow</p>
+          <h2>Flow Studio</h2>
         </div>
-        <button class="primary-button" type="button" @click="createNodeDraft">New Node</button>
+        <button class="primary-button" type="button" @click="createNodeDraft">New Flow Node</button>
       </div>
 
       <div class="editor-toolbar">
-        <input v-model="storySearch" class="search-input" type="text" placeholder="Search node / scene / tag">
+        <input v-model="storySearch" class="search-input" type="text" placeholder="Search node / workspace / tag">
         <button class="secondary-button" type="button" :disabled="isLoadingStory" @click="emit('loadStory')">
           {{ isLoadingStory ? 'Loading...' : 'Refresh From Backend' }}
         </button>
@@ -339,7 +343,7 @@ function importSandboxPlan(planId: string) {
           <p>{{ node.id }}</p>
           <div class="node-card-meta">
             <span>{{ node.speakerId }}</span>
-            <span>{{ node.choices.length }} exits</span>
+            <span>{{ node.choices.length }} actions</span>
           </div>
         </button>
       </div>
@@ -373,12 +377,12 @@ function importSandboxPlan(planId: string) {
         <section class="editor-panel">
           <div class="panel-head">
             <div>
-              <p class="eyebrow">Node Inspector</p>
+              <p class="eyebrow">Flow Node Inspector</p>
               <h3>{{ selectedNode.title }}</h3>
             </div>
             <div class="inline-actions">
               <button class="secondary-button" type="button" @click="duplicateSelectedNode">Duplicate</button>
-              <button class="secondary-button" type="button" @click="addChoiceToSelectedNode">Add Branch</button>
+              <button class="secondary-button" type="button" @click="addChoiceToSelectedNode">Add Action</button>
             </div>
           </div>
 
@@ -392,7 +396,7 @@ function importSandboxPlan(planId: string) {
               <input :value="selectedNode.id" type="text" @input="updateNodeField('id', ($event.target as HTMLInputElement).value)">
             </label>
             <label class="field">
-              <span>Scene</span>
+              <span>Workspace</span>
               <input :value="selectedNode.sceneId" type="text" @input="updateNodeField('sceneId', ($event.target as HTMLInputElement).value)">
             </label>
             <label class="field">
@@ -401,15 +405,15 @@ function importSandboxPlan(planId: string) {
             </label>
             <label class="field">
               <span>Tags</span>
-              <input :value="listToInput(selectedNode.tags)" type="text" placeholder="hub, lore, tactics" @input="updateNodeField('tags', ($event.target as HTMLInputElement).value)">
+              <input :value="listToInput(selectedNode.tags)" type="text" placeholder="hub, interview, knowledge" @input="updateNodeField('tags', ($event.target as HTMLInputElement).value)">
             </label>
             <label class="field">
               <span>Enter Flags</span>
-              <input :value="listToInput(selectedNode.enterFlags)" type="text" placeholder="met-lyra, lantern-attuned" @input="updateNodeField('enterFlags', ($event.target as HTMLInputElement).value)">
+              <input :value="listToInput(selectedNode.enterFlags)" type="text" placeholder="mode-interview, mode-knowledge" @input="updateNodeField('enterFlags', ($event.target as HTMLInputElement).value)">
             </label>
             <label class="field">
               <span>Enter Affinity</span>
-              <input :value="affinityToInput(selectedNode.enterAffinityChanges)" type="text" placeholder="lyra:1" @input="updateNodeField('enterAffinityChanges', ($event.target as HTMLInputElement).value)">
+              <input :value="affinityToInput(selectedNode.enterAffinityChanges)" type="text" placeholder="java-rag-interviewer:1" @input="updateNodeField('enterAffinityChanges', ($event.target as HTMLInputElement).value)">
             </label>
             <label class="field wide">
               <span>Narrative</span>
@@ -422,9 +426,9 @@ function importSandboxPlan(planId: string) {
           <div class="panel-head">
             <div>
               <p class="eyebrow">Flow Preview</p>
-              <h3>Outgoing Choices</h3>
+              <h3>Outgoing Actions</h3>
             </div>
-            <span class="metric-pill">{{ selectedNode.choices.length }} exits</span>
+            <span class="metric-pill">{{ selectedNode.choices.length }} actions</span>
           </div>
 
           <div class="flow-list">
@@ -445,7 +449,7 @@ function importSandboxPlan(planId: string) {
         <section class="editor-panel editor-panel-wide">
           <div class="panel-head">
             <div>
-              <p class="eyebrow">Choice Editor</p>
+              <p class="eyebrow">Action Editor</p>
               <h3>Conditions And Routing</h3>
             </div>
           </div>
@@ -453,7 +457,7 @@ function importSandboxPlan(planId: string) {
           <div v-for="choice in selectedNode.choices" :key="choice.id" class="choice-editor">
             <div class="editor-fields">
               <label class="field">
-                <span>Choice ID</span>
+                <span>Action ID</span>
                 <input :value="choice.id" type="text" @input="updateChoiceField(choice.id, 'id', ($event.target as HTMLInputElement).value)">
               </label>
               <label class="field">
@@ -470,27 +474,27 @@ function importSandboxPlan(planId: string) {
               </label>
               <label class="field">
                 <span>Keywords</span>
-                <input :value="listToInput(choice.keywords)" type="text" placeholder="trust, help, relic" @input="updateChoiceField(choice.id, 'keywords', ($event.target as HTMLInputElement).value)">
+                <input :value="listToInput(choice.keywords)" type="text" placeholder="java, rag, project, writing" @input="updateChoiceField(choice.id, 'keywords', ($event.target as HTMLInputElement).value)">
               </label>
               <label class="field">
                 <span>Required Flags</span>
-                <input :value="listToInput(choice.requiredFlags)" type="text" placeholder="lantern-attuned, allied-lyra" @input="updateChoiceField(choice.id, 'requiredFlags', ($event.target as HTMLInputElement).value)">
+                <input :value="listToInput(choice.requiredFlags)" type="text" placeholder="mode-interview, mode-knowledge" @input="updateChoiceField(choice.id, 'requiredFlags', ($event.target as HTMLInputElement).value)">
               </label>
               <label class="field">
                 <span>Blocked Flags</span>
-                <input :value="listToInput(choice.blockedFlags)" type="text" placeholder="failed-ambush" @input="updateChoiceField(choice.id, 'blockedFlags', ($event.target as HTMLInputElement).value)">
+                <input :value="listToInput(choice.blockedFlags)" type="text" placeholder="needs-reroute" @input="updateChoiceField(choice.id, 'blockedFlags', ($event.target as HTMLInputElement).value)">
               </label>
               <label class="field">
                 <span>Minimum Affinity</span>
-                <input :value="affinityToInput(choice.minimumAffinity)" type="text" placeholder="lyra:2, narrator:0" @input="updateChoiceField(choice.id, 'minimumAffinity', ($event.target as HTMLInputElement).value)">
+                <input :value="affinityToInput(choice.minimumAffinity)" type="text" placeholder="java-rag-interviewer:2, narrator:0" @input="updateChoiceField(choice.id, 'minimumAffinity', ($event.target as HTMLInputElement).value)">
               </label>
               <label class="field">
                 <span>Flags To Add</span>
-                <input :value="listToInput(choice.flagsToAdd)" type="text" placeholder="trust-offered, hidden-route-known" @input="updateChoiceField(choice.id, 'flagsToAdd', ($event.target as HTMLInputElement).value)">
+                <input :value="listToInput(choice.flagsToAdd)" type="text" placeholder="mode-interview, reusable-flow" @input="updateChoiceField(choice.id, 'flagsToAdd', ($event.target as HTMLInputElement).value)">
               </label>
               <label class="field">
                 <span>Affinity Changes</span>
-                <input :value="affinityToInput(choice.affinityChanges)" type="text" placeholder="lyra:1" @input="updateChoiceField(choice.id, 'affinityChanges', ($event.target as HTMLInputElement).value)">
+                <input :value="affinityToInput(choice.affinityChanges)" type="text" placeholder="knowledge-curator:1" @input="updateChoiceField(choice.id, 'affinityChanges', ($event.target as HTMLInputElement).value)">
               </label>
             </div>
           </div>
@@ -498,7 +502,7 @@ function importSandboxPlan(planId: string) {
       </div>
 
       <div v-else class="empty-state">
-        <p>No editable story node is loaded yet. Load from backend or create a draft node first.</p>
+        <p>No editable flow node is loaded yet. Load from backend or create a draft node first.</p>
       </div>
 
       <AgentDirectorPanel
@@ -535,7 +539,7 @@ function importSandboxPlan(planId: string) {
 
     <aside class="editor-inspector">
       <div class="editor-panel compact">
-        <p class="eyebrow">Draft Status</p>
+        <p class="eyebrow">Flow Draft Status</p>
         <div class="metric-grid">
           <div><span>Nodes</span><strong>{{ draft?.nodes.length || 0 }}</strong></div>
           <div><span>Entry</span><strong>{{ draft?.entryNodeId || '-' }}</strong></div>
@@ -547,7 +551,7 @@ function importSandboxPlan(planId: string) {
       <div class="editor-panel compact">
         <p class="eyebrow">Draft Actions</p>
         <div class="stack-actions">
-          <button class="primary-button" type="button" @click="emit('persistDraft', 'Draft saved manually.')">Save Draft</button>
+          <button class="primary-button" type="button" @click="emit('persistDraft', 'Flow draft saved manually.')">Save Draft</button>
           <button class="primary-button" type="button" :disabled="isSavingStory || !draft" @click="emit('publishDraft')">
             {{ isSavingStory ? 'Saving...' : 'Publish To Backend' }}
           </button>
@@ -557,11 +561,11 @@ function importSandboxPlan(planId: string) {
       </div>
 
       <div class="editor-panel compact">
-        <p class="eyebrow">Authoring Notes</p>
+        <p class="eyebrow">Container Notes</p>
         <div class="notes-list">
-          <p>Nodes carry scene text and context. Choices carry routing, flag conditions, and affinity changes.</p>
-          <p>The editor is still draft-first. Use it to reshape structure before deciding what should become authored canon.</p>
-          <p>Sandbox imports become candidate node chains. Review removed flags and side effects manually before publishing.</p>
+          <p>Nodes carry workspace context. Actions carry routing, flag conditions, and Agent affinity changes.</p>
+          <p>The studio is draft-first. Use it to reshape reusable task flows before publishing them to the backend.</p>
+          <p>Sandbox imports become candidate flow chains. Review removed flags and side effects manually before publishing.</p>
         </div>
       </div>
 
@@ -577,44 +581,46 @@ function importSandboxPlan(planId: string) {
 
 <style scoped>
 .editor-view{display:grid;grid-template-columns:320px minmax(0,1fr) 300px;gap:18px}
-.editor-sidebar,.editor-inspector,.editor-panel{border:1px solid rgba(255,255,255,.08);background:rgba(10,14,19,.64);backdrop-filter:blur(18px)}
-.editor-sidebar,.editor-inspector{display:grid;align-content:start;gap:22px;padding:24px;border-radius:28px}
+.editor-sidebar,.editor-inspector,.editor-panel{border:1px solid var(--color-border);background:rgba(255,255,255,.9);box-shadow:var(--shadow-card)}
+.editor-sidebar,.editor-inspector{display:grid;align-content:start;gap:20px;padding:20px;border-radius:var(--radius)}
 .editor-main,.editor-main-grid,.editor-toolbar,.node-list,.editor-fields,.flow-list,.notes-list,.stack-actions{display:grid;gap:12px}
-.editor-panel{padding:22px;border-radius:28px}
-.editor-panel.compact{background:rgba(255,255,255,.04);border-radius:24px}
+.editor-panel{padding:20px;border-radius:var(--radius)}
+.editor-panel.compact{background:#f7fffd;border-radius:var(--radius)}
 .editor-panel-wide{grid-column:1/-1}
 .editor-sidebar-head,.panel-head,.inline-actions,.node-card-top,.node-card-meta,.flow-card-top,.flow-target{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}
-.eyebrow{margin:0 0 8px;font-size:12px;letter-spacing:.24em;text-transform:uppercase;color:#b9a988}
+.eyebrow{margin:0 0 8px;font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--color-primary-strong);font-weight:800}
 h2,h3,p{margin:0}
-h2{font-size:clamp(28px,4vw,40px);line-height:1}
-.search-input,.field input,.editor-textarea{width:100%;padding:14px 16px;border:1px solid rgba(255,255,255,.1);border-radius:16px;outline:none;color:#f7f0e2;background:rgba(255,255,255,.04);font:inherit}
-.editor-textarea{resize:vertical;min-height:124px;border-radius:20px}
-.search-input:focus,.field input:focus,.editor-textarea:focus{border-color:rgba(229,199,138,.54);box-shadow:0 0 0 4px rgba(229,199,138,.08)}
+h2{font-size:clamp(28px,4vw,40px);line-height:1.05;color:#102f2d}
+h3{color:#173f3b}
+.search-input,.field input,.editor-textarea{width:100%;min-height:44px;padding:10px 14px;border:1px solid var(--color-border);border-radius:var(--radius);outline:none;color:var(--color-text);background:#fff;font:inherit}
+.editor-textarea{resize:vertical;min-height:124px}
+.search-input:focus,.field input:focus,.editor-textarea:focus{border-color:var(--color-primary);box-shadow:0 0 0 4px rgba(13,148,136,.12)}
 .field{display:grid;gap:10px}
 .field.wide{grid-column:1/-1}
-.field span{font-size:14px;color:#f7efde}
+.field span{font-size:14px;color:var(--color-text);font-weight:700}
 .tag-cloud,.token-row{display:flex;flex-wrap:wrap;gap:8px}
-.token{padding:6px 12px;border-radius:999px;background:rgba(255,255,255,.05);color:#8f918e;font-size:13px;cursor:pointer}
+.token{padding:5px 10px;border-radius:var(--radius);background:#eef6f4;color:var(--color-faint);font-size:13px;cursor:pointer}
 .node-list{max-height:calc(100vh - 340px);overflow:auto;padding-right:4px}
-.node-card{appearance:none;border:1px solid transparent;border-radius:18px;padding:14px;background:rgba(255,255,255,.04);color:#f4ede0;text-align:left;cursor:pointer}
-.node-card.active{border-color:rgba(229,199,138,.48);background:rgba(229,199,138,.08)}
-.node-card p,.node-card-meta span{color:#9f9d95;font-size:13px}
-.flow-card,.choice-editor{display:grid;gap:10px;padding:16px;border-radius:20px;background:rgba(255,255,255,.04)}
-.flow-card p,.notes-list p{color:#cfc7ba;line-height:1.7}
+.node-card{appearance:none;border:1px solid #d7eeea;border-radius:var(--radius);padding:14px;background:#fff;color:var(--color-text);text-align:left;cursor:pointer;transition:background 180ms var(--ease),border-color 180ms var(--ease),box-shadow 180ms var(--ease)}
+.node-card.active{border-color:var(--color-primary);background:#ecfdf5;box-shadow:0 8px 18px rgba(13,148,136,.1)}
+.node-card p,.node-card-meta span{color:var(--color-faint);font-size:13px}
+.flow-card,.choice-editor{display:grid;gap:10px;padding:14px;border:1px solid #d7eeea;border-radius:var(--radius);background:#fff}
+.flow-card p,.notes-list p{color:var(--color-muted);line-height:1.65}
 .metric-grid{display:grid;gap:14px}
-.metric-grid div{display:flex;justify-content:space-between;gap:12px;color:#d6cfbf}
-.metric-grid span,.flow-target span{color:#9e9a93}
-.metric-pill{padding:6px 12px;border-radius:999px;background:rgba(229,199,138,.12);color:#efd5a1;font-size:12px}
-.primary-button,.secondary-button,.text-button{appearance:none;border:0;cursor:pointer;transition:transform 160ms ease,background 160ms ease}
-.primary-button,.secondary-button{padding:12px 18px;border-radius:999px}
-.primary-button{background:#e5c78a;color:#11161d}
-.secondary-button{background:rgba(255,255,255,.06);color:#f4ede0}
-.text-button{padding:0;background:transparent;color:#f2b2a9}
-.primary-button:hover,.secondary-button:hover,.node-card:hover{transform:translateY(-1px)}
-.empty-state{display:grid;place-items:center;min-height:60vh;border:1px dashed rgba(255,255,255,.12);border-radius:28px;color:#a8a094}
-.status{display:inline-flex;align-items:center;padding:12px 14px;border-radius:14px;line-height:1.5}
-.status.success{color:#dff7d6;background:rgba(117,198,122,.14)}
-.status.error{color:#ffd7d2;background:rgba(217,94,81,.14)}
+.metric-grid div{display:flex;justify-content:space-between;gap:12px;color:var(--color-text)}
+.metric-grid span,.flow-target span{color:var(--color-faint)}
+.metric-pill{padding:5px 10px;border-radius:var(--radius);background:#fff7ed;color:#9a3412;font-size:12px;font-weight:800}
+.primary-button,.secondary-button,.text-button{appearance:none;border:0;cursor:pointer;transition:background 180ms var(--ease),border-color 180ms var(--ease),box-shadow 180ms var(--ease)}
+.primary-button,.secondary-button{min-height:44px;padding:0 16px;border-radius:var(--radius);font-weight:800}
+.primary-button{background:var(--color-accent);color:#fff}
+.secondary-button{border:1px solid var(--color-border);background:#fff;color:var(--color-primary-strong)}
+.text-button{min-height:44px;padding:0;background:transparent;color:#b91c1c;font-weight:800}
+.primary-button:hover{background:#c2410c;box-shadow:0 10px 22px rgba(234,88,12,.18)}
+.secondary-button:hover,.node-card:hover{border-color:var(--color-primary);background:#ecfdf5}
+.empty-state{display:grid;place-items:center;min-height:60vh;border:1px dashed var(--color-border);border-radius:var(--radius);color:var(--color-faint);background:#fff}
+.status{display:inline-flex;align-items:center;min-height:44px;padding:10px 14px;border-radius:var(--radius);line-height:1.5}
+.status.success{color:#166534;background:#dcfce7;border:1px solid #bbf7d0}
+.status.error{color:#991b1b;background:#fee2e2;border:1px solid #fecaca}
 @media (max-width:1200px){.editor-view{grid-template-columns:1fr}.node-list{max-height:none}}
 @media (max-width:960px){.editor-fields{grid-template-columns:1fr}}
 </style>

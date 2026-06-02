@@ -185,25 +185,41 @@ public class GameEngine {
         state.addFlag("session-started");
 
         String combined = (input + " " + choice).toLowerCase();
-        if (combined.contains("trust") || combined.contains("help") || combined.contains("follow")) {
-            state.adjustRelationship("lyra", 1, 0, 0);
+        if (containsAny(combined, "陪聊", "闲聊", "状态", "情绪", "companion", "chat")) {
+            state.adjustRelationship("companion", 1, 1, 0);
+            state.addFlag("mode-companion");
         }
-        if (combined.contains("doubt") || combined.contains("refuse") || combined.contains("leave")) {
-            state.adjustRelationship("lyra", -1, 0, 1);
+        if (containsAny(combined, "java", "jvm", "spring", "并发", "线程", "八股", "面试", "interview")) {
+            state.adjustRelationship("java-rag-interviewer", 1, 0, 1);
+            state.addFlag("mode-interview");
         }
-        if (combined.contains("care") || combined.contains("stay") || combined.contains("protect")) {
-            state.adjustRelationship("lyra", 0, 1, 0);
+        if (containsAny(combined, "rag", "embedding", "向量", "召回", "重排", "检索", "知识库", "文档")) {
+            state.adjustRelationship("knowledge-curator", 1, 0, 1);
+            state.addFlag("mode-knowledge");
         }
-        if (combined.contains("ask") || combined.contains("why") || combined.contains("who")) {
-            state.adjustRelationship("lyra", 0, 0, 1);
-            state.adjustRelationship("rowan", 0, 0, 1);
+        if (containsAny(combined, "项目", "代码", "bug", "架构", "任务", "计划", "project", "code")) {
+            state.adjustRelationship("project-agent", 1, 0, 1);
+            state.addFlag("mode-project");
         }
-        if (combined.contains("rowan")) {
-            state.adjustRelationship("rowan", 1, 0, 1);
+        if (containsAny(combined, "写作", "文章", "改稿", "提纲", "表达", "writing", "draft")) {
+            state.adjustRelationship("writing-coach", 1, 0, 1);
+            state.addFlag("mode-writing");
         }
-        if (combined.contains("lyra")) {
-            state.adjustRelationship("lyra", 1, 1, 0);
+        if (containsAny(combined, "help", "帮", "建议", "下一步", "plan", "review", "复盘", "总结")) {
+            state.adjustRelationship("narrator", 1, 0, 1);
         }
+        if (containsAny(combined, "doubt", "refuse", "不对", "换一个", "别", "不要")) {
+            state.addFlag("needs-reroute");
+        }
+    }
+
+    private boolean containsAny(String value, String... candidates) {
+        for (String candidate : candidates) {
+            if (value.contains(candidate)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private String buildCombinedMessage(StoryEvent storyBeat, String agentMessage) {

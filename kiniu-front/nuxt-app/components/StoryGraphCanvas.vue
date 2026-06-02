@@ -158,7 +158,7 @@ function shortLabel(value: string, length = 28) {
     <div class="graph-head">
       <div>
         <p class="eyebrow">Canvas</p>
-        <h3>节点关系画布</h3>
+        <h3>任务流画布</h3>
       </div>
       <div class="graph-meta">
         <span>{{ nodes.length }} 节点</span>
@@ -172,7 +172,7 @@ function shortLabel(value: string, length = 28) {
         :viewBox="`0 0 ${graph.canvasWidth} ${graph.canvasHeight}`"
         :style="{ minWidth: `${graph.canvasWidth}px`, minHeight: `${graph.canvasHeight}px` }"
         role="img"
-        aria-label="Story graph canvas"
+        aria-label="Agent flow canvas"
       >
         <defs>
           <marker
@@ -227,7 +227,7 @@ function shortLabel(value: string, length = 28) {
             {{ shortLabel(node.node.id, 24) }}
           </text>
           <text :x="node.x + 16" :y="node.y + 94" class="meta-text">
-            {{ node.node.choices.length }} 出口 · {{ node.node.speakerId }}
+            {{ node.node.choices.length }} 动作 · {{ node.node.speakerId }}
           </text>
         </g>
       </svg>
@@ -242,24 +242,24 @@ function shortLabel(value: string, length = 28) {
 <style scoped>
 .graph-panel{display:grid;gap:16px}
 .graph-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
-.eyebrow{margin:0 0 8px;font-size:12px;letter-spacing:.24em;text-transform:uppercase;color:#b9a988}
+.eyebrow{margin:0 0 8px;font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--color-primary-strong);font-weight:800}
 h3,p{margin:0}
-h3{font-size:15px;color:#efe7d6}
+h3{font-size:15px;color:#173f3b}
 .graph-meta{display:flex;gap:8px;flex-wrap:wrap}
-.graph-meta span{padding:6px 10px;border-radius:999px;background:rgba(255,255,255,.05);color:#9f9d95;font-size:12px}
-.graph-stage{overflow:auto;padding:8px;border:1px solid rgba(255,255,255,.08);border-radius:24px;background:radial-gradient(circle at top left,rgba(229,199,138,.08),transparent 28%),rgba(255,255,255,.02)}
+.graph-meta span{padding:5px 9px;border-radius:var(--radius);background:#eef6f4;color:var(--color-faint);font-size:12px;font-weight:700}
+.graph-stage{overflow:auto;padding:8px;border:1px solid #d7eeea;border-radius:var(--radius);background:#f8fffd}
 .graph-svg{display:block}
-.graph-edge{fill:none;stroke:rgba(197,181,154,.38);stroke-width:2;opacity:.78}
-.graph-edge.selected{stroke:#e5c78a;stroke-width:2.6;opacity:1}
+.graph-edge{fill:none;stroke:rgba(13,148,136,.34);stroke-width:2;opacity:.82}
+.graph-edge.selected{stroke:var(--color-primary);stroke-width:2.6;opacity:1}
 .graph-edge.dangling{stroke-dasharray:7 7;opacity:.5}
 .graph-node{cursor:pointer}
-.graph-node rect{fill:rgba(20,25,31,.92);stroke:rgba(255,255,255,.08);stroke-width:1.2;transition:fill 160ms ease,stroke 160ms ease,transform 160ms ease}
-.graph-node.selected rect{fill:rgba(229,199,138,.12);stroke:rgba(229,199,138,.8);stroke-width:2}
-.graph-node.entry rect{stroke:rgba(132,192,132,.7)}
-.graph-node:hover rect{fill:rgba(255,255,255,.08)}
+.graph-node rect{fill:#fff;stroke:#bfe7df;stroke-width:1.2;transition:fill 180ms var(--ease),stroke 180ms var(--ease)}
+.graph-node.selected rect{fill:#ccfbf1;stroke:var(--color-primary);stroke-width:2}
+.graph-node.entry rect{stroke:#16a34a}
+.graph-node:hover rect{fill:#ecfdf5}
 .scene-text,.meta-text,.title-text{font-family:"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;pointer-events:none}
-.scene-text{font-size:11px;letter-spacing:.12em;text-transform:uppercase;fill:#a59373}
-.title-text{font-size:16px;font-weight:700;fill:#f2eadd}
-.meta-text{font-size:12px;fill:#9a978f}
-.graph-hint{color:#9d9688;line-height:1.6}
+.scene-text{font-size:11px;letter-spacing:.1em;text-transform:uppercase;fill:#0f766e}
+.title-text{font-size:16px;font-weight:700;fill:#173f3b}
+.meta-text{font-size:12px;fill:#55706d}
+.graph-hint{color:var(--color-faint);line-height:1.6}
 </style>

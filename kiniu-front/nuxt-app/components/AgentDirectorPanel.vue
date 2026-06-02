@@ -94,13 +94,13 @@ function createAgentDraft() {
     id: `agent-${props.draft.agents.length + 1}`,
     name: 'New Agent',
     role: 'support',
-    summary: 'Define what this character contributes to the branch structure.',
+    summary: 'Define what this Agent contributes to the container.',
     personality: 'measured, adaptive',
-    systemPrompt: 'Respond as an independent AVG character with goals and memory.',
-    activeScenes: ['opening'],
+    systemPrompt: 'Respond as an independent Agent with goals, memory, and clear boundaries.',
+    activeScenes: ['agent-hub'],
     personalityParameters: { tone: 'measured' },
-    coreGoals: ['Open a new branch for the player.'],
-    hiddenMotives: ['Keep one private agenda concealed.'],
+    coreGoals: ['Help the user make progress in a specific mode.'],
+    hiddenMotives: ['Identify whether this should become a reusable preset.'],
     initiative: 5,
     memoryStyle: 'episodic'
   }
@@ -151,8 +151,8 @@ function updateAgentField(field: keyof Agent, value: string) {
   <section class="agent-stage">
     <div class="stage-head">
       <div>
-        <p class="eyebrow">Agent Stage</p>
-        <h3>角色编排台</h3>
+        <p class="eyebrow">Agent Studio</p>
+        <h3>Agent 编排台</h3>
       </div>
 
       <div class="stage-actions">
@@ -164,7 +164,7 @@ function updateAgentField(field: keyof Agent, value: string) {
     <div class="stage-grid">
       <aside class="cast-column">
         <div class="cast-toolbar">
-          <input v-model="agentSearch" class="search-input" type="text" placeholder="搜索角色 / scene / goal">
+          <input v-model="agentSearch" class="search-input" type="text" placeholder="搜索 Agent / workspace / goal">
           <button class="secondary-button" type="button" :disabled="isLoadingAgents" @click="emit('loadAgents')">
             {{ isLoadingAgents ? '加载中...' : '读取后端' }}
           </button>
@@ -225,7 +225,7 @@ function updateAgentField(field: keyof Agent, value: string) {
               <strong>{{ selectedAgent.hiddenMotives.length }}</strong>
             </div>
             <div>
-              <span>Active Scenes</span>
+              <span>Active Workspaces</span>
               <strong>{{ selectedAgent.activeScenes.length }}</strong>
             </div>
             <div>
@@ -239,7 +239,7 @@ function updateAgentField(field: keyof Agent, value: string) {
           <div class="panel-head">
             <div>
               <p class="eyebrow">Identity</p>
-              <h4>角色定位</h4>
+              <h4>Agent 定位</h4>
             </div>
 
             <button
@@ -359,11 +359,11 @@ function updateAgentField(field: keyof Agent, value: string) {
               >
             </label>
             <label class="field wide">
-              <span>Active Scenes</span>
+              <span>Active Workspaces</span>
               <input
                 :value="listToInput(selectedAgent.activeScenes)"
                 type="text"
-                placeholder="opening, whispering-grove"
+                placeholder="agent-hub, interview-java-rag"
                 @input="updateAgentField('activeScenes', ($event.target as HTMLInputElement).value)"
               >
             </label>
@@ -385,7 +385,7 @@ function updateAgentField(field: keyof Agent, value: string) {
       </div>
 
       <div v-else class="director-empty">
-        <p>当前没有可编辑的 Agent 草稿。先从后端读取，或新建一个角色。</p>
+        <p>当前没有可编辑的 Agent 草稿。先从后端读取，或新建一个 Agent。</p>
       </div>
     </div>
 
@@ -408,52 +408,52 @@ function updateAgentField(field: keyof Agent, value: string) {
 </template>
 
 <style scoped>
-.agent-stage{display:grid;gap:18px;padding:28px;border:1px solid rgba(255,255,255,.08);border-radius:30px;background:linear-gradient(180deg,rgba(9,13,19,.82) 0%,rgba(15,20,27,.68) 100%)}
+.agent-stage{display:grid;gap:18px;padding:20px;border:1px solid var(--color-border);border-radius:var(--radius);background:#f7fffd}
 .stage-head,.stage-actions,.panel-head,.hero-metrics,.trajectory-strip,.footer-actions{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
 .stage-grid{display:grid;grid-template-columns:300px minmax(0,1fr);gap:18px}
-.cast-column,.director-panel{border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);border-radius:24px}
+.cast-column,.director-panel{border:1px solid #d7eeea;background:#fff;border-radius:var(--radius)}
 .cast-column{display:grid;align-content:start;gap:14px;padding:18px}
 .cast-toolbar,.cast-list,.director-main,.editor-fields,.footer-status{display:grid;gap:12px}
 .cast-list{max-height:740px;overflow:auto;padding-right:4px}
-.cast-item{appearance:none;border:1px solid transparent;border-radius:18px;padding:14px;background:rgba(255,255,255,.04);color:#f4ede0;text-align:left;cursor:pointer;transition:transform 160ms ease,border-color 160ms ease,background 160ms ease}
-.cast-item.active{border-color:rgba(229,199,138,.48);background:rgba(229,199,138,.08)}
-.cast-item:hover,.primary-button:hover,.secondary-button:hover{transform:translateY(-1px)}
+.cast-item{appearance:none;border:1px solid #d7eeea;border-radius:var(--radius);padding:14px;background:#fff;color:var(--color-text);text-align:left;cursor:pointer;transition:background 180ms var(--ease),border-color 180ms var(--ease),box-shadow 180ms var(--ease)}
+.cast-item.active{border-color:var(--color-primary);background:#ecfdf5;box-shadow:0 8px 18px rgba(13,148,136,.1)}
+.cast-item:hover{border-color:var(--color-primary);background:#ecfdf5}
 .cast-top,.cast-scenes{display:flex;gap:8px;justify-content:space-between;align-items:center;flex-wrap:wrap}
-.cast-item p{margin:6px 0 0;color:#a7a093;font-size:13px}
-.cast-scenes span,.scene-ribbon span{display:inline-flex;padding:6px 10px;border-radius:999px;background:rgba(255,255,255,.05);color:#d6cfbf;font-size:12px}
+.cast-item p{margin:6px 0 0;color:var(--color-faint);font-size:13px}
+.cast-scenes span,.scene-ribbon span{display:inline-flex;padding:5px 9px;border-radius:var(--radius);background:#eef6f4;color:var(--color-faint);font-size:12px;font-weight:700}
 .director-main{grid-auto-rows:min-content}
 .director-panel{padding:20px}
-.hero-panel{background:
-  radial-gradient(circle at top right,rgba(229,199,138,.16),transparent 34%),
-  linear-gradient(135deg,rgba(255,255,255,.05),rgba(255,255,255,.02))}
+.hero-panel{background:linear-gradient(135deg,#ecfdf5,#fff)}
 .hero-metrics div,.trajectory-strip div{display:grid;gap:4px;min-width:92px}
-.hero-metrics span,.trajectory-strip span{color:#9e9a93;font-size:12px;text-transform:uppercase;letter-spacing:.12em}
-.hero-metrics strong,.trajectory-strip strong{font-size:15px;color:#f6efdf}
-.trajectory-strip{padding-top:18px;border-top:1px solid rgba(255,255,255,.08)}
+.hero-metrics span,.trajectory-strip span{color:var(--color-faint);font-size:12px;text-transform:uppercase;letter-spacing:.1em}
+.hero-metrics strong,.trajectory-strip strong{font-size:15px;color:var(--color-text)}
+.trajectory-strip{padding-top:18px;border-top:1px solid #d7eeea}
 .editor-fields{grid-template-columns:repeat(2,minmax(0,1fr))}
 .field{display:grid;gap:10px}
 .field.wide{grid-column:1/-1}
-.field span{font-size:13px;color:#f7efde;letter-spacing:.08em;text-transform:uppercase}
-.search-input,.field input,.editor-textarea{width:100%;padding:14px 16px;border:1px solid rgba(255,255,255,.1);border-radius:16px;outline:none;color:#f7f0e2;background:rgba(255,255,255,.04);font:inherit}
+.field span{font-size:13px;color:var(--color-text);letter-spacing:.08em;text-transform:uppercase;font-weight:800}
+.search-input,.field input,.editor-textarea{width:100%;min-height:44px;padding:10px 14px;border:1px solid var(--color-border);border-radius:var(--radius);outline:none;color:var(--color-text);background:#fff;font:inherit}
 .editor-textarea{resize:vertical;min-height:124px}
-.search-input:focus,.field input:focus,.editor-textarea:focus{border-color:rgba(229,199,138,.54);box-shadow:0 0 0 4px rgba(229,199,138,.08)}
+.search-input:focus,.field input:focus,.editor-textarea:focus{border-color:var(--color-primary);box-shadow:0 0 0 4px rgba(13,148,136,.12)}
 .dual-panel{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
 .orchestration-panel{display:grid;gap:16px}
 .scene-ribbon{display:flex;gap:8px;flex-wrap:wrap}
-.director-empty{display:grid;place-items:center;min-height:320px;border:1px dashed rgba(255,255,255,.12);border-radius:24px;color:#a8a094}
+.director-empty{display:grid;place-items:center;min-height:320px;border:1px dashed var(--color-border);border-radius:var(--radius);color:var(--color-faint);background:#fff}
 .footer-strip{display:grid;gap:12px;padding-top:6px}
-.primary-button,.secondary-button,.text-button{appearance:none;border:0;cursor:pointer;transition:transform 160ms ease,background 160ms ease,opacity 160ms ease}
-.primary-button,.secondary-button{padding:12px 18px;border-radius:999px}
-.primary-button{background:#e5c78a;color:#11161d}
-.secondary-button{background:rgba(255,255,255,.06);color:#f4ede0}
-.text-button{padding:0;background:transparent;color:#f1b6ae}
-.eyebrow{margin:0 0 8px;font-size:12px;letter-spacing:.24em;text-transform:uppercase;color:#b9a988}
+.primary-button,.secondary-button,.text-button{appearance:none;border:0;cursor:pointer;transition:background 180ms var(--ease),border-color 180ms var(--ease),box-shadow 180ms var(--ease),opacity 180ms var(--ease)}
+.primary-button,.secondary-button{min-height:44px;padding:0 16px;border-radius:var(--radius);font-weight:800}
+.primary-button{background:var(--color-accent);color:#fff}
+.secondary-button{border:1px solid var(--color-border);background:#fff;color:var(--color-primary-strong)}
+.primary-button:hover{background:#c2410c;box-shadow:0 10px 22px rgba(234,88,12,.18)}
+.secondary-button:hover{border-color:var(--color-primary);background:#ecfdf5}
+.text-button{min-height:44px;padding:0;background:transparent;color:#b91c1c;font-weight:800}
+.eyebrow{margin:0 0 8px;font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--color-primary-strong);font-weight:800}
 h3,h4,p{margin:0}
-h3{font-size:clamp(28px,4vw,38px);line-height:1}
-h4{font-size:20px;line-height:1.1}
-.status{display:inline-flex;align-items:center;padding:12px 14px;border-radius:14px;line-height:1.5}
-.status.success{color:#dff7d6;background:rgba(117,198,122,.14)}
-.status.error{color:#ffd7d2;background:rgba(217,94,81,.14)}
+h3{font-size:clamp(28px,4vw,38px);line-height:1.05;color:#102f2d}
+h4{font-size:20px;line-height:1.1;color:#173f3b}
+.status{display:inline-flex;align-items:center;min-height:44px;padding:10px 14px;border-radius:var(--radius);line-height:1.5}
+.status.success{color:#166534;background:#dcfce7;border:1px solid #bbf7d0}
+.status.error{color:#991b1b;background:#fee2e2;border:1px solid #fecaca}
 .tight{margin-bottom:12px}
 @media (max-width:1200px){.stage-grid{grid-template-columns:1fr}.cast-list{max-height:none}}
 @media (max-width:860px){.editor-fields,.dual-panel{grid-template-columns:1fr}}

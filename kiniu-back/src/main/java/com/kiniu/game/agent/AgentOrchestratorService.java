@@ -70,13 +70,13 @@ public class AgentOrchestratorService {
         factors.add(new AgentScoreFactor("base-initiative", agent.initiative(), "Base initiative from the agent profile."));
 
         if (agent.id().equals(storyBeat.speakerId())) {
-            factors.add(new AgentScoreFactor("scene-speaker", 5, "Agent is the scene speaker for this story beat."));
+            factors.add(new AgentScoreFactor("scene-speaker", 5, "Agent is the active speaker for this conversation turn."));
         }
         if (storyBeat.spotlightAgentIds().contains(agent.id())) {
             factors.add(new AgentScoreFactor("spotlight", 4, "Agent is already in the spotlight list."));
         }
         if (agent.activeScenes().contains(worldState.getCurrentScene())) {
-            factors.add(new AgentScoreFactor("active-scene", 2, "Agent is configured for the current scene."));
+            factors.add(new AgentScoreFactor("active-scene", 2, "Agent is configured for the current workspace."));
         }
         int relationshipScore = Math.max(0, worldState.getRelationship(agent.id()).aggregate());
         if (relationshipScore > 0) {
@@ -94,7 +94,7 @@ public class AgentOrchestratorService {
             factors.add(new AgentScoreFactor(
                     "generated-beat-bonus",
                     1,
-                    "Generated beats give non-narrator characters a small initiative boost."));
+                    "Generated turns give specialist agents a small initiative boost."));
         }
 
         return List.copyOf(factors);
@@ -105,7 +105,7 @@ public class AgentOrchestratorService {
             int indexSeed = Math.abs((worldState.getCurrentScene() + storyBeat.title()).hashCode());
             return agent.coreGoals().get(indexSeed % agent.coreGoals().size());
         }
-        return "Sustain the scene and react coherently.";
+        return "Sustain the session and react coherently.";
     }
 
     private String safe(String value) {

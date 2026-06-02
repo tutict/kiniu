@@ -19,10 +19,10 @@ public class DynamicBranchService {
         Set<String> generatedChoices = new LinkedHashSet<>(storyBeat.choices());
 
         if (generatedChoices.isEmpty()) {
-            generatedChoices.add("Pause and observe how the scene responds");
+            generatedChoices.add("让容器先总结当前目标");
         }
         if (storyBeat.isGenerated()) {
-            generatedChoices.add("Let the generated branch sharpen into a new lead");
+            generatedChoices.add("把这个临时方向沉淀成任务流");
         }
 
         for (Agent agent : activeAgents) {
@@ -31,24 +31,24 @@ public class DynamicBranchService {
             }
 
             RelationshipState relationshipState = state.getRelationship(agent.id());
-            generatedChoices.add("Ask " + agent.name() + " what they notice");
+            generatedChoices.add("让 " + agent.name() + " 给出下一步建议");
 
             if (relationshipState.getTrust() >= 2) {
-                generatedChoices.add("Trust " + agent.name() + " to guide the next move");
+                generatedChoices.add("让 " + agent.name() + " 主导这一轮");
             }
             if (relationshipState.getAffection() >= 2) {
-                generatedChoices.add("Stay close to " + agent.name());
+                generatedChoices.add("让 " + agent.name() + " 保持陪伴节奏");
             }
             if (relationshipState.getCuriosity() >= 2) {
-                generatedChoices.add("Challenge " + agent.name() + " to reveal more");
+                generatedChoices.add("让 " + agent.name() + " 追问一个细节");
             }
         }
 
         if (state.getFlags().contains("session-started")) {
-            generatedChoices.add("Inspect the shifting atmosphere");
+            generatedChoices.add("让容器总结当前会话状态");
         }
-        if (state.getFlags().contains("generated-plot-active")) {
-            generatedChoices.add("Anchor this dynamic beat into the authored seed graph");
+        if (state.getFlags().contains("generated-conversation-active")) {
+            generatedChoices.add("把动态对话保存成可复用模板");
         }
         if (generatedChoices.size() > 7) {
             return generatedChoices.stream().limit(7).toList();

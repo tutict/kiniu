@@ -20,49 +20,46 @@ class StoryEngineTests {
     }
 
     @Test
-    void shouldExposeEntryChoicesForFreshState() {
+    void shouldExposeContainerModesForFreshState() {
         StoryEngine storyEngine = createStoryEngine();
         WorldState state = WorldState.initial();
 
         List<String> choices = storyEngine.getDefaultChoices(state);
 
         assertThat(choices).containsExactly(
-                "沿着脚印前进",
-                "调查远处灯光",
-                "留在原地倾听");
+                "自由陪聊",
+                "Java/RAG 面试考查",
+                "知识库问答",
+                "项目助理",
+                "写作教练");
     }
 
     @Test
-    void shouldUnlockWarningBranchAfterOverhearingHunters() {
+    void shouldRouteIntoJavaRagInterviewMode() {
         StoryEngine storyEngine = createStoryEngine();
         WorldState state = WorldState.initial();
 
-        storyEngine.findTriggeredEvent(state, "", "留在原地倾听");
-        storyEngine.findTriggeredEvent(state, "", "转回岔路口");
+        storyEngine.findTriggeredEvent(state, "", "Java/RAG 面试考查");
 
         List<String> choices = storyEngine.getDefaultChoices(state);
 
-        assertThat(state.getFlags()).contains("overheard-hunters");
-        assertThat(choices).contains("提起猎人的动向");
+        assertThat(state.getFlags()).contains("mode-interview");
+        assertThat(state.getCurrentNodeId()).isEqualTo("interview.java-rag");
+        assertThat(state.getAffinity("java-rag-interviewer")).isGreaterThan(0);
+        assertThat(choices).contains("先问 Java 基础", "切到 RAG 架构", "总结薄弱点");
     }
 
     @Test
-    void shouldRequireLanternAndAffinityBeforeVaultBranchAppears() {
+    void shouldRouteBetweenKnowledgeAndReviewFlows() {
         StoryEngine storyEngine = createStoryEngine();
         WorldState state = WorldState.initial();
 
-        storyEngine.findTriggeredEvent(state, "", "沿着脚印前进");
-        assertThat(storyEngine.getDefaultChoices(state)).doesNotContain("要求 Lyra 揭示圣物位置");
+        storyEngine.findTriggeredEvent(state, "", "知识库问答");
+        storyEngine.findTriggeredEvent(state, "", "整理知识包缺口");
 
-        WorldState preparedState = WorldState.initial();
-        storyEngine.findTriggeredEvent(preparedState, "", "调查远处灯光");
-        storyEngine.findTriggeredEvent(preparedState, "", "带着符文去找 Lyra");
-
-        List<String> crossroadsChoices = storyEngine.getDefaultChoices(preparedState);
-        assertThat(crossroadsChoices).contains("要求 Lyra 揭示圣物位置");
-
-        storyEngine.findTriggeredEvent(preparedState, "", "告诉 Lyra 你愿意合作");
-        assertThat(storyEngine.getDefaultChoices(preparedState)).contains("请求进入密库");
+        assertThat(state.getFlags()).contains("mode-knowledge");
+        assertThat(state.getCurrentNodeId()).isEqualTo("learning.review");
+        assertThat(storyEngine.getDefaultChoices(state)).contains("继续复盘", "回到 Agent 容器");
     }
 
     @Test
@@ -70,10 +67,10 @@ class StoryEngineTests {
         StoryEngine storyEngine = createStoryEngine();
         StoryCatalogResponse catalog = storyEngine.getStoryCatalog();
 
-        assertThat(catalog.entryNodeId()).isEqualTo("opening.threshold");
+        assertThat(catalog.entryNodeId()).isEqualTo("container.home");
         assertThat(catalog.nodes()).hasSizeGreaterThanOrEqualTo(10);
         assertThat(catalog.nodes().stream().map(node -> node.id()))
-                .contains("vault.threshold", "grove.alliance", "archive.notes");
+                .contains("interview.java-rag", "knowledge.qa", "workspace.project");
     }
 
     @Test
@@ -81,13 +78,13 @@ class StoryEngineTests {
         StoryEngine storyEngine = createStoryEngine();
         StoryCatalogResponse catalog = storyEngine.getStoryCatalog();
         StoryCatalogResponse updatedCatalog = new StoryCatalogResponse(
-                "opening.threshold",
+                "container.home",
                 catalog.nodes().stream()
-                        .map(node -> node.id().equals("opening.threshold")
+                        .map(node -> node.id().equals("container.home")
                                 ? new com.kiniu.game.dto.StoryNodeView(
                                         node.id(),
                                         node.sceneId(),
-                                        "Edited Threshold",
+                                        "Edited Container Hub",
                                         node.speakerId(),
                                         node.narrative(),
                                         node.tags(),
@@ -101,9 +98,9 @@ class StoryEngineTests {
 
         StoryEngine reloadedEngine = createStoryEngine();
         assertThat(reloadedEngine.getStoryCatalog().nodes().stream()
-                .filter(node -> node.id().equals("opening.threshold"))
+                .filter(node -> node.id().equals("container.home"))
                 .findFirst()
                 .orElseThrow()
-                .title()).isEqualTo("Edited Threshold");
+                .title()).isEqualTo("Edited Container Hub");
     }
 }

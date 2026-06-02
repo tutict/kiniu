@@ -233,7 +233,7 @@ function triggerLoad() {
             <strong>{{ sessionMetrics.seedTurns }}</strong>
           </div>
           <div>
-            <span>Scenes</span>
+            <span>Workspaces</span>
             <strong>{{ sessionMetrics.uniqueScenes }}</strong>
           </div>
           <div>
@@ -243,7 +243,7 @@ function triggerLoad() {
         </div>
 
         <div class="summary-copy">
-          <p>当前导出用于调试动态编排结果、验证 seed 与 generated beat 的切换，并为前端演示或 Electron 嵌入提供直接 JSON。</p>
+          <p>当前导出用于调试 Agent 编排结果、验证 seed 与 generated turn 的切换，并为前端演示或桌面壳嵌入提供直接 JSON。</p>
           <p v-if="exportData?.updatedAt">最近更新时间：{{ formatTime(exportData.updatedAt) }}</p>
         </div>
 
@@ -258,7 +258,7 @@ function triggerLoad() {
         <div class="panel-head">
           <div>
             <p class="eyebrow">Sandbox Shelf</p>
-            <h4>本地分支沙盘</h4>
+            <h4>本地会话沙盘</h4>
           </div>
 
           <div class="footer-actions">
@@ -270,7 +270,7 @@ function triggerLoad() {
               :disabled="!selectedSandboxPlan || !canImportSandbox"
               @click="selectedSandboxPlan && emit('promoteSandbox', selectedSandboxPlan.id)"
             >
-              导入草稿
+              导入任务流
             </button>
           </div>
         </div>
@@ -303,7 +303,7 @@ function triggerLoad() {
                 <strong>{{ formatTime(selectedSandboxPlan.createdAt) }}</strong>
               </div>
               <div>
-                <span>Scene</span>
+                <span>Workspace</span>
                 <strong>{{ selectedSandboxPlan.sceneId || '-' }}</strong>
               </div>
               <div>
@@ -328,7 +328,7 @@ function triggerLoad() {
                   <strong>#{{ index + 1 }} {{ step.label }}</strong>
                   <span>{{ step.intent }} 路 {{ step.risk }} 路 {{ step.targetMood }}</span>
                   <p>{{ step.consequenceSummary }}</p>
-                  <small>{{ step.targetAgentId || 'scene' }} 路 rel {{ formatSignedValue(step.relationshipDelta) }}</small>
+                  <small>{{ step.targetAgentId || 'workspace' }} 路 rel {{ formatSignedValue(step.relationshipDelta) }}</small>
                   <small v-if="step.addedFlags.length || step.removedFlags.length">
                     <template v-if="step.addedFlags.length">+{{ step.addedFlags.join(', ') }}</template>
                     <template v-if="step.addedFlags.length && step.removedFlags.length"> 路 </template>
@@ -377,16 +377,16 @@ function triggerLoad() {
         </div>
 
         <div v-else class="turn-empty">
-          <p>当前还没有保存的沙盘链。先回到游戏页，把分支预演保存到本地调试区。</p>
+          <p>当前还没有保存的沙盘链。先回到对话页，把下一步动作预演保存到本地调试区。</p>
         </div>
-        <p v-if="!canImportSandbox" class="status error">先加载或创建一个故事草稿，才能把沙盘链导入到故事图。</p>
+        <p v-if="!canImportSandbox" class="status error">先加载或创建一个任务流草稿，才能把沙盘链导入到 Flow Studio。</p>
       </section>
 
       <section class="debug-panel branch-panel">
         <div class="panel-head">
           <div>
-            <p class="eyebrow">Branch Tree</p>
-            <h4>会话分支图</h4>
+            <p class="eyebrow">Flow Tree</p>
+            <h4>会话动作图</h4>
           </div>
         </div>
 
@@ -396,7 +396,7 @@ function triggerLoad() {
             :viewBox="`0 0 ${branchGraph.width} ${branchGraph.height}`"
             :style="{ minWidth: `${branchGraph.width}px`, minHeight: `${branchGraph.height}px` }"
             role="img"
-            aria-label="Session branch graph"
+            aria-label="Session action graph"
           >
             <path
               v-for="edge in branchGraph.edges"
@@ -444,7 +444,7 @@ function triggerLoad() {
             >
               <strong>{{ turn.storyEvent?.title || turn.sceneId }}</strong>
               <span>{{ formatTime(turn.timestamp) }}</span>
-              <p>{{ shortText(turn.playerChoice || turn.playerInput || 'No direct player move.', 52) }}</p>
+              <p>{{ shortText(turn.playerChoice || turn.playerInput || 'No direct user move.', 52) }}</p>
             </button>
           </div>
 
@@ -455,7 +455,7 @@ function triggerLoad() {
                 <strong>{{ selectedTurn.id }}</strong>
               </div>
               <div>
-                <span>Scene</span>
+                <span>Workspace</span>
                 <strong>{{ selectedTurn.sceneId }}</strong>
               </div>
               <div>
@@ -469,8 +469,8 @@ function triggerLoad() {
             </div>
 
             <article class="detail-block">
-              <p class="block-label">Player Move</p>
-              <p>{{ selectedTurn.playerChoice || selectedTurn.playerInput || 'The player remained silent.' }}</p>
+              <p class="block-label">User Move</p>
+              <p>{{ selectedTurn.playerChoice || selectedTurn.playerInput || 'The user remained silent.' }}</p>
             </article>
 
             <article class="detail-block">
@@ -484,14 +484,14 @@ function triggerLoad() {
             </article>
 
             <article class="detail-block">
-              <p class="block-label">Presented Choices</p>
+              <p class="block-label">Presented Actions</p>
               <div class="token-row">
                 <span v-for="choice in selectedTurn.presentedChoices" :key="choice" class="token">{{ choice }}</span>
               </div>
             </article>
 
             <article class="detail-block" v-if="selectedTurn.presentedBranchOptions.length">
-              <p class="block-label">Branch Options</p>
+              <p class="block-label">Action Options</p>
               <div class="reply-list">
                 <div
                   v-for="option in selectedTurn.presentedBranchOptions"
@@ -500,7 +500,7 @@ function triggerLoad() {
                 >
                   <strong>{{ option.label }}</strong>
                   <span>{{ option.intent }} · {{ option.risk }} · {{ option.targetMood }}</span>
-                  <p>{{ option.targetAgentId || 'scene' }} · {{ option.source }} · rel {{ option.relationshipDelta >= 0 ? '+' : '' }}{{ option.relationshipDelta }}</p>
+                  <p>{{ option.targetAgentId || 'workspace' }} · {{ option.source }} · rel {{ option.relationshipDelta >= 0 ? '+' : '' }}{{ option.relationshipDelta }}</p>
                   <small>{{ option.consequenceSummary }}</small>
                   <small v-if="option.addedFlags.length || option.removedFlags.length">
                     <template v-if="option.addedFlags.length">+{{ option.addedFlags.join(', ') }}</template>
@@ -557,7 +557,7 @@ function triggerLoad() {
                 >
                   <strong>{{ option.label }}</strong>
                   <span>{{ option.intent }} · {{ option.risk }} · {{ option.targetMood }}</span>
-                  <p>{{ option.targetAgentId || 'scene' }} · {{ option.source }} · rel {{ option.relationshipDelta >= 0 ? '+' : '' }}{{ option.relationshipDelta }}</p>
+                  <p>{{ option.targetAgentId || 'workspace' }} · {{ option.source }} · rel {{ option.relationshipDelta >= 0 ? '+' : '' }}{{ option.relationshipDelta }}</p>
                   <small>{{ option.consequenceSummary }}</small>
                   <small v-if="option.addedFlags.length || option.removedFlags.length">
                     <template v-if="option.addedFlags.length">+{{ option.addedFlags.join(', ') }}</template>
@@ -583,7 +583,7 @@ function triggerLoad() {
                     {{ invocation.providerSucceeded ? 'provider' : invocation.fallbackUsed ? 'fallback' : 'local' }}
                     路 {{ invocation.latencyMs }}ms
                   </span>
-                  <p>{{ invocation.targetId || 'scene' }} 路 {{ invocation.model || 'no-model' }}</p>
+                  <p>{{ invocation.targetId || 'workspace' }} 路 {{ invocation.model || 'no-model' }}</p>
                   <small>{{ invocation.errorMessage || invocation.providerUrl || 'No provider metadata.' }}</small>
                 </div>
               </div>
@@ -620,55 +620,57 @@ function triggerLoad() {
 </template>
 
 <style scoped>
-.debug-stage{display:grid;gap:18px;padding:28px;border:1px solid rgba(255,255,255,.08);border-radius:30px;background:linear-gradient(180deg,rgba(13,17,24,.84) 0%,rgba(10,14,20,.66) 100%)}
+.debug-stage{display:grid;gap:18px;padding:20px;border:1px solid var(--color-border);border-radius:var(--radius);background:#f7fffd}
 .debug-head,.debug-toolbar,.panel-head,.metric-strip,.footer-actions,.status-row{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}
 .debug-grid{display:grid;gap:18px}
-.debug-panel{border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);border-radius:24px;padding:20px}
+.debug-panel{border:1px solid #d7eeea;background:#fff;border-radius:var(--radius);padding:20px}
 .summary-panel{display:grid;gap:18px}
 .metric-strip div,.detail-grid div{display:grid;gap:4px;min-width:92px}
-.metric-strip span,.detail-grid span,.block-label{color:#9e9a93;font-size:12px;text-transform:uppercase;letter-spacing:.12em}
-.metric-strip strong,.detail-grid strong{color:#f6efdf;font-size:15px}
-.summary-copy{display:grid;gap:8px;color:#cfc7ba;line-height:1.7}
-.backend-pill{display:inline-flex;padding:8px 12px;border-radius:999px;background:rgba(255,255,255,.05);color:#c8c0b2;font-size:12px}
-.branch-stage{overflow:auto;padding:8px;border:1px solid rgba(255,255,255,.08);border-radius:22px;background:radial-gradient(circle at top left,rgba(229,199,138,.08),transparent 30%),rgba(255,255,255,.02)}
+.metric-strip span,.detail-grid span,.block-label{color:var(--color-faint);font-size:12px;text-transform:uppercase;letter-spacing:.1em}
+.metric-strip strong,.detail-grid strong{color:var(--color-text);font-size:15px}
+.summary-copy{display:grid;gap:8px;color:var(--color-muted);line-height:1.65}
+.backend-pill{display:inline-flex;padding:6px 10px;border-radius:var(--radius);background:#eef6f4;color:var(--color-faint);font-size:12px;font-weight:700}
+.branch-stage{overflow:auto;padding:8px;border:1px solid #d7eeea;border-radius:var(--radius);background:#f8fffd}
 .branch-svg{display:block}
-.branch-edge{fill:none;stroke:rgba(197,181,154,.36);stroke-width:2}
+.branch-edge{fill:none;stroke:rgba(13,148,136,.34);stroke-width:2}
 .branch-node{cursor:pointer}
-.branch-node rect{fill:rgba(17,21,28,.92);stroke:rgba(255,255,255,.08);stroke-width:1.2;transition:fill 160ms ease,stroke 160ms ease}
-.branch-node.selected rect{fill:rgba(229,199,138,.12);stroke:rgba(229,199,138,.72);stroke-width:1.8}
+.branch-node rect{fill:#fff;stroke:#bfe7df;stroke-width:1.2;transition:fill 180ms var(--ease),stroke 180ms var(--ease)}
+.branch-node.selected rect{fill:#ccfbf1;stroke:var(--color-primary);stroke-width:1.8}
 .branch-title,.branch-meta{font-family:"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;pointer-events:none}
-.branch-title{fill:#f2eadd;font-size:13px;font-weight:700}
-.branch-meta{fill:#9a978f;font-size:11px}
+.branch-title{fill:#173f3b;font-size:13px;font-weight:700}
+.branch-meta{fill:#55706d;font-size:11px}
 .replay-layout,.sandbox-layout{display:grid;grid-template-columns:280px minmax(0,1fr);gap:16px}
 .turn-list,.sandbox-list,.reply-list,.detail-grid{display:grid;gap:10px}
 .turn-list{max-height:520px;overflow:auto;padding-right:4px}
 .sandbox-list{max-height:420px;overflow:auto;padding-right:4px}
-.turn-card{appearance:none;border:1px solid transparent;border-radius:18px;padding:14px;background:rgba(255,255,255,.04);color:#f4ede0;text-align:left;cursor:pointer;display:grid;gap:6px;transition:transform 160ms ease,border-color 160ms ease,background 160ms ease}
-.turn-card.active{border-color:rgba(229,199,138,.48);background:rgba(229,199,138,.08)}
-.turn-card span{color:#9e9a93;font-size:12px}
-.turn-card p{margin:0;color:#cfc7ba;line-height:1.5}
+.turn-card{appearance:none;border:1px solid #d7eeea;border-radius:var(--radius);padding:14px;background:#fff;color:var(--color-text);text-align:left;cursor:pointer;display:grid;gap:6px;transition:background 180ms var(--ease),border-color 180ms var(--ease),box-shadow 180ms var(--ease)}
+.turn-card.active{border-color:var(--color-primary);background:#ecfdf5;box-shadow:0 8px 18px rgba(13,148,136,.1)}
+.turn-card:hover{border-color:var(--color-primary);background:#ecfdf5}
+.turn-card span{color:var(--color-faint);font-size:12px}
+.turn-card p{margin:0;color:var(--color-muted);line-height:1.5}
 .turn-detail,.turn-empty{display:grid;gap:14px}
 .detail-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
-.detail-block{display:grid;gap:10px;padding:16px;border-radius:18px;background:rgba(255,255,255,.04)}
-.detail-block p,.turn-empty p{margin:0;color:#ddd4c4;line-height:1.7}
+.detail-block{display:grid;gap:10px;padding:14px;border:1px solid #d7eeea;border-radius:var(--radius);background:#fff}
+.detail-block p,.turn-empty p{margin:0;color:var(--color-muted);line-height:1.65}
 .token-row{display:flex;gap:8px;flex-wrap:wrap}
-.token{display:inline-flex;padding:6px 10px;border-radius:999px;background:rgba(229,199,138,.12);color:#efd5a1;font-size:12px}
-.token.muted{background:rgba(255,255,255,.05);color:#b3aca0}
-.reply-card{display:grid;gap:4px;padding:12px;border-radius:16px;background:rgba(255,255,255,.04)}
-.reply-card span,.reply-card small{color:#9d9688}
-.reply-card p{margin:0;color:#f0e7d7}
-.eyebrow{margin:0 0 8px;font-size:12px;letter-spacing:.24em;text-transform:uppercase;color:#b9a988}
-.search-input{width:min(320px,100%);padding:14px 16px;border:1px solid rgba(255,255,255,.1);border-radius:16px;outline:none;color:#f7f0e2;background:rgba(255,255,255,.04);font:inherit}
-.search-input:focus{border-color:rgba(229,199,138,.54);box-shadow:0 0 0 4px rgba(229,199,138,.08)}
-.primary-button,.secondary-button{appearance:none;border:0;cursor:pointer;padding:12px 18px;border-radius:999px;transition:transform 160ms ease,background 160ms ease}
-.primary-button{background:#e5c78a;color:#11161d}
-.secondary-button{background:rgba(255,255,255,.06);color:#f4ede0}
-.primary-button:hover,.secondary-button:hover,.turn-card:hover{transform:translateY(-1px)}
-.status{display:inline-flex;align-items:center;padding:12px 14px;border-radius:14px;line-height:1.5}
-.status.success{color:#dff7d6;background:rgba(117,198,122,.14)}
-.status.error{color:#ffd7d2;background:rgba(217,94,81,.14)}
+.token{display:inline-flex;padding:5px 9px;border-radius:var(--radius);background:#ccfbf1;color:#115e59;font-size:12px;font-weight:700}
+.token.muted{background:#eef6f4;color:var(--color-faint)}
+.reply-card{display:grid;gap:4px;padding:12px;border:1px solid #d7eeea;border-radius:var(--radius);background:#fff}
+.reply-card span,.reply-card small{color:var(--color-faint)}
+.reply-card p{margin:0;color:var(--color-text)}
+.eyebrow{margin:0 0 8px;font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--color-primary-strong);font-weight:800}
+.search-input{width:min(320px,100%);min-height:44px;padding:10px 14px;border:1px solid var(--color-border);border-radius:var(--radius);outline:none;color:var(--color-text);background:#fff;font:inherit}
+.search-input:focus{border-color:var(--color-primary);box-shadow:0 0 0 4px rgba(13,148,136,.12)}
+.primary-button,.secondary-button{appearance:none;border:0;cursor:pointer;min-height:44px;padding:0 16px;border-radius:var(--radius);font-weight:800;transition:background 180ms var(--ease),border-color 180ms var(--ease),box-shadow 180ms var(--ease)}
+.primary-button{background:var(--color-accent);color:#fff}
+.secondary-button{border:1px solid var(--color-border);background:#fff;color:var(--color-primary-strong)}
+.primary-button:hover{background:#c2410c;box-shadow:0 10px 22px rgba(234,88,12,.18)}
+.secondary-button:hover{border-color:var(--color-primary);background:#ecfdf5}
+.status{display:inline-flex;align-items:center;min-height:44px;padding:10px 14px;border-radius:var(--radius);line-height:1.5}
+.status.success{color:#166534;background:#dcfce7;border:1px solid #bbf7d0}
+.status.error{color:#991b1b;background:#fee2e2;border:1px solid #fecaca}
 h3,h4,p{margin:0}
-h3{font-size:clamp(28px,4vw,38px);line-height:1}
-h4{font-size:18px;line-height:1.1;color:#efe7d6}
+h3{font-size:clamp(28px,4vw,38px);line-height:1.05;color:#102f2d}
+h4{font-size:18px;line-height:1.1;color:#173f3b}
 @media (max-width:980px){.replay-layout,.sandbox-layout{grid-template-columns:1fr}.detail-grid{grid-template-columns:1fr}}
 </style>

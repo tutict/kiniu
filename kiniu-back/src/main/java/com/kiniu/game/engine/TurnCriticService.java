@@ -51,7 +51,7 @@ public class TurnCriticService {
             int choicePressureScore) {
         List<String> notes = new ArrayList<>();
         if (focusScore < 7) {
-            notes.add("Focus drift detected: the story speaker did not clearly dominate the performed replies.");
+            notes.add("Focus drift detected: the active speaker did not clearly dominate the performed replies.");
         } else {
             notes.add("Focus is coherent around " + storyEvent.speakerId() + ".");
         }
@@ -59,17 +59,17 @@ public class TurnCriticService {
             notes.add("Some planned agents were held back, which preserves pacing but may hide unused tension.");
         }
         if (castCoverageScore < 6) {
-            notes.add("Cast coverage is thin and may underuse the active roster.");
+            notes.add("Agent coverage is thin and may underuse the active roster.");
         } else {
-            notes.add("Cast coverage is acceptable for the current scene scale.");
+            notes.add("Agent coverage is acceptable for the current workspace scale.");
         }
         if (choicePressureScore < 5) {
-            notes.add("Choice pressure is weak; the player may need sharper branch contrast.");
+            notes.add("Choice pressure is weak; the user may need sharper next-action contrast.");
         } else {
             notes.add("Presented choices provide enough pressure to carry the next decision.");
         }
         if ("generated".equals(storyEvent.sourceType())) {
-            notes.add("Generated beat should be reconciled with authored graph continuity.");
+            notes.add("Generated turn should be reconciled with reusable flow continuity.");
         }
         return List.copyOf(notes);
     }

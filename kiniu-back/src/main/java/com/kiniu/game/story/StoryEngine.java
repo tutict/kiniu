@@ -20,12 +20,12 @@ import org.springframework.stereotype.Service;
 @Service
 public class StoryEngine {
 
-    private static final String ENTRY_NODE_ID = "opening.threshold";
+    private static final String ENTRY_NODE_ID = "container.home";
 
     private final ObjectMapper objectMapper;
     private final Path catalogPath;
     private volatile String entryNodeId = ENTRY_NODE_ID;
-    private volatile Map<String, StoryNode> storyNodes = createStoryGraph();
+    private volatile Map<String, StoryNode> storyNodes = createAgentContainerFlow();
 
     @Autowired
     public StoryEngine(
@@ -172,6 +172,328 @@ public class StoryEngine {
         if (parent != null) {
             Files.createDirectories(parent);
         }
+    }
+
+    private Map<String, StoryNode> createAgentContainerFlow() {
+        Map<String, StoryNode> nodes = new LinkedHashMap<>();
+
+        StoryNode containerHome = StoryNode.builder(
+                        "container.home",
+                        "agent-hub",
+                        "Agent Container Hub",
+                        "narrator")
+                .narrative("这里是通用 Agent 容器。你可以从陪伴、面试、知识库问答、项目助理或写作教练开始，也可以直接描述当前想解决的问题。")
+                .tag("entry")
+                .tag("agent-container")
+                .choice(StoryChoice.of(
+                                "start-companion",
+                                "自由陪聊",
+                                "进入日常陪伴模式，适合开放聊天、轻量计划和状态整理。",
+                                "companion.check-in")
+                        .whenKeywords("陪聊", "闲聊", "状态", "companion", "chat")
+                        .addFlag("mode-companion")
+                        .changeAffinity("companion", 1))
+                .choice(StoryChoice.of(
+                                "start-java-rag-interview",
+                                "Java/RAG 面试考查",
+                                "进入可追问、可评分、可复盘的 Java 与 RAG 面试模式。",
+                                "interview.java-rag")
+                        .whenKeywords("java", "rag", "面试", "八股", "interview")
+                        .addFlag("mode-interview")
+                        .changeAffinity("java-rag-interviewer", 1))
+                .choice(StoryChoice.of(
+                                "start-knowledge-qa",
+                                "知识库问答",
+                                "进入基于知识包和上下文的问答模式，强调来源、假设和缺口。",
+                                "knowledge.qa")
+                        .whenKeywords("知识库", "文档", "检索", "问答", "knowledge", "docs")
+                        .addFlag("mode-knowledge")
+                        .changeAffinity("knowledge-curator", 1))
+                .choice(StoryChoice.of(
+                                "start-project-agent",
+                                "项目助理",
+                                "进入项目推进模式，适合拆任务、做方案、查风险和复盘进展。",
+                                "workspace.project")
+                        .whenKeywords("项目", "代码", "任务", "计划", "project", "code")
+                        .addFlag("mode-project")
+                        .changeAffinity("project-agent", 1))
+                .choice(StoryChoice.of(
+                                "start-writing-coach",
+                                "写作教练",
+                                "进入写作辅助模式，适合梳理文章、改稿、提纲和表达。",
+                                "writing.coach")
+                        .whenKeywords("写作", "文章", "改稿", "提纲", "writing")
+                        .addFlag("mode-writing")
+                        .changeAffinity("writing-coach", 1))
+                .build();
+
+        StoryNode companionCheckIn = StoryNode.builder(
+                        "companion.check-in",
+                        "companion-check-in",
+                        "Daily Companion Check-in",
+                        "companion")
+                .narrative("陪伴 Agent 会先确认你现在要聊天、整理状态，还是把一个模糊目标变成下一步行动。")
+                .tag("companion")
+                .tag("open-chat")
+                .choice(StoryChoice.of(
+                                "continue-companion",
+                                "继续聊当前状态",
+                                "保持轻量陪伴，让 Agent 追问一个真正有用的问题。",
+                                "companion.check-in")
+                        .whenKeywords("继续", "聊", "状态", "心情", "plan"))
+                .choice(StoryChoice.of(
+                                "turn-into-review",
+                                "整理成复盘计划",
+                                "把聊天内容收束成目标、障碍、下一步和提醒。",
+                                "learning.review")
+                        .whenKeywords("复盘", "计划", "总结", "review")
+                        .changeAffinity("companion", 1))
+                .choice(StoryChoice.of(
+                                "back-to-container-from-companion",
+                                "回到 Agent 容器",
+                                "返回容器入口，切换到其他 Agent 或任务流。",
+                                "container.home")
+                        .whenKeywords("返回", "切换", "容器", "agent"))
+                .build();
+
+        StoryNode javaRagInterview = StoryNode.builder(
+                        "interview.java-rag",
+                        "interview-java-rag",
+                        "Java & RAG Interview Room",
+                        "java-rag-interviewer")
+                .narrative("面试官会一次只问一个问题，根据你的回答追问，并在必要时给出评分、漏洞和参考答案。")
+                .tag("interview")
+                .tag("java")
+                .tag("rag")
+                .choice(StoryChoice.of(
+                                "ask-java-core",
+                                "先问 Java 基础",
+                                "从集合、异常、泛型、反射、I/O 等基础知识开始。",
+                                "interview.java-core")
+                        .whenKeywords("java", "基础", "集合", "hashmap", "core")
+                        .changeAffinity("java-rag-interviewer", 1))
+                .choice(StoryChoice.of(
+                                "ask-jvm-concurrency",
+                                "追问 JVM/并发",
+                                "切到 JVM、内存模型、锁、线程池和并发容器。",
+                                "interview.java-core")
+                        .whenKeywords("jvm", "并发", "线程", "锁", "concurrency")
+                        .addFlag("interview-deep-dive"))
+                .choice(StoryChoice.of(
+                                "ask-rag-architecture",
+                                "切到 RAG 架构",
+                                "围绕切分、Embedding、召回、重排、上下文压缩和评估追问。",
+                                "interview.rag-architecture")
+                        .whenKeywords("rag", "向量", "召回", "embedding", "rerank")
+                        .changeAffinity("knowledge-curator", 1))
+                .choice(StoryChoice.of(
+                                "review-interview",
+                                "总结薄弱点",
+                                "把当前回答整理成薄弱点、复习顺序和下一轮问题。",
+                                "learning.review")
+                        .whenKeywords("总结", "薄弱", "复习", "score", "review"))
+                .build();
+
+        StoryNode javaCore = StoryNode.builder(
+                        "interview.java-core",
+                        "interview-java-core",
+                        "Java Core Drill",
+                        "java-rag-interviewer")
+                .narrative("这一轮聚焦 Java 基础和 JVM/并发。先让用户回答，再根据答案追问边界条件、底层机制和实际工程取舍。")
+                .tag("interview")
+                .tag("java-core")
+                .choice(StoryChoice.of(
+                                "continue-java-follow-up",
+                                "继续追问 Java",
+                                "围绕上一题追问实现细节、反例和工程场景。",
+                                "interview.java-core")
+                        .whenKeywords("继续", "追问", "java", "jvm"))
+                .choice(StoryChoice.of(
+                                "switch-to-rag-from-java",
+                                "转到 RAG",
+                                "从 Java 后端工程视角切到 RAG 系统设计。",
+                                "interview.rag-architecture")
+                        .whenKeywords("rag", "向量", "检索", "系统设计"))
+                .choice(StoryChoice.of(
+                                "java-review",
+                                "生成复习卡片",
+                                "把 Java 回答沉淀成可复习的知识卡和错题。",
+                                "learning.review")
+                        .whenKeywords("卡片", "错题", "复习", "总结"))
+                .build();
+
+        StoryNode ragArchitecture = StoryNode.builder(
+                        "interview.rag-architecture",
+                        "interview-rag-architecture",
+                        "RAG Architecture Drill",
+                        "java-rag-interviewer")
+                .narrative("这一轮聚焦 RAG：文档切分、Embedding、向量库、召回、重排、上下文装配、评估和线上观测。")
+                .tag("interview")
+                .tag("rag")
+                .choice(StoryChoice.of(
+                                "continue-rag-follow-up",
+                                "继续追问 RAG",
+                                "追问一个 RAG 系统在真实业务里的失效模式和优化方案。",
+                                "interview.rag-architecture")
+                        .whenKeywords("继续", "追问", "rag", "评估", "召回"))
+                .choice(StoryChoice.of(
+                                "switch-to-knowledge-qa",
+                                "转成知识库问答",
+                                "把面试问题切换成基于知识包的 grounded QA。",
+                                "knowledge.qa")
+                        .whenKeywords("知识库", "文档", "问答", "grounded")
+                        .addFlag("rag-to-knowledge"))
+                .choice(StoryChoice.of(
+                                "rag-review",
+                                "生成 RAG 复盘",
+                                "整理 RAG 薄弱点、术语表和下一轮追问。",
+                                "learning.review")
+                        .whenKeywords("复盘", "总结", "薄弱", "术语"))
+                .build();
+
+        StoryNode knowledgeQa = StoryNode.builder(
+                        "knowledge.qa",
+                        "knowledge-qa",
+                        "Knowledge QA Workspace",
+                        "knowledge-curator")
+                .narrative("知识库 Agent 会优先区分：已有上下文能支持什么、哪些是推断、还缺哪些资料。")
+                .tag("knowledge")
+                .tag("rag")
+                .choice(StoryChoice.of(
+                                "ask-with-sources",
+                                "基于资料回答",
+                                "要求 Agent 明确来源、证据和不确定性。",
+                                "knowledge.qa")
+                        .whenKeywords("回答", "来源", "证据", "资料"))
+                .choice(StoryChoice.of(
+                                "design-retrieval",
+                                "设计检索策略",
+                                "讨论切分、召回、重排、过滤和评估指标。",
+                                "interview.rag-architecture")
+                        .whenKeywords("检索", "召回", "重排", "评估"))
+                .choice(StoryChoice.of(
+                                "knowledge-review",
+                                "整理知识包缺口",
+                                "列出下一批应该接入的文档、笔记或项目资料。",
+                                "learning.review")
+                        .whenKeywords("缺口", "接入", "文档", "整理"))
+                .build();
+
+        StoryNode workspaceProject = StoryNode.builder(
+                        "workspace.project",
+                        "workspace-project",
+                        "Project Agent Workspace",
+                        "project-agent")
+                .narrative("项目 Agent 会把目标拆成可执行步骤，指出依赖、风险、验收标准和适合沉淀为模板的流程。")
+                .tag("project")
+                .tag("workspace")
+                .choice(StoryChoice.of(
+                                "break-down-task",
+                                "拆解当前任务",
+                                "把目标拆成可执行的小步和验收标准。",
+                                "workspace.project")
+                        .whenKeywords("拆解", "任务", "计划", "issue"))
+                .choice(StoryChoice.of(
+                                "review-project-risk",
+                                "检查项目风险",
+                                "从依赖、范围、测试和交付角度找风险。",
+                                "session.review")
+                        .whenKeywords("风险", "测试", "交付", "review"))
+                .choice(StoryChoice.of(
+                                "back-to-container-from-project",
+                                "回到 Agent 容器",
+                                "返回容器入口，切换到其他 Agent 或任务流。",
+                                "container.home")
+                        .whenKeywords("返回", "切换", "容器"))
+                .build();
+
+        StoryNode writingCoach = StoryNode.builder(
+                        "writing.coach",
+                        "writing-coach",
+                        "Writing Coach Desk",
+                        "writing-coach")
+                .narrative("写作教练会先找意图、读者和结构，再帮你改写、扩展或收束，而不是把文本改成另一个人的声音。")
+                .tag("writing")
+                .tag("coach")
+                .choice(StoryChoice.of(
+                                "shape-outline",
+                                "梳理提纲",
+                                "把想法整理成标题、段落顺序和论证线。",
+                                "writing.coach")
+                        .whenKeywords("提纲", "结构", "标题", "outline"))
+                .choice(StoryChoice.of(
+                                "revise-draft",
+                                "修改草稿",
+                                "聚焦清晰度、节奏和具体表达。",
+                                "writing.coach")
+                        .whenKeywords("修改", "改稿", "润色", "draft"))
+                .choice(StoryChoice.of(
+                                "writing-review",
+                                "生成写作复盘",
+                                "整理这次写作的主题、素材缺口和下一步。",
+                                "learning.review")
+                        .whenKeywords("复盘", "总结", "下一步"))
+                .build();
+
+        StoryNode learningReview = StoryNode.builder(
+                        "learning.review",
+                        "learning-review",
+                        "Session Review",
+                        "narrator")
+                .narrative("复盘节点会把本轮会话整理为目标、已知事实、薄弱点、下一步和可沉淀的 Agent 模板。")
+                .tag("review")
+                .tag("memory")
+                .choice(StoryChoice.of(
+                                "continue-review",
+                                "继续复盘",
+                                "继续压缩本轮信息，形成下一步行动。",
+                                "learning.review")
+                        .whenKeywords("继续", "复盘", "总结", "下一步"))
+                .choice(StoryChoice.of(
+                                "return-container-from-review",
+                                "回到 Agent 容器",
+                                "返回容器入口，选择新的 Agent 或任务流。",
+                                "container.home")
+                        .whenKeywords("返回", "容器", "切换", "agent"))
+                .build();
+
+        StoryNode sessionReview = StoryNode.builder(
+                        "session.review",
+                        "session-review",
+                        "Session Risk Review",
+                        "project-agent")
+                .narrative("项目复盘会关注：目标是否明确、上下文是否充分、风险是否可验证、下一步是否足够小。")
+                .tag("review")
+                .tag("project")
+                .choice(StoryChoice.of(
+                                "continue-session-review",
+                                "继续检查风险",
+                                "继续围绕范围、测试、依赖和验收追问。",
+                                "session.review")
+                        .whenKeywords("继续", "风险", "测试", "验收"))
+                .choice(StoryChoice.of(
+                                "return-container-from-session-review",
+                                "回到 Agent 容器",
+                                "返回容器入口，选择新的 Agent 或任务流。",
+                                "container.home")
+                        .whenKeywords("返回", "容器", "切换"))
+                .build();
+
+        for (StoryNode node : List.of(
+                containerHome,
+                companionCheckIn,
+                javaRagInterview,
+                javaCore,
+                ragArchitecture,
+                knowledgeQa,
+                workspaceProject,
+                writingCoach,
+                learningReview,
+                sessionReview)) {
+            nodes.put(node.id(), node);
+        }
+
+        return Map.copyOf(nodes);
     }
 
     private void validateCatalog(StoryCatalogResponse catalog) {

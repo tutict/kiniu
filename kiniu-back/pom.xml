@@ -15,7 +15,7 @@
     <artifactId>kiniu-back</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>kiniu-back</name>
-    <description>AI-driven AVG game backend</description>
+    <description>Configurable companion agent container backend</description>
 
     <properties>
         <java.version>17</java.version>
@@ -44,7 +44,7 @@
                 <artifactId>native-maven-plugin</artifactId>
                 <configuration>
                     <mainClass>com.kiniu.game.GameApplication</mainClass>
-                    <imageName>kiniu-avg-game</imageName>
+                    <imageName>kiniu-agent-container</imageName>
                 </configuration>
             </plugin>
         </plugins>

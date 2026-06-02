@@ -39,8 +39,8 @@ public class PlotAgentService {
 
         worldState.setCurrentScene(targetScene);
         worldState.setCurrentNodeId(generatedNodeId);
-        worldState.addFlag("generated-plot-active");
-        worldState.addFlag("generated-beat:" + beatType);
+        worldState.addFlag("generated-conversation-active");
+        worldState.addFlag("generated-flow:" + beatType);
 
         String fallbackTitle = titleFor(beatType, spotlightAgent);
         List<String> fallbackChoices = buildGeneratedChoices(beatType, spotlightAgent, worldState);
@@ -102,23 +102,23 @@ public class PlotAgentService {
             String playerChoice,
             List<String> choices) {
         String playerMove = !safe(playerChoice).isBlank() ? playerChoice : safe(playerInput);
-        return "Placeholder PlotAgent beat: type="
+        return "Container-generated turn: type="
                 + beatType
                 + ", scene="
                 + sceneId
                 + ", spotlight="
                 + spotlightAgent.name()
-                + ". The player steers the scene with \""
+                + ". The user steers the session with \""
                 + (playerMove.isBlank() ? "silence" : playerMove)
-                + "\" while the relationship vector remains trust="
+                + "\" while the relationship vector is trust="
                 + worldState.getRelationship(spotlightAgent.id()).getTrust()
                 + ", affection="
                 + worldState.getRelationship(spotlightAgent.id()).getAffection()
                 + ", curiosity="
                 + worldState.getRelationship(spotlightAgent.id()).getCuriosity()
-                + ". Suggested branch anchors: "
+                + ". Suggested next actions: "
                 + String.join(", ", choices)
-                + ". Fallback local plot-planning path.";
+                + ". Fallback local agent-container planning path.";
     }
 
     private Agent selectSpotlightAgent(WorldState worldState, List<Agent> contextAgents) {
@@ -134,10 +134,10 @@ public class PlotAgentService {
                                 "director",
                                 "Fallback narrator",
                                 "calm",
-                                "Keep the scene coherent.",
+                                "Keep the session coherent.",
                                 List.of(worldState.getCurrentScene()),
                                 java.util.Map.of(),
-                                List.of("Keep the scene coherent."),
+                                List.of("Keep the session coherent."),
                                 List.of(),
                                 10,
                                 "omniscient")
@@ -149,17 +149,26 @@ public class PlotAgentService {
         int trust = worldState.getRelationship(spotlightAgent.id()).getTrust();
         int curiosity = worldState.getRelationship(spotlightAgent.id()).getCuriosity();
 
-        if (containsAny(combined, "plan", "route", "ambush", "prepare", "strategy")) {
-            return "tactical";
+        if (containsAny(combined, "面试", "八股", "java", "jvm", "spring", "interview")) {
+            return "interview";
         }
-        if (containsAny(combined, "doubt", "refuse", "lie", "leave", "against")) {
-            return "conflict";
+        if (containsAny(combined, "rag", "检索", "向量", "embedding", "重排", "知识库", "文档")) {
+            return "knowledge";
         }
-        if (containsAny(combined, "who", "why", "ask", "truth", "memory") || curiosity >= 2) {
+        if (containsAny(combined, "项目", "代码", "任务", "计划", "prepare", "strategy", "project")) {
+            return "planning";
+        }
+        if (containsAny(combined, "写作", "文章", "改稿", "提纲", "draft", "writing")) {
+            return "writing";
+        }
+        if (containsAny(combined, "复盘", "总结", "review", "薄弱", "下一步")) {
+            return "review";
+        }
+        if (containsAny(combined, "陪聊", "闲聊", "状态", "心情", "trust", "help", "stay") || trust >= 2) {
+            return "companion";
+        }
+        if (containsAny(combined, "who", "why", "ask", "memory", "为什么", "怎么") || curiosity >= 2) {
             return "discovery";
-        }
-        if (containsAny(combined, "trust", "help", "ally", "protect", "stay") || trust >= 2) {
-            return "alliance";
         }
         return "pivot";
     }
@@ -179,38 +188,53 @@ public class PlotAgentService {
         String agentName = spotlightAgent.name();
 
         switch (beatType) {
-            case "tactical" -> {
-                choices.add("Let " + agentName + " outline the next move");
-                choices.add("Probe the safest route before committing");
-                choices.add("Force the scene into a decisive confrontation");
+            case "interview" -> {
+                choices.add("让 " + agentName + " 出一道新题");
+                choices.add("先回答上一题再让它评分");
+                choices.add("要求它追问一个更深的边界条件");
             }
-            case "conflict" -> {
-                choices.add("Challenge " + agentName + " directly");
-                choices.add("Pull back and observe before responding");
-                choices.add("Offer a conditional alliance instead of full trust");
+            case "knowledge" -> {
+                choices.add("让 " + agentName + " 基于资料回答");
+                choices.add("让它列出缺失上下文");
+                choices.add("设计一套检索与评估策略");
+            }
+            case "planning" -> {
+                choices.add("让 " + agentName + " 拆解下一步");
+                choices.add("先检查风险和依赖");
+                choices.add("把结果整理成任务清单");
+            }
+            case "writing" -> {
+                choices.add("让 " + agentName + " 梳理提纲");
+                choices.add("让它修改一段草稿");
+                choices.add("要求它保留原有表达风格");
             }
             case "discovery" -> {
-                choices.add("Ask " + agentName + " for the hidden context");
-                choices.add("Inspect the newest clue in the scene");
-                choices.add("Record the revelation for later branching");
+                choices.add("让 " + agentName + " 解释背后的上下文");
+                choices.add("追问一个关键假设");
+                choices.add("把发现记录到会话记忆");
             }
-            case "alliance" -> {
-                choices.add("Trust " + agentName + " with the initiative");
-                choices.add("Share a personal risk to deepen the bond");
-                choices.add("Coordinate a joint move before the window closes");
+            case "companion" -> {
+                choices.add("让 " + agentName + " 继续陪聊");
+                choices.add("把状态整理成一个小行动");
+                choices.add("记录一个偏好到长期记忆");
+            }
+            case "review" -> {
+                choices.add("总结本轮关键结论");
+                choices.add("列出薄弱点和下一步");
+                choices.add("沉淀成可复用 Agent 模板");
             }
             default -> {
-                choices.add("Ask the cast to reframe the situation");
-                choices.add("Shift the emotional tone of the scene");
-                choices.add("Let the next branch emerge from observation");
+                choices.add("让容器重新判断最合适的 Agent");
+                choices.add("切换到另一个任务流");
+                choices.add("先总结当前会话再继续");
             }
         }
 
-        if (worldState.hasFlag("lantern-attuned")) {
-            choices.add("Trace the lantern resonance into the next branch");
+        if (worldState.hasFlag("mode-interview")) {
+            choices.add("生成一次面试评分和参考答案");
         }
-        if (worldState.hasFlag("overheard-hunters")) {
-            choices.add("Turn the hunters' intel into leverage");
+        if (worldState.hasFlag("mode-knowledge")) {
+            choices.add("标注回答中的证据与假设");
         }
 
         return choices.stream().limit(4).toList();
@@ -218,11 +242,14 @@ public class PlotAgentService {
 
     private String titleFor(String beatType, Agent spotlightAgent) {
         return switch (beatType) {
-            case "tactical" -> "Tactical Reframe";
-            case "conflict" -> spotlightAgent.name() + " Pushes Back";
-            case "discovery" -> "An Unstable Revelation";
-            case "alliance" -> "Shared Momentum";
-            default -> "Improvised Crosscurrent";
+            case "interview" -> "Adaptive Interview Turn";
+            case "knowledge" -> "Grounded Knowledge Turn";
+            case "planning" -> "Project Planning Turn";
+            case "writing" -> "Writing Coaching Turn";
+            case "companion" -> "Companion Check-in";
+            case "review" -> "Session Review";
+            case "discovery" -> "Context Discovery";
+            default -> "Container Routing Turn";
         };
     }
 

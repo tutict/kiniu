@@ -31,7 +31,7 @@ import jakarta.servlet.http.HttpServletRequest;
 
 @RestController
 @CrossOrigin(origins = "*")
-@RequestMapping("/game")
+@RequestMapping({"/game", "/agent"})
 public class GameController {
 
     private final GameEngine gameEngine;

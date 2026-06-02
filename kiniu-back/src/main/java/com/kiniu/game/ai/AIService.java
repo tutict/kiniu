@@ -72,7 +72,7 @@ public class AIService {
         reply.append(agent.name())
                 .append(" acts as an independent ")
                 .append(agent.role())
-                .append(". The tone is ")
+                .append(" inside a configurable Agent container. The tone is ")
                 .append(agent.personality())
                 .append(". ");
         reply.append(agent.summary()).append(' ');
@@ -93,18 +93,18 @@ public class AIService {
                 reply.append(storyBeat.directorSummary()).append(' ');
             }
         } else {
-            reply.append("The scene holds for a moment, waiting for the next decisive move. ");
+            reply.append("The session holds for a moment, waiting for the next useful move. ");
         }
 
         if (!playerChoice.isBlank()) {
-            reply.append("The player chose \"").append(playerChoice).append("\". ");
+            reply.append("The user chose \"").append(playerChoice).append("\". ");
         } else if (!playerInput.isBlank()) {
-            reply.append("The player said \"").append(playerInput).append("\". ");
+            reply.append("The user said \"").append(playerInput).append("\". ");
         } else {
-            reply.append("The player has not acted yet. ");
+            reply.append("The user has not acted yet. ");
         }
 
-        reply.append("Current scene: ")
+        reply.append("Current workspace: ")
                 .append(worldState.getCurrentScene())
                 .append(", node: ")
                 .append(worldState.getCurrentNodeId())
@@ -119,7 +119,7 @@ public class AIService {
                 .append(worldState.getRelationship(agent.id()).getCuriosity())
                 .append(". ");
 
-        reply.append("Fallback local generation path.");
+        reply.append("Fallback local agent-container generation path.");
         return reply.toString();
     }
 
@@ -246,9 +246,9 @@ public class AIService {
         String move = !safe(playerChoice).isBlank() ? playerChoice : safe(playerInput);
         return "Objective="
                 + turnPlan.objective()
-                + "; branch="
+                + "; turn="
                 + storyBeat.title()
-                + "; playerMove="
+                + "; userMove="
                 + (move.isBlank() ? "silence" : move)
                 + "; takeaway="
                 + summarize(reply);
@@ -267,14 +267,14 @@ public class AIService {
     }
 
     private String buildReplySystemPrompt(Agent agent, AgentTurnPlan turnPlan) {
-        return "You are " + agent.name() + ", an independent AVG character."
+        return "You are " + agent.name() + ", an independent Agent inside a configurable desktop companion container."
                 + "\nRole: " + agent.role()
                 + "\nPersonality: " + agent.personality()
                 + "\nSummary: " + agent.summary()
                 + "\nSystem guidance: " + agent.systemPrompt()
                 + "\nCurrent objective: " + turnPlan.objective()
                 + "\nPrivate memory: " + turnPlan.memorySummary()
-                + "\nWrite one short in-character reply with no role labels.";
+                + "\nWrite one short useful reply with no role labels.";
     }
 
     private String buildReplyUserPrompt(
@@ -284,18 +284,18 @@ public class AIService {
             List<String> recentDialogue,
             StoryEvent storyBeat) {
         String move = !safe(playerChoice).isBlank() ? playerChoice : safe(playerInput);
-        return "Scene: " + worldState.getCurrentScene()
+        return "Workspace: " + worldState.getCurrentScene()
                 + "\nNode: " + worldState.getCurrentNodeId()
-                + "\nStory beat: " + storyBeat.title()
-                + "\nNarrative: " + storyBeat.narrative()
+                + "\nTurn title: " + storyBeat.title()
+                + "\nContext: " + storyBeat.narrative()
                 + "\nDirector note: " + storyBeat.directorSummary()
-                + "\nPlayer move: " + (move.isBlank() ? "silence" : move)
+                + "\nUser move: " + (move.isBlank() ? "silence" : move)
                 + "\nRecent dialogue:\n- " + String.join("\n- ", recentDialogue)
                 + "\nRespond in 2-4 sentences.";
     }
 
     private String buildPlannerSystemPrompt() {
-        return "You are a planner agent for an Agent-driven AVG orchestration engine."
+        return "You are a planner agent for a configurable desktop Agent-container orchestration engine."
                 + "\nReturn exactly one JSON object and no markdown."
                 + "\nSchema: {\"sceneGoal\":\"string\",\"tensionLabel\":\"string\",\"pacingLabel\":\"string\","
                 + "\"directorIntent\":\"string\",\"risks\":[\"string\"]}"
@@ -311,27 +311,27 @@ public class AIService {
             List<String> nextChoices) {
         String move = !safe(playerChoice).isBlank() ? playerChoice : safe(playerInput);
         String cast = activeAgents.stream().map(Agent::name).collect(Collectors.joining(", "));
-        return "Scene: " + worldState.getCurrentScene()
+        return "Workspace: " + worldState.getCurrentScene()
                 + "\nNode: " + worldState.getCurrentNodeId()
-                + "\nStory beat title: " + storyEvent.title()
-                + "\nStory beat source: " + storyEvent.sourceType()
+                + "\nTurn title: " + storyEvent.title()
+                + "\nTurn source: " + storyEvent.sourceType()
                 + "\nSpeaker: " + storyEvent.speakerId()
-                + "\nNarrative: " + storyEvent.narrative()
+                + "\nContext: " + storyEvent.narrative()
                 + "\nDirector note: " + safe(storyEvent.directorSummary())
-                + "\nActive cast: " + (cast.isBlank() ? "none" : cast)
+                + "\nActive agents: " + (cast.isBlank() ? "none" : cast)
                 + "\nSpotlight agents: " + String.join(", ", storyEvent.spotlightAgentIds())
-                + "\nPlayer move: " + (move.isBlank() ? "silence" : move)
-                + "\nNext choices: " + String.join(", ", nextChoices)
+                + "\nUser move: " + (move.isBlank() ? "silence" : move)
+                + "\nNext actions: " + String.join(", ", nextChoices)
                 + "\nFlags: " + String.join(", ", worldState.getFlags())
                 + "\nReturn concise labels and 1-3 short risk items.";
     }
 
     private String buildPlotBeatSystemPrompt() {
-        return "You are a plot planner for an Agent-driven AVG."
+        return "You are a turn planner for a configurable Agent-container conversation engine."
                 + "\nReturn exactly one JSON object and no markdown."
                 + "\nSchema: {\"title\":\"string\",\"narrative\":\"string\",\"choices\":[\"string\"],"
                 + "\"spotlightAgentIds\":[\"string\"]}"
-                + "\nWrite a playable beat with 2-4 sentences and 3-4 branch choices.";
+                + "\nWrite a useful conversation turn with 2-4 sentences and 3-4 next actions.";
     }
 
     private String buildPlotBeatUserPrompt(
@@ -344,27 +344,27 @@ public class AIService {
             List<String> baseChoices) {
         String move = !safe(playerChoice).isBlank() ? playerChoice : safe(playerInput);
         return "Beat type: " + beatType
-                + "\nScene: " + sceneId
+                + "\nWorkspace: " + sceneId
                 + "\nCurrent node: " + worldState.getCurrentNodeId()
                 + "\nSpotlight agent id: " + spotlightAgent.id()
                 + "\nSpotlight agent name: " + spotlightAgent.name()
                 + "\nSpotlight role: " + spotlightAgent.role()
                 + "\nSpotlight summary: " + spotlightAgent.summary()
-                + "\nPlayer move: " + (move.isBlank() ? "silence" : move)
+                + "\nUser move: " + (move.isBlank() ? "silence" : move)
                 + "\nRelationship: trust=" + worldState.getRelationship(spotlightAgent.id()).getTrust()
                 + ", affection=" + worldState.getRelationship(spotlightAgent.id()).getAffection()
                 + ", curiosity=" + worldState.getRelationship(spotlightAgent.id()).getCuriosity()
-                + "\nExisting branch anchors: " + String.join(", ", baseChoices)
+                + "\nExisting next-action anchors: " + String.join(", ", baseChoices)
                 + "\nFlags: " + String.join(", ", worldState.getFlags())
-                + "\nKeep the beat aligned with the scene and preserve branch pressure.";
+                + "\nKeep the turn aligned with the workspace and preserve useful next-action pressure.";
     }
 
     private String buildDirectorSystemPrompt() {
-        return "You are a director agent orchestrating an AVG turn."
+        return "You are a conductor agent orchestrating a desktop Agent-container turn."
                 + "\nReturn exactly one JSON object and no markdown."
                 + "\nSchema: {\"directorSummary\":\"string\",\"choices\":[\"string\"],"
                 + "\"spotlightAgentIds\":[\"string\"]}"
-                + "\nWrite a concise directing note and refine branch choices for the next turn.";
+                + "\nWrite a concise routing note and refine next actions for the next turn.";
     }
 
     private String buildDirectorUserPrompt(
@@ -376,26 +376,26 @@ public class AIService {
             List<String> nextChoices) {
         String cast = activeAgents.stream().map(agent -> agent.id() + ":" + agent.name()).collect(Collectors.joining(", "));
         String move = !safe(playerChoice).isBlank() ? playerChoice : safe(playerInput);
-        return "Story beat: " + storyBeat.title()
+        return "Turn title: " + storyBeat.title()
                 + "\nSource type: " + storyBeat.sourceType()
-                + "\nScene: " + worldState.getCurrentScene()
+                + "\nWorkspace: " + worldState.getCurrentScene()
                 + "\nNode: " + worldState.getCurrentNodeId()
                 + "\nFocus speaker: " + storyBeat.speakerId()
-                + "\nNarrative: " + storyBeat.narrative()
-                + "\nActive cast: " + (cast.isBlank() ? "none" : cast)
-                + "\nPlayer move: " + (move.isBlank() ? "silence" : move)
-                + "\nCurrent choices: " + String.join(", ", nextChoices)
-                + "\nPreserve pacing, focus, and branch clarity.";
+                + "\nContext: " + storyBeat.narrative()
+                + "\nActive agents: " + (cast.isBlank() ? "none" : cast)
+                + "\nUser move: " + (move.isBlank() ? "silence" : move)
+                + "\nCurrent next actions: " + String.join(", ", nextChoices)
+                + "\nPreserve pacing, focus, and action clarity.";
     }
 
     private String buildBranchOptionsSystemPrompt() {
-        return "You are a branch-planning agent for an Agent-driven AVG."
+        return "You are a next-action planning agent for a configurable Agent container."
                 + "\nReturn exactly one JSON object and no markdown."
                 + "\nSchema: {\"branchOptions\":[{\"label\":\"string\",\"intent\":\"string\","
                 + "\"risk\":\"low|medium|high\",\"targetMood\":\"string\",\"targetAgentId\":\"string\","
                 + "\"consequenceSummary\":\"string\",\"relationshipDelta\":-3..3,"
                 + "\"addedFlags\":[\"string\"],\"removedFlags\":[\"string\"]}]}"
-                + "\nAnnotate the supplied branch labels without inventing new labels.";
+                + "\nAnnotate the supplied next-action labels without inventing new labels.";
     }
 
     private String buildBranchOptionsUserPrompt(
@@ -406,18 +406,18 @@ public class AIService {
             List<String> nextChoices) {
         String cast = activeAgents.stream().map(agent -> agent.id() + ":" + agent.name()).collect(Collectors.joining(", "));
         String move = !safe(playerChoice).isBlank() ? playerChoice : safe(playerInput);
-        return "Story beat: " + storyEvent.title()
-                + "\nScene: " + storyEvent.targetScene()
+        return "Turn title: " + storyEvent.title()
+                + "\nWorkspace: " + storyEvent.targetScene()
                 + "\nFocused speaker: " + storyEvent.speakerId()
-                + "\nNarrative: " + storyEvent.narrative()
-                + "\nPlayer move: " + (move.isBlank() ? "silence" : move)
-                + "\nActive cast: " + (cast.isBlank() ? "none" : cast)
-                + "\nBranch labels: " + String.join(", ", nextChoices)
-                + "\nFor each branch label return intent, risk, target mood, target agent id, consequence summary, relationship delta, and likely flag changes.";
+                + "\nContext: " + storyEvent.narrative()
+                + "\nUser move: " + (move.isBlank() ? "silence" : move)
+                + "\nActive agents: " + (cast.isBlank() ? "none" : cast)
+                + "\nNext-action labels: " + String.join(", ", nextChoices)
+                + "\nFor each label return intent, risk, target mood, target agent id, consequence summary, relationship delta, and likely flag changes.";
     }
 
     private String buildCriticSystemPrompt() {
-        return "You are a critic agent for an Agent-driven AVG orchestration engine."
+        return "You are a critic agent for a configurable Agent-container orchestration engine."
                 + "\nReturn exactly one JSON object and no markdown."
                 + "\nSchema: {\"verdict\":\"stable|usable|fragile\",\"focusScore\":1-10,"
                 + "\"castCoverageScore\":1-10,\"choicePressureScore\":1-10,\"notes\":[\"string\"]}"
@@ -440,13 +440,13 @@ public class AIService {
                         + " objective=" + reply.objective()
                         + ", message=" + summarize(reply.message()))
                 .collect(Collectors.joining("\n- ", "- ", ""));
-        return "Story beat title: " + storyEvent.title()
-                + "\nStory beat source: " + storyEvent.sourceType()
+        return "Turn title: " + storyEvent.title()
+                + "\nTurn source: " + storyEvent.sourceType()
                 + "\nFocused speaker: " + storyEvent.speakerId()
-                + "\nNext choices: " + String.join(", ", nextChoices)
+                + "\nNext actions: " + String.join(", ", nextChoices)
                 + "\nTurn plans:\n" + (planSummary.isBlank() ? "- none" : planSummary)
                 + "\nPerformed replies:\n" + (replySummary.isBlank() ? "- none" : replySummary)
-                + "\nEvaluate focus, cast coverage, and branch pressure for this turn.";
+                + "\nEvaluate focus, agent coverage, and next-action pressure for this turn.";
     }
 
     private TurnPlannerBrief parsePlannerBrief(String content) throws IOException {

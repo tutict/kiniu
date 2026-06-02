@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import AgentConsoleView from '../components/GameConsoleView.vue'
+import AgentStudioView from '../components/StoryEditorView.vue'
+import SettingsPanelView from '../components/SettingsPanelView.vue'
 import type {
   AgentCatalogResponse,
   ApiSettings,
@@ -17,14 +20,14 @@ import type {
   WorldState
 } from '../types/game'
 
-type ViewMode = 'game' | 'editor' | 'settings'
+type ViewMode = 'chat' | 'studio' | 'settings'
 
-const SETTINGS_STORAGE_KEY = 'kiniu.avg.settings'
-const SESSION_STORAGE_KEY = 'kiniu.avg.session'
-const STORY_DRAFT_STORAGE_KEY = 'kiniu.avg.storyDraft'
-const AGENT_DRAFT_STORAGE_KEY = 'kiniu.avg.agentDraft'
-const SESSION_EXPORT_STORAGE_KEY = 'kiniu.avg.sessionExport'
-const SANDBOX_PLAN_STORAGE_KEY = 'kiniu.avg.sandboxPlans'
+const SETTINGS_STORAGE_KEY = 'kiniu.agent.settings'
+const SESSION_STORAGE_KEY = 'kiniu.agent.session'
+const STORY_DRAFT_STORAGE_KEY = 'kiniu.agent.flowDraft'
+const AGENT_DRAFT_STORAGE_KEY = 'kiniu.agent.agentDraft'
+const SESSION_EXPORT_STORAGE_KEY = 'kiniu.agent.sessionExport'
+const SANDBOX_PLAN_STORAGE_KEY = 'kiniu.agent.sandboxPlans'
 
 const defaultSettings: ApiSettings = {
   backendUrl: 'http://localhost:8080',
@@ -33,7 +36,7 @@ const defaultSettings: ApiSettings = {
   model: 'gpt-4.1-mini'
 }
 
-const activeView = ref<ViewMode>('game')
+const activeView = ref<ViewMode>('chat')
 const isHydrated = ref(false)
 const isSending = ref(false)
 const isLoadingStory = ref(false)
@@ -64,37 +67,47 @@ const sessionExport = ref<SessionExportResponse | null>(null)
 const sandboxPlans = ref<SavedSandboxPlan[]>([])
 const storyAnalysis = ref<StoryAnalysisResponse | null>(null)
 const currentOrchestration = ref<OrchestrationTraceView | null>(null)
-const currentBranchOptions = ref<BranchOptionView[]>(toBranchOptions(['沿着脚印前进', '调查远处灯光', '留在原地倾听']))
+const currentBranchOptions = ref<BranchOptionView[]>(toBranchOptions(['自由陪聊', 'Java/RAG 面试考查', '知识库问答', '项目助理']))
 const worldState = ref<WorldState>({
-  currentScene: 'opening',
-  currentNodeId: 'opening.threshold',
+  currentScene: 'agent-hub',
+  currentNodeId: 'container.home',
   flags: [],
-  affinityScores: { lyra: 0, narrator: 0 }
+  affinityScores: {
+    narrator: 0,
+    companion: 0,
+    'java-rag-interviewer': 0,
+    'knowledge-curator': 0,
+    'project-agent': 0,
+    'writing-coach': 0
+  }
 })
 const messages = ref<ChatMessage[]>([
   {
     id: 'intro-system',
     role: 'system',
     speaker: '系统',
-    content: '设置页提供 API 接入配置，创作页可以直接读取并编辑故事图草稿。'
+    content: '这是通用 Agent 容器。你可以新建 Agent、配置任务流，也可以直接在当前会话里让容器选择合适的 Agent。'
   },
   {
     id: 'intro-narrator',
     role: 'assistant',
-    speaker: '旁白',
-    content: '雾色压低了林地的边界。现在你既能推进故事，也能回到创作台重排它的分支骨架。'
+    speaker: 'Container Conductor',
+    content: '先选择一个模式，或直接描述你想解决的问题。我会把这一轮路由给最合适的 Agent。'
   }
 ])
 
 const sceneLabel = computed(() => {
   const labels: Record<string, string> = {
-    opening: '序章',
-    'moonlit-crossroads': '月下岔路',
-    'lantern-altar': '灯坛遗迹',
-    'whispering-grove': '低语林地',
-    'hunter-camp': '猎人营火',
-    'sealed-vault': '密库门前',
-    'echo-chamber': '回声室'
+    'agent-hub': 'Agent 容器',
+    'companion-check-in': '陪伴对话',
+    'interview-java-rag': 'Java/RAG 面试',
+    'interview-java-core': 'Java 深挖',
+    'interview-rag-architecture': 'RAG 架构',
+    'knowledge-qa': '知识库问答',
+    'workspace-project': '项目助理',
+    'writing-coach': '写作教练',
+    'learning-review': '会话复盘',
+    'session-review': '风险复盘'
   }
   return labels[worldState.value.currentScene] ?? worldState.value.currentScene
 })
@@ -102,6 +115,9 @@ const sceneLabel = computed(() => {
 const affinityEntries = computed(() => Object.entries(worldState.value.affinityScores))
 
 onMounted(() => {
+  isHydrated.value = true
+
+  try {
   const savedSettings = localStorage.getItem(SETTINGS_STORAGE_KEY)
   if (savedSettings) Object.assign(settings, defaultSettings, JSON.parse(savedSettings) as Partial<ApiSettings>)
 
@@ -112,7 +128,7 @@ onMounted(() => {
   const savedDraft = localStorage.getItem(STORY_DRAFT_STORAGE_KEY)
   if (savedDraft) {
     storyDraft.value = normalizeStoryCatalog(JSON.parse(savedDraft) as StoryCatalogResponse)
-    storyStatus.value = '已从本地恢复剧情草稿。'
+    storyStatus.value = '已从本地恢复任务流草稿。'
   }
 
   const savedAgents = localStorage.getItem(AGENT_DRAFT_STORAGE_KEY)
@@ -124,7 +140,7 @@ onMounted(() => {
   const savedSessionExport = localStorage.getItem(SESSION_EXPORT_STORAGE_KEY)
   if (savedSessionExport) {
     sessionExport.value = normalizeSessionExport(JSON.parse(savedSessionExport) as SessionExportResponse)
-    sessionStatus.value = '宸蹭粠鏈湴鎭㈠ Session 瀵煎嚭銆?'
+    sessionStatus.value = '已从本地恢复 Session 导出。'
   }
 
   const savedSandboxPlans = localStorage.getItem(SANDBOX_PLAN_STORAGE_KEY)
@@ -135,14 +151,15 @@ onMounted(() => {
   if (sessionExport.value) {
     replaceSessionSandboxPlans(sessionExport.value.sessionId, sessionExport.value.sandboxPlans)
   }
-
-  isHydrated.value = true
+  } catch {
+    errorMessage.value = 'Local cache could not be restored; using defaults instead.'
+  }
 })
 
 watch(() => activeView.value, async (view) => {
   saveStatus.value = ''
   errorMessage.value = ''
-  if (view === 'editor') {
+  if (view === 'studio') {
     if (!storyDraft.value) await loadStoryCatalog()
     if (!agentDraft.value) await loadAgentCatalog()
   }
@@ -239,11 +256,11 @@ function toBranchOptions(labels: string[]): BranchOptionView[] {
     risk: 'medium',
     targetMood: 'volatile',
     targetAgentId: '',
-    consequenceSummary: 'This branch keeps the scene moving without a stored prediction.',
+    consequenceSummary: 'This next action keeps the Agent session moving without a stored prediction.',
     relationshipDelta: 0,
     addedFlags: [],
     removedFlags: [],
-    source: 'legacy'
+      source: 'container'
   }))
 }
 
@@ -259,7 +276,7 @@ function normalizeBranchOptions(options: BranchOptionView[] | null | undefined, 
       relationshipDelta: Number.isFinite(option.relationshipDelta) ? option.relationshipDelta : 0,
       addedFlags: option.addedFlags ?? [],
       removedFlags: option.removedFlags ?? [],
-      source: option.source ?? 'legacy'
+      source: option.source ?? 'container'
     }))
     .filter(option => option.label.trim().length > 0)
 
@@ -382,7 +399,7 @@ function normalizeStoryAnalysis(analysis: StoryAnalysisResponse): StoryAnalysisR
 async function loadStoryCatalog() {
   if (!settings.backendUrl.trim()) {
     activeView.value = 'settings'
-    storyError.value = '请先填写后端地址，再加载故事图。'
+    storyError.value = '请先填写后端地址，再加载任务流。'
     return
   }
 
@@ -391,13 +408,13 @@ async function loadStoryCatalog() {
   storyError.value = ''
 
   try {
-    const response = await $fetch<StoryCatalogResponse>('/game/story', {
+    const response = await $fetch<StoryCatalogResponse>('/agent/story', {
       baseURL: settings.backendUrl.trim(),
       headers: buildHeaders()
     })
     storyDraft.value = normalizeStoryCatalog(JSON.parse(JSON.stringify(response)) as StoryCatalogResponse)
     storyAnalysis.value = null
-    persistStoryDraft('已从后端载入故事图，当前进入本地草稿编辑模式。')
+    persistStoryDraft('已从后端载入任务流，当前进入本地草稿编辑模式。')
   } catch (error) {
     storyError.value = error instanceof Error ? `加载失败：${error.message}` : '加载失败，请检查后端地址或接口状态。'
   } finally {
@@ -417,7 +434,7 @@ async function loadAgentCatalog() {
   agentError.value = ''
 
   try {
-    const response = await $fetch<AgentCatalogResponse>('/game/agents', {
+    const response = await $fetch<AgentCatalogResponse>('/agent/agents', {
       baseURL: settings.backendUrl.trim(),
       headers: buildHeaders()
     })
@@ -447,7 +464,7 @@ async function loadSessionExport(targetSessionId = sessionId.value) {
   sessionError.value = ''
 
   try {
-    const response = await $fetch<SessionExportResponse>(`/game/export/${encodeURIComponent(normalizedSessionId)}`, {
+    const response = await $fetch<SessionExportResponse>(`/agent/export/${encodeURIComponent(normalizedSessionId)}`, {
       baseURL: settings.backendUrl.trim(),
       headers: buildHeaders()
     })
@@ -467,7 +484,7 @@ async function exportStoryDraft() {
   const payload = JSON.stringify(storyDraft.value, null, 2)
   try {
     await navigator.clipboard.writeText(payload)
-    storyStatus.value = '剧情草稿 JSON 已复制到剪贴板。'
+    storyStatus.value = '任务流草稿 JSON 已复制到剪贴板。'
   } catch {
     storyStatus.value = '浏览器未允许写入剪贴板，但草稿仍已保存在本地。'
   }
@@ -509,19 +526,19 @@ async function exportSandboxPlans() {
 
 async function saveStoryDraftToBackend() {
   if (!storyDraft.value) {
-    storyError.value = '当前没有可保存的故事草稿。'
+    storyError.value = '当前没有可保存的任务流草稿。'
     return
   }
   if (!settings.backendUrl.trim()) {
     activeView.value = 'settings'
-    storyError.value = '请先填写后端地址，再保存故事图。'
+    storyError.value = '请先填写后端地址，再保存任务流。'
     return
   }
 
   isSavingStory.value = true
   storyError.value = ''
   try {
-    const response = await $fetch<StoryCatalogResponse>('/game/story', {
+    const response = await $fetch<StoryCatalogResponse>('/agent/story', {
       baseURL: settings.backendUrl.trim(),
       method: 'PUT',
       body: storyDraft.value,
@@ -556,7 +573,7 @@ async function validateStoryDraft() {
       story: storyDraft.value,
       agents: agentDraft.value
     }
-    const response = await $fetch<StoryAnalysisResponse>('/game/story/analyze', {
+    const response = await $fetch<StoryAnalysisResponse>('/agent/story/analyze', {
       baseURL: settings.backendUrl.trim(),
       method: 'POST',
       body: request,
@@ -582,7 +599,7 @@ async function generateStoryDraft(request: StoryGenerationRequest) {
   generatorStatus.value = ''
   generatorError.value = ''
   try {
-    const response = await $fetch<StoryGenerationResponse>('/game/story/generate', {
+    const response = await $fetch<StoryGenerationResponse>('/agent/story/generate', {
       baseURL: settings.backendUrl.trim(),
       method: 'POST',
       body: request,
@@ -591,8 +608,8 @@ async function generateStoryDraft(request: StoryGenerationRequest) {
     storyDraft.value = normalizeStoryCatalog(response.story)
     agentDraft.value = normalizeAgentCatalog(response.agents)
     storyAnalysis.value = normalizeStoryAnalysis(response.analysis)
-    persistStoryDraft('Generated story draft cached locally.')
-    persistAgentDraft('Generated agent draft cached locally.')
+    persistStoryDraft('Generated task-flow draft cached locally.')
+    persistAgentDraft('Generated Agent draft cached locally.')
     generatorStatus.value = response.summary
     validationStatus.value = `Validation complete: ${response.analysis.errorCount} errors, ${response.analysis.warningCount} warnings.`
     validationError.value = ''
@@ -617,7 +634,7 @@ async function saveAgentDraftToBackend() {
   isSavingAgents.value = true
   agentError.value = ''
   try {
-    const response = await $fetch<AgentCatalogResponse>('/game/agents', {
+    const response = await $fetch<AgentCatalogResponse>('/agent/agents', {
       baseURL: settings.backendUrl.trim(),
       method: 'PUT',
       body: agentDraft.value,
@@ -663,12 +680,12 @@ async function saveSandboxPlan(plan: SandboxPlanDraft) {
       createdAt: new Date().toISOString()
     })
     sandboxPlans.value = [savedPlan, ...sandboxPlans.value]
-    persistSandboxPlans(`Sandbox run saved locally for ${savedPlan.sceneId || 'current scene'}.`)
+    persistSandboxPlans(`Sandbox run saved locally for ${savedPlan.sceneId || 'current workspace'}.`)
     return
   }
 
   try {
-    const response = await $fetch<SessionExportResponse>(`/game/export/${encodeURIComponent(sessionId.value)}/sandbox-plans`, {
+    const response = await $fetch<SessionExportResponse>(`/agent/export/${encodeURIComponent(sessionId.value)}/sandbox-plans`, {
       baseURL: settings.backendUrl.trim(),
       method: 'POST',
       body: plan,
@@ -677,7 +694,7 @@ async function saveSandboxPlan(plan: SandboxPlanDraft) {
     sessionExport.value = normalizeSessionExport(JSON.parse(JSON.stringify(response)) as SessionExportResponse)
     replaceSessionSandboxPlans(sessionExport.value.sessionId, sessionExport.value.sandboxPlans)
     localStorage.setItem(SANDBOX_PLAN_STORAGE_KEY, JSON.stringify(sandboxPlans.value))
-    persistSessionExport(`Sandbox run saved to backend export for ${plan.sceneId || 'current scene'}.`)
+    persistSessionExport(`Sandbox run saved to backend export for ${plan.sceneId || 'current workspace'}.`)
   } catch (error) {
     const fallbackPlan = normalizeSandboxPlan({
       ...plan,
@@ -686,7 +703,7 @@ async function saveSandboxPlan(plan: SandboxPlanDraft) {
       createdAt: new Date().toISOString()
     })
     sandboxPlans.value = [fallbackPlan, ...sandboxPlans.value]
-    persistSandboxPlans(`Sandbox run saved locally for ${fallbackPlan.sceneId || 'current scene'}.`)
+    persistSandboxPlans(`Sandbox run saved locally for ${fallbackPlan.sceneId || 'current workspace'}.`)
     sessionError.value = error instanceof Error
       ? `Sandbox sync failed, kept local copy: ${error.message}`
       : 'Sandbox sync failed, kept local copy.'
@@ -716,12 +733,12 @@ async function sendTurn(choice = '') {
   const trimmedChoice = choice.trim()
 
   if (!trimmedInput && !trimmedChoice) {
-    errorMessage.value = '请输入一句行动描述，或直接选择一个分支。'
+    errorMessage.value = '请输入一句需求描述，或直接选择一个 Agent 模式。'
     return
   }
   if (!settings.backendUrl.trim()) {
     activeView.value = 'settings'
-    errorMessage.value = '请先在设置页填写游戏后端地址。'
+    errorMessage.value = '请先在设置页填写后端地址。'
     return
   }
 
@@ -735,7 +752,7 @@ async function sendTurn(choice = '') {
   errorMessage.value = ''
   isSending.value = true
   try {
-    const response = await $fetch<GameResponse>('/game/next', {
+    const response = await $fetch<GameResponse>('/agent/next', {
       baseURL: settings.backendUrl.trim(),
       method: 'POST',
       body: { sessionId: sessionId.value, input: trimmedInput, choice: trimmedChoice },
@@ -744,7 +761,7 @@ async function sendTurn(choice = '') {
     messages.value.push({
       id: `assistant-${Date.now()}`,
       role: 'assistant',
-      speaker: '剧情引擎',
+      speaker: 'Agent 容器',
       content: response.message
     })
     currentBranchOptions.value = normalizeBranchOptions(response.branchOptions, response.choices)
@@ -766,20 +783,20 @@ async function sendTurn(choice = '') {
     <div v-if="isHydrated" class="frame">
       <header class="topbar">
         <div>
-          <p class="eyebrow">Kiniu AVG Console</p>
-          <h1>剧情工作台</h1>
+          <p class="eyebrow">Kiniu Agent Container</p>
+          <h1>Agent 容器</h1>
         </div>
 
         <nav class="nav">
-          <button class="nav-button" :class="{ active: activeView === 'game' }" type="button" @click="activeView = 'game'">游戏</button>
-          <button class="nav-button" :class="{ active: activeView === 'editor' }" type="button" @click="activeView = 'editor'">创作</button>
+          <button class="nav-button" :class="{ active: activeView === 'chat' }" type="button" @click="activeView = 'chat'">对话</button>
+          <button class="nav-button" :class="{ active: activeView === 'studio' }" type="button" @click="activeView = 'studio'">Agent Studio</button>
           <button class="nav-button" :class="{ active: activeView === 'settings' }" type="button" @click="activeView = 'settings'">设置</button>
         </nav>
       </header>
 
       <main class="workspace">
-        <GameConsoleView
-          v-if="activeView === 'game'"
+        <AgentConsoleView
+          v-if="activeView === 'chat'"
           v-model:player-input="playerInput"
           :settings="settings"
           :world-state="worldState"
@@ -793,8 +810,8 @@ async function sendTurn(choice = '') {
           @send-turn="sendTurn"
         />
 
-        <StoryEditorView
-          v-else-if="activeView === 'editor'"
+        <AgentStudioView
+          v-else-if="activeView === 'studio'"
           :draft="storyDraft"
           :agent-draft="agentDraft"
           :session-export="sessionExport"
@@ -855,21 +872,61 @@ async function sendTurn(choice = '') {
 </template>
 
 <style scoped>
-:global(body){margin:0;font-family:"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;background:radial-gradient(circle at top,rgba(216,194,146,.16),transparent 36%),linear-gradient(180deg,#0f1318 0%,#171e25 55%,#0d1015 100%);color:#f5efe3}
+:global(:root){
+  --color-primary:#0d9488;
+  --color-primary-strong:#0f766e;
+  --color-secondary:#14b8a6;
+  --color-accent:#ea580c;
+  --color-bg:#f0fdfa;
+  --color-bg-soft:#f7fffd;
+  --color-surface:#ffffff;
+  --color-surface-muted:#ecfdf5;
+  --color-border:#b6e7df;
+  --color-border-strong:#5eead4;
+  --color-text:#123c3a;
+  --color-muted:#55706d;
+  --color-faint:#78918d;
+  --color-danger:#dc2626;
+  --color-success:#15803d;
+  --shadow-soft:0 18px 48px rgba(15,118,110,.12);
+  --shadow-card:0 1px 2px rgba(15,23,42,.06),0 10px 28px rgba(15,118,110,.08);
+  --radius:8px;
+  --ease:cubic-bezier(.2,.8,.2,1);
+}
+:global(body){
+  margin:0;
+  font-family:Inter,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  background:
+    radial-gradient(circle at 8% 0%,rgba(20,184,166,.18),transparent 30%),
+    linear-gradient(180deg,#f0fdfa 0%,#f7fffd 42%,#eef9f6 100%);
+  color:var(--color-text);
+  -webkit-font-smoothing:antialiased;
+}
 :global(*){box-sizing:border-box}
-.shell{min-height:100vh}
-.frame{width:min(1440px,calc(100vw - 32px));margin:0 auto;padding:24px 0 36px}
-.topbar{display:flex;align-items:end;justify-content:space-between;gap:24px;padding:8px 0 28px}
-.eyebrow{margin:0 0 8px;font-size:12px;letter-spacing:.24em;text-transform:uppercase;color:#b9a988}
+:global(button),:global(input),:global(textarea){font:inherit}
+:global(:focus-visible){outline:3px solid rgba(234,88,12,.32);outline-offset:2px}
+.shell{min-height:100dvh}
+.frame{width:min(1480px,calc(100vw - 32px));margin:0 auto;padding:24px 0 40px}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:10px 0 24px}
+.eyebrow{margin:0 0 8px;font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--color-primary-strong);font-weight:700}
 h1,p{margin:0}
-h1{font-size:clamp(34px,6vw,56px);line-height:.95}
-.nav{display:inline-flex;gap:8px;padding:6px;border:1px solid rgba(255,255,255,.08);border-radius:999px;background:rgba(255,255,255,.03);backdrop-filter:blur(16px)}
-.nav-button{appearance:none;border:0;cursor:pointer;padding:10px 18px;border-radius:999px;color:#d8d2c5;background:transparent;transition:transform 160ms ease,background 160ms ease}
-.nav-button.active{background:#e5c78a;color:#11161d}
-.workspace{display:grid;min-height:calc(100vh - 172px)}
+h1{font-size:clamp(34px,5vw,54px);line-height:1;letter-spacing:0;color:#102f2d}
+.nav{display:inline-flex;gap:4px;padding:4px;border:1px solid var(--color-border);border-radius:var(--radius);background:rgba(255,255,255,.78);box-shadow:var(--shadow-card)}
+.nav-button{appearance:none;border:0;cursor:pointer;min-height:44px;padding:0 18px;border-radius:6px;color:var(--color-muted);background:transparent;font-size:14px;font-weight:700;white-space:nowrap;transition:background 180ms var(--ease),color 180ms var(--ease),box-shadow 180ms var(--ease)}
+.nav-button.active{background:var(--color-primary);color:#fff;box-shadow:0 8px 22px rgba(13,148,136,.22)}
+.nav-button:hover{background:#e6fffb;color:var(--color-primary-strong)}
+.nav-button.active:hover{background:var(--color-primary-strong);color:#fff}
+.workspace{display:grid;min-height:calc(100dvh - 166px)}
 .status-row{display:flex;justify-content:flex-start;gap:12px;flex-wrap:wrap;margin-top:14px}
-.status{display:inline-flex;align-items:center;padding:12px 14px;border-radius:14px;line-height:1.5}
-.status.error{color:#ffd7d2;background:rgba(217,94,81,.14)}
-.nav-button:hover{transform:translateY(-1px)}
-@media (max-width:960px){.frame{width:min(100vw - 20px,1440px);padding-top:18px}.topbar{display:grid;align-items:start}}
+.status{display:inline-flex;align-items:center;min-height:44px;padding:10px 14px;border-radius:var(--radius);line-height:1.5}
+.status.error{color:#991b1b;background:#fee2e2;border:1px solid #fecaca}
+@media (max-width:960px){
+  .frame{width:min(100vw - 20px,1480px);padding-top:16px}
+  .topbar{display:grid;align-items:start}
+  .nav{width:100%;display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
+  .nav-button{padding:0 8px;font-size:13px}
+}
+@media (prefers-reduced-motion:reduce){
+  .nav-button{transition:none}
+}
 </style>

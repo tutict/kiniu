@@ -71,19 +71,19 @@ public class DirectorAgentService {
             List<String> nextChoices) {
         String cast = activeAgents.stream().map(Agent::name).reduce((left, right) -> left + ", " + right).orElse("none");
         String move = !safe(playerChoice).isBlank() ? playerChoice : safe(playerInput);
-        return "Director framing: source="
+        return "Container framing: source="
                 + storyBeat.sourceType()
-                + ", scene="
+                + ", workspace="
                 + worldState.getCurrentScene()
-                + ", active cast="
+                + ", active agents="
                 + (cast.isBlank() ? "none" : cast)
                 + ". Keep the next exchange centered on "
                 + storyBeat.title()
-                + " after the player move \""
+                + " after the user move \""
                 + (move.isBlank() ? "silence" : move)
-                + "\". Offer branches: "
+                + "\". Offer next actions: "
                 + String.join(", ", nextChoices)
-                + ". Fallback local directing path.";
+                + ". Fallback local container-routing path.";
     }
 
     private List<String> normalizeChoices(List<String> generatedChoices, List<String> fallbackChoices) {
