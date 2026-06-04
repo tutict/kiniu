@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useUiI18n } from '../i18n'
 import type { SavedSandboxPlan, SessionExportResponse, SessionTurnView } from '../types/game'
 
 type PositionedTurn = {
@@ -33,6 +34,7 @@ const emit = defineEmits<{
   promoteSandbox: [planId: string]
 }>()
 
+const { t } = useUiI18n()
 const requestedSessionId = ref('')
 const selectedTurnId = ref('')
 const selectedSandboxPlanId = ref('')
@@ -195,20 +197,41 @@ function formatSignedValue(value: number) {
 function triggerLoad() {
   emit('loadSession', requestedSessionId.value.trim() || props.currentSessionId)
 }
+
+function displayCode(value: string) {
+  switch (value) {
+    case 'pivot':
+      return t('codePivot')
+    case 'medium':
+      return t('codeMedium')
+    case 'low':
+      return t('codeLow')
+    case 'high':
+      return t('codeHigh')
+    case 'volatile':
+      return t('codeVolatile')
+    case 'stable':
+      return t('codeStable')
+    case 'calm':
+      return t('codeCalm')
+    default:
+      return value
+  }
+}
 </script>
 
 <template>
   <section class="debug-stage">
     <div class="debug-head">
       <div>
-        <p class="eyebrow">Session Debug</p>
-        <h3>导出与回放</h3>
+        <p class="eyebrow">{{ t('sessionDebugEyebrow') }}</p>
+        <h3>{{ t('sessionDebugTitle') }}</h3>
       </div>
 
       <div class="debug-toolbar">
         <input v-model="requestedSessionId" class="search-input" type="text" placeholder="session-123456">
         <button class="secondary-button" type="button" :disabled="isLoadingSession" @click="triggerLoad">
-          {{ isLoadingSession ? '读取中...' : '读取导出' }}
+          {{ isLoadingSession ? t('actionReading') : t('actionReadExport') }}
         </button>
       </div>
     </div>
@@ -217,60 +240,60 @@ function triggerLoad() {
       <section class="debug-panel summary-panel">
         <div class="metric-strip">
           <div>
-            <span>Session</span>
+            <span>{{ t('labelSession') }}</span>
             <strong>{{ exportData?.sessionId || currentSessionId }}</strong>
           </div>
           <div>
-            <span>Turns</span>
+            <span>{{ t('labelTurns') }}</span>
             <strong>{{ sessionMetrics.totalTurns }}</strong>
           </div>
           <div>
-            <span>Generated</span>
+            <span>{{ t('labelGenerated') }}</span>
             <strong>{{ sessionMetrics.generatedTurns }}</strong>
           </div>
           <div>
-            <span>Seeded</span>
+            <span>{{ t('labelSeeded') }}</span>
             <strong>{{ sessionMetrics.seedTurns }}</strong>
           </div>
           <div>
-            <span>Workspaces</span>
+            <span>{{ t('labelWorkspaces') }}</span>
             <strong>{{ sessionMetrics.uniqueScenes }}</strong>
           </div>
           <div>
-            <span>Sandbox</span>
+            <span>{{ t('labelSandbox') }}</span>
             <strong>{{ sandboxMetrics.sessionPlans }}/{{ sandboxMetrics.totalPlans }}</strong>
           </div>
         </div>
 
         <div class="summary-copy">
-          <p>当前导出用于调试 Agent 编排结果、验证 seed 与 generated turn 的切换，并为前端演示或桌面壳嵌入提供直接 JSON。</p>
-          <p v-if="exportData?.updatedAt">最近更新时间：{{ formatTime(exportData.updatedAt) }}</p>
+          <p>{{ t('sessionDebugCopy') }}</p>
+          <p v-if="exportData?.updatedAt">{{ t('lastUpdated', { time: formatTime(exportData.updatedAt) }) }}</p>
         </div>
 
         <div class="footer-actions">
-          <button class="primary-button" type="button" :disabled="!exportData" @click="emit('exportSession')">复制 JSON</button>
-          <button class="secondary-button" type="button" @click="emit('resetSession')">清空缓存</button>
-          <span class="backend-pill">{{ backendUrl || '未配置后端' }}</span>
+          <button class="primary-button" type="button" :disabled="!exportData" @click="emit('exportSession')">{{ t('actionCopyJson') }}</button>
+          <button class="secondary-button" type="button" @click="emit('resetSession')">{{ t('actionClearCache') }}</button>
+          <span class="backend-pill">{{ backendUrl || t('labelNoBackend') }}</span>
         </div>
       </section>
 
       <section class="debug-panel sandbox-panel">
         <div class="panel-head">
           <div>
-            <p class="eyebrow">Sandbox Shelf</p>
-            <h4>本地会话沙盘</h4>
+            <p class="eyebrow">{{ t('labelSandboxShelf') }}</p>
+            <h4>{{ t('labelLocalSandbox') }}</h4>
           </div>
 
           <div class="footer-actions">
-            <button class="primary-button" type="button" :disabled="!sandboxPlans.length" @click="emit('exportSandboxPlans')">复制 JSON</button>
-            <button class="secondary-button" type="button" :disabled="!sandboxPlans.length" @click="emit('resetSandboxPlans')">清空沙盘</button>
+            <button class="primary-button" type="button" :disabled="!sandboxPlans.length" @click="emit('exportSandboxPlans')">{{ t('actionCopyJson') }}</button>
+            <button class="secondary-button" type="button" :disabled="!sandboxPlans.length" @click="emit('resetSandboxPlans')">{{ t('actionClearSandbox') }}</button>
             <button
               class="secondary-button"
               type="button"
               :disabled="!selectedSandboxPlan || !canImportSandbox"
               @click="selectedSandboxPlan && emit('promoteSandbox', selectedSandboxPlan.id)"
             >
-              导入任务流
+              {{ t('actionImportFlow') }}
             </button>
           </div>
         </div>
@@ -288,37 +311,37 @@ function triggerLoad() {
               <strong>{{ plan.title }}</strong>
               <span>{{ formatTime(plan.createdAt) }}</span>
               <p>{{ plan.sceneId }} / {{ plan.nodeId || '-' }}</p>
-              <p>{{ plan.steps.length }} steps · rel {{ formatSignedValue(plan.totalRelationshipDelta) }}</p>
+              <p>{{ plan.steps.length }} {{ t('labelSteps') }} · {{ t('labelRelation') }} {{ formatSignedValue(plan.totalRelationshipDelta) }}</p>
             </button>
           </div>
 
           <div v-if="selectedSandboxPlan" class="turn-detail">
             <div class="detail-grid">
               <div>
-                <span>Session</span>
+                <span>{{ t('labelSession') }}</span>
                 <strong>{{ selectedSandboxPlan.sessionId || '-' }}</strong>
               </div>
               <div>
-                <span>Created</span>
+                <span>{{ t('labelCreated') }}</span>
                 <strong>{{ formatTime(selectedSandboxPlan.createdAt) }}</strong>
               </div>
               <div>
-                <span>Workspace</span>
+                <span>{{ t('labelWorkspace') }}</span>
                 <strong>{{ selectedSandboxPlan.sceneId || '-' }}</strong>
               </div>
               <div>
-                <span>Node</span>
+                <span>{{ t('labelNode') }}</span>
                 <strong>{{ selectedSandboxPlan.nodeId || '-' }}</strong>
               </div>
             </div>
 
             <article class="detail-block">
-              <p class="block-label">Summary</p>
-              <p>{{ selectedSandboxPlan.summary || 'No summary.' }}</p>
+              <p class="block-label">{{ t('labelSummaryBlock') }}</p>
+              <p>{{ selectedSandboxPlan.summary || t('fieldNoSummary') }}</p>
             </article>
 
             <article class="detail-block">
-              <p class="block-label">Steps</p>
+              <p class="block-label">{{ t('labelSteps') }}</p>
               <div class="reply-list">
                 <div
                   v-for="(step, index) in selectedSandboxPlan.steps"
@@ -326,12 +349,12 @@ function triggerLoad() {
                   class="reply-card"
                 >
                   <strong>#{{ index + 1 }} {{ step.label }}</strong>
-                  <span>{{ step.intent }} 路 {{ step.risk }} 路 {{ step.targetMood }}</span>
+                  <span>{{ displayCode(step.intent) }} · {{ displayCode(step.risk) }} · {{ displayCode(step.targetMood) }}</span>
                   <p>{{ step.consequenceSummary }}</p>
-                  <small>{{ step.targetAgentId || 'workspace' }} 路 rel {{ formatSignedValue(step.relationshipDelta) }}</small>
+                  <small>{{ step.targetAgentId || t('fieldWorkspace') }} · {{ t('labelRelation') }} {{ formatSignedValue(step.relationshipDelta) }}</small>
                   <small v-if="step.addedFlags.length || step.removedFlags.length">
                     <template v-if="step.addedFlags.length">+{{ step.addedFlags.join(', ') }}</template>
-                    <template v-if="step.addedFlags.length && step.removedFlags.length"> 路 </template>
+                    <template v-if="step.addedFlags.length && step.removedFlags.length"> · </template>
                     <template v-if="step.removedFlags.length">-{{ step.removedFlags.join(', ') }}</template>
                   </small>
                 </div>
@@ -339,22 +362,22 @@ function triggerLoad() {
             </article>
 
             <article class="detail-block">
-              <p class="block-label">Projected State</p>
+              <p class="block-label">{{ t('labelProjectedState') }}</p>
               <div class="detail-grid">
                 <div>
-                  <span>Total Delta</span>
+                  <span>{{ t('labelTotalDelta') }}</span>
                   <strong>{{ formatSignedValue(selectedSandboxPlan.totalRelationshipDelta) }}</strong>
                 </div>
                 <div>
-                  <span>Flags</span>
+                  <span>{{ t('labelFlags') }}</span>
                   <strong>{{ selectedSandboxPlan.finalFlags.length }}</strong>
                 </div>
                 <div>
-                  <span>Plans</span>
+                  <span>{{ t('labelPlans') }}</span>
                   <strong>{{ sandboxMetrics.totalPlans }}</strong>
                 </div>
                 <div>
-                  <span>Steps</span>
+                  <span>{{ t('labelSteps') }}</span>
                   <strong>{{ sandboxMetrics.totalSteps }}</strong>
                 </div>
               </div>
@@ -368,7 +391,7 @@ function triggerLoad() {
                   class="reply-card"
                 >
                   <strong>{{ agentId }}</strong>
-                  <span>final affinity</span>
+                  <span>{{ t('labelFinalAffinity') }}</span>
                   <p>{{ value }}</p>
                 </div>
               </div>
@@ -377,16 +400,16 @@ function triggerLoad() {
         </div>
 
         <div v-else class="turn-empty">
-          <p>当前还没有保存的沙盘链。先回到对话页，把下一步动作预演保存到本地调试区。</p>
+          <p>{{ t('emptyNoSandbox') }}</p>
         </div>
-        <p v-if="!canImportSandbox" class="status error">先加载或创建一个任务流草稿，才能把沙盘链导入到 Flow Studio。</p>
+        <p v-if="!canImportSandbox" class="status error">{{ t('sandboxNeedsDraft') }}</p>
       </section>
 
       <section class="debug-panel branch-panel">
         <div class="panel-head">
           <div>
-            <p class="eyebrow">Flow Tree</p>
-            <h4>会话动作图</h4>
+            <p class="eyebrow">{{ t('labelFlowTree') }}</p>
+            <h4>{{ t('labelSessionActionGraph') }}</h4>
           </div>
         </div>
 
@@ -396,7 +419,7 @@ function triggerLoad() {
             :viewBox="`0 0 ${branchGraph.width} ${branchGraph.height}`"
             :style="{ minWidth: `${branchGraph.width}px`, minHeight: `${branchGraph.height}px` }"
             role="img"
-            aria-label="Session action graph"
+            :aria-label="t('sessionGraphAria')"
           >
             <path
               v-for="edge in branchGraph.edges"
@@ -427,8 +450,8 @@ function triggerLoad() {
       <section class="debug-panel replay-panel">
         <div class="panel-head">
           <div>
-            <p class="eyebrow">Replay</p>
-            <h4>逐回合回放</h4>
+            <p class="eyebrow">{{ t('labelReplay') }}</p>
+            <h4>{{ t('labelTurnReplay') }}</h4>
           </div>
         </div>
 
@@ -444,54 +467,54 @@ function triggerLoad() {
             >
               <strong>{{ turn.storyEvent?.title || turn.sceneId }}</strong>
               <span>{{ formatTime(turn.timestamp) }}</span>
-              <p>{{ shortText(turn.playerChoice || turn.playerInput || 'No direct user move.', 52) }}</p>
+              <p>{{ shortText(turn.playerChoice || turn.playerInput || t('labelNoDirectMove'), 52) }}</p>
             </button>
           </div>
 
           <div v-if="selectedTurn" class="turn-detail">
             <div class="detail-grid">
               <div>
-                <span>Turn ID</span>
+                <span>{{ t('labelTurnId') }}</span>
                 <strong>{{ selectedTurn.id }}</strong>
               </div>
               <div>
-                <span>Workspace</span>
+                <span>{{ t('labelWorkspace') }}</span>
                 <strong>{{ selectedTurn.sceneId }}</strong>
               </div>
               <div>
-                <span>Node</span>
+                <span>{{ t('labelNode') }}</span>
                 <strong>{{ selectedTurn.nodeId }}</strong>
               </div>
               <div>
-                <span>Source</span>
+                <span>{{ t('labelSource') }}</span>
                 <strong>{{ selectedTurn.storyEvent?.sourceType || '-' }}</strong>
               </div>
             </div>
 
             <article class="detail-block">
-              <p class="block-label">User Move</p>
-              <p>{{ selectedTurn.playerChoice || selectedTurn.playerInput || 'The user remained silent.' }}</p>
+              <p class="block-label">{{ t('labelUserMove') }}</p>
+              <p>{{ selectedTurn.playerChoice || selectedTurn.playerInput || t('fieldUserSilent') }}</p>
             </article>
 
             <article class="detail-block">
-              <p class="block-label">Director</p>
-              <p>{{ selectedTurn.directorMessage || selectedTurn.storyEvent?.directorSummary || 'No director summary.' }}</p>
+              <p class="block-label">{{ t('labelDirector') }}</p>
+              <p>{{ selectedTurn.directorMessage || selectedTurn.storyEvent?.directorSummary || t('fieldNoDirectorSummary') }}</p>
             </article>
 
             <article class="detail-block">
-              <p class="block-label">Summary</p>
+              <p class="block-label">{{ t('labelSummaryBlock') }}</p>
               <p>{{ selectedTurn.summary }}</p>
             </article>
 
             <article class="detail-block">
-              <p class="block-label">Presented Actions</p>
+              <p class="block-label">{{ t('labelPresentedActions') }}</p>
               <div class="token-row">
                 <span v-for="choice in selectedTurn.presentedChoices" :key="choice" class="token">{{ choice }}</span>
               </div>
             </article>
 
             <article class="detail-block" v-if="selectedTurn.presentedBranchOptions.length">
-              <p class="block-label">Action Options</p>
+              <p class="block-label">{{ t('labelActionOptions') }}</p>
               <div class="reply-list">
                 <div
                   v-for="option in selectedTurn.presentedBranchOptions"
@@ -499,8 +522,8 @@ function triggerLoad() {
                   class="reply-card"
                 >
                   <strong>{{ option.label }}</strong>
-                  <span>{{ option.intent }} · {{ option.risk }} · {{ option.targetMood }}</span>
-                  <p>{{ option.targetAgentId || 'workspace' }} · {{ option.source }} · rel {{ option.relationshipDelta >= 0 ? '+' : '' }}{{ option.relationshipDelta }}</p>
+                  <span>{{ displayCode(option.intent) }} · {{ displayCode(option.risk) }} · {{ displayCode(option.targetMood) }}</span>
+                  <p>{{ option.targetAgentId || t('fieldWorkspace') }} · {{ option.source }} · {{ t('labelRelation') }} {{ option.relationshipDelta >= 0 ? '+' : '' }}{{ option.relationshipDelta }}</p>
                   <small>{{ option.consequenceSummary }}</small>
                   <small v-if="option.addedFlags.length || option.removedFlags.length">
                     <template v-if="option.addedFlags.length">+{{ option.addedFlags.join(', ') }}</template>
@@ -512,7 +535,7 @@ function triggerLoad() {
             </article>
 
             <article class="detail-block">
-              <p class="block-label">Agent Replies</p>
+              <p class="block-label">{{ t('labelAgentReplies') }}</p>
               <div class="reply-list">
                 <div v-for="reply in selectedTurn.agentReplies" :key="reply.agentId + reply.message" class="reply-card">
                   <strong>{{ reply.agentName }}</strong>
@@ -524,22 +547,22 @@ function triggerLoad() {
             </article>
 
             <article v-if="selectedTurn.orchestration" class="detail-block">
-              <p class="block-label">Orchestration</p>
+              <p class="block-label">{{ t('labelOrchestration') }}</p>
               <div class="detail-grid">
                 <div>
-                  <span>Verdict</span>
+                  <span>{{ t('labelVerdict') }}</span>
                   <strong>{{ selectedTurn.orchestration.critic.verdict }}</strong>
                 </div>
                 <div>
-                  <span>Tension</span>
+                  <span>{{ t('labelTension') }}</span>
                   <strong>{{ selectedTurn.orchestration.planner.tensionLabel }}</strong>
                 </div>
                 <div>
-                  <span>Pacing</span>
+                  <span>{{ t('labelPacing') }}</span>
                   <strong>{{ selectedTurn.orchestration.planner.pacingLabel }}</strong>
                 </div>
                 <div>
-                  <span>Focus Score</span>
+                  <span>{{ t('labelFocusScore') }}</span>
                   <strong>{{ selectedTurn.orchestration.critic.focusScore }}</strong>
                 </div>
               </div>
@@ -556,8 +579,8 @@ function triggerLoad() {
                   class="reply-card"
                 >
                   <strong>{{ option.label }}</strong>
-                  <span>{{ option.intent }} · {{ option.risk }} · {{ option.targetMood }}</span>
-                  <p>{{ option.targetAgentId || 'workspace' }} · {{ option.source }} · rel {{ option.relationshipDelta >= 0 ? '+' : '' }}{{ option.relationshipDelta }}</p>
+                  <span>{{ displayCode(option.intent) }} · {{ displayCode(option.risk) }} · {{ displayCode(option.targetMood) }}</span>
+                  <p>{{ option.targetAgentId || t('fieldWorkspace') }} · {{ option.source }} · {{ t('labelRelation') }} {{ option.relationshipDelta >= 0 ? '+' : '' }}{{ option.relationshipDelta }}</p>
                   <small>{{ option.consequenceSummary }}</small>
                   <small v-if="option.addedFlags.length || option.removedFlags.length">
                     <template v-if="option.addedFlags.length">+{{ option.addedFlags.join(', ') }}</template>
@@ -568,7 +591,7 @@ function triggerLoad() {
               </div>
               <div class="reply-list">
                 <div v-for="note in selectedTurn.orchestration.critic.notes" :key="note" class="reply-card">
-                  <strong>Critic</strong>
+                  <strong>{{ t('labelCritic') }}</strong>
                   <p>{{ note }}</p>
                 </div>
               </div>
@@ -580,17 +603,17 @@ function triggerLoad() {
                 >
                   <strong>{{ invocation.operation }}</strong>
                   <span>
-                    {{ invocation.providerSucceeded ? 'provider' : invocation.fallbackUsed ? 'fallback' : 'local' }}
-                    路 {{ invocation.latencyMs }}ms
+                    {{ invocation.providerSucceeded ? t('fieldProvider') : invocation.fallbackUsed ? t('fieldFallback') : t('fieldLocal') }}
+                    · {{ invocation.latencyMs }}ms
                   </span>
-                  <p>{{ invocation.targetId || 'workspace' }} 路 {{ invocation.model || 'no-model' }}</p>
-                  <small>{{ invocation.errorMessage || invocation.providerUrl || 'No provider metadata.' }}</small>
+                  <p>{{ invocation.targetId || t('fieldWorkspace') }} · {{ invocation.model || t('fieldNoModel') }}</p>
+                  <small>{{ invocation.errorMessage || invocation.providerUrl || t('fieldNoProviderMeta') }}</small>
                 </div>
               </div>
               <div class="reply-list">
                 <div v-for="plan in selectedTurn.orchestration.plans" :key="plan.agentId" class="reply-card">
                   <strong>{{ plan.agentName }}</strong>
-                  <span>{{ plan.role }} 路 {{ plan.initiativeScore }} 路 {{ plan.shouldSpeak ? 'speak' : 'hold' }}</span>
+                  <span>{{ plan.role }} · {{ plan.initiativeScore }} · {{ plan.shouldSpeak ? t('fieldSpeak') : t('fieldHold') }}</span>
                   <p>{{ plan.objective }}</p>
                   <small>{{ plan.scoreFactors.map((factor) => `${factor.delta >= 0 ? '+' : ''}${factor.delta} ${factor.code}`).join(' · ') }}</small>
                 </div>
@@ -598,7 +621,7 @@ function triggerLoad() {
             </article>
 
             <article class="detail-block">
-              <p class="block-label">State Snapshot</p>
+              <p class="block-label">{{ t('labelStateSnapshot') }}</p>
               <div class="token-row">
                 <span v-for="flag in selectedTurn.stateSnapshot.flags" :key="flag" class="token muted">{{ flag }}</span>
               </div>
@@ -606,7 +629,7 @@ function triggerLoad() {
           </div>
 
           <div v-else class="turn-empty">
-            <p>还没有可回放的 session 导出。先读取一个 session。</p>
+            <p>{{ t('emptyNoSessionExport') }}</p>
           </div>
         </div>
       </section>
@@ -620,57 +643,59 @@ function triggerLoad() {
 </template>
 
 <style scoped>
-.debug-stage{display:grid;gap:18px;padding:20px;border:1px solid var(--color-border);border-radius:var(--radius);background:#f7fffd}
+.debug-stage{display:grid;gap:18px;padding:20px;border:1px solid var(--color-border);border-radius:var(--radius);background:var(--color-bg-soft)}
 .debug-head,.debug-toolbar,.panel-head,.metric-strip,.footer-actions,.status-row{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}
 .debug-grid{display:grid;gap:18px}
-.debug-panel{border:1px solid #d7eeea;background:#fff;border-radius:var(--radius);padding:20px}
+.debug-panel{border:1px solid var(--color-border-soft);background:var(--color-surface);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow-card)}
 .summary-panel{display:grid;gap:18px}
 .metric-strip div,.detail-grid div{display:grid;gap:4px;min-width:92px}
 .metric-strip span,.detail-grid span,.block-label{color:var(--color-faint);font-size:12px;text-transform:uppercase;letter-spacing:.1em}
 .metric-strip strong,.detail-grid strong{color:var(--color-text);font-size:15px}
 .summary-copy{display:grid;gap:8px;color:var(--color-muted);line-height:1.65}
-.backend-pill{display:inline-flex;padding:6px 10px;border-radius:var(--radius);background:#eef6f4;color:var(--color-faint);font-size:12px;font-weight:700}
-.branch-stage{overflow:auto;padding:8px;border:1px solid #d7eeea;border-radius:var(--radius);background:#f8fffd}
+.backend-pill{display:inline-flex;padding:6px 10px;border-radius:var(--radius);background:var(--color-token-muted-bg);color:var(--color-faint);font-size:12px;font-weight:700}
+.branch-stage{overflow:auto;padding:8px;border:1px solid var(--color-border-soft);border-radius:var(--radius);background:var(--color-graph-bg);scrollbar-gutter:stable}
 .branch-svg{display:block}
-.branch-edge{fill:none;stroke:rgba(13,148,136,.34);stroke-width:2}
+.branch-edge{fill:none;stroke:var(--color-graph-edge);stroke-width:2}
 .branch-node{cursor:pointer}
-.branch-node rect{fill:#fff;stroke:#bfe7df;stroke-width:1.2;transition:fill 180ms var(--ease),stroke 180ms var(--ease)}
-.branch-node.selected rect{fill:#ccfbf1;stroke:var(--color-primary);stroke-width:1.8}
+.branch-node rect{fill:var(--color-graph-node);stroke:var(--color-graph-node-border);stroke-width:1.2;transition:fill 180ms var(--ease),stroke 180ms var(--ease)}
+.branch-node.selected rect{fill:var(--color-graph-node-selected);stroke:var(--color-primary);stroke-width:1.8}
 .branch-title,.branch-meta{font-family:"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;pointer-events:none}
-.branch-title{fill:#173f3b;font-size:13px;font-weight:700}
-.branch-meta{fill:#55706d;font-size:11px}
+.branch-title{fill:var(--color-heading-soft);font-size:13px;font-weight:700}
+.branch-meta{fill:var(--color-muted);font-size:11px}
 .replay-layout,.sandbox-layout{display:grid;grid-template-columns:280px minmax(0,1fr);gap:16px}
 .turn-list,.sandbox-list,.reply-list,.detail-grid{display:grid;gap:10px}
-.turn-list{max-height:520px;overflow:auto;padding-right:4px}
-.sandbox-list{max-height:420px;overflow:auto;padding-right:4px}
-.turn-card{appearance:none;border:1px solid #d7eeea;border-radius:var(--radius);padding:14px;background:#fff;color:var(--color-text);text-align:left;cursor:pointer;display:grid;gap:6px;transition:background 180ms var(--ease),border-color 180ms var(--ease),box-shadow 180ms var(--ease)}
-.turn-card.active{border-color:var(--color-primary);background:#ecfdf5;box-shadow:0 8px 18px rgba(13,148,136,.1)}
-.turn-card:hover{border-color:var(--color-primary);background:#ecfdf5}
+.turn-list{max-height:520px;overflow:auto;padding-right:4px;scrollbar-gutter:stable}
+.sandbox-list{max-height:420px;overflow:auto;padding-right:4px;scrollbar-gutter:stable}
+.turn-card{appearance:none;border:1px solid var(--color-border-soft);border-radius:var(--radius);padding:14px;background:var(--color-surface);color:var(--color-text);text-align:left;cursor:pointer;display:grid;gap:6px;transition:background 180ms var(--ease),border-color 180ms var(--ease),box-shadow 180ms var(--ease),transform 180ms var(--ease)}
+.turn-card.active{border-color:var(--color-primary);background:var(--color-surface-muted);box-shadow:var(--shadow-active)}
+.turn-card:hover{border-color:var(--color-primary);background:var(--color-hover);transform:translateY(-1px)}
 .turn-card span{color:var(--color-faint);font-size:12px}
 .turn-card p{margin:0;color:var(--color-muted);line-height:1.5}
 .turn-detail,.turn-empty{display:grid;gap:14px}
 .detail-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
-.detail-block{display:grid;gap:10px;padding:14px;border:1px solid #d7eeea;border-radius:var(--radius);background:#fff}
+.detail-block{display:grid;gap:10px;padding:14px;border:1px solid var(--color-border-soft);border-radius:var(--radius);background:var(--color-surface)}
 .detail-block p,.turn-empty p{margin:0;color:var(--color-muted);line-height:1.65}
 .token-row{display:flex;gap:8px;flex-wrap:wrap}
-.token{display:inline-flex;padding:5px 9px;border-radius:var(--radius);background:#ccfbf1;color:#115e59;font-size:12px;font-weight:700}
-.token.muted{background:#eef6f4;color:var(--color-faint)}
-.reply-card{display:grid;gap:4px;padding:12px;border:1px solid #d7eeea;border-radius:var(--radius);background:#fff}
+.token{display:inline-flex;padding:5px 9px;border-radius:var(--radius);background:var(--color-token-bg);color:var(--color-token-text);font-size:12px;font-weight:700}
+.token.muted{background:var(--color-token-muted-bg);color:var(--color-faint)}
+.reply-card{display:grid;gap:4px;padding:12px;border:1px solid var(--color-border-soft);border-radius:var(--radius);background:var(--color-surface)}
 .reply-card span,.reply-card small{color:var(--color-faint)}
 .reply-card p{margin:0;color:var(--color-text)}
 .eyebrow{margin:0 0 8px;font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--color-primary-strong);font-weight:800}
-.search-input{width:min(320px,100%);min-height:44px;padding:10px 14px;border:1px solid var(--color-border);border-radius:var(--radius);outline:none;color:var(--color-text);background:#fff;font:inherit}
-.search-input:focus{border-color:var(--color-primary);box-shadow:0 0 0 4px rgba(13,148,136,.12)}
+.search-input{width:min(320px,100%);min-height:44px;padding:10px 14px;border:1px solid var(--color-border);border-radius:var(--radius);outline:none;color:var(--color-text);background:var(--color-input);font:inherit}
+.search-input:focus{border-color:var(--color-primary);box-shadow:0 0 0 4px var(--color-focus-ring)}
 .primary-button,.secondary-button{appearance:none;border:0;cursor:pointer;min-height:44px;padding:0 16px;border-radius:var(--radius);font-weight:800;transition:background 180ms var(--ease),border-color 180ms var(--ease),box-shadow 180ms var(--ease)}
-.primary-button{background:var(--color-accent);color:#fff}
-.secondary-button{border:1px solid var(--color-border);background:#fff;color:var(--color-primary-strong)}
-.primary-button:hover{background:#c2410c;box-shadow:0 10px 22px rgba(234,88,12,.18)}
-.secondary-button:hover{border-color:var(--color-primary);background:#ecfdf5}
+.primary-button{background:var(--color-accent);color:var(--color-on-accent)}
+.secondary-button{border:1px solid var(--color-border);background:var(--color-input);color:var(--color-primary-strong)}
+.primary-button:hover{background:var(--color-accent-hover);box-shadow:var(--shadow-accent)}
+.secondary-button:hover{border-color:var(--color-primary);background:var(--color-hover)}
 .status{display:inline-flex;align-items:center;min-height:44px;padding:10px 14px;border-radius:var(--radius);line-height:1.5}
-.status.success{color:#166534;background:#dcfce7;border:1px solid #bbf7d0}
-.status.error{color:#991b1b;background:#fee2e2;border:1px solid #fecaca}
+.status.success{color:var(--color-success-text);background:var(--color-success-bg);border:1px solid var(--color-success-border)}
+.status.error{color:var(--color-danger-text);background:var(--color-danger-bg);border:1px solid var(--color-danger-border)}
 h3,h4,p{margin:0}
-h3{font-size:clamp(28px,4vw,38px);line-height:1.05;color:#102f2d}
-h4{font-size:18px;line-height:1.1;color:#173f3b}
-@media (max-width:980px){.replay-layout,.sandbox-layout{grid-template-columns:1fr}.detail-grid{grid-template-columns:1fr}}
+h3{font-size:clamp(28px,4vw,38px);line-height:1.05;color:var(--color-heading)}
+h4{font-size:18px;line-height:1.1;color:var(--color-heading-soft)}
+.debug-panel,.turn-card,.detail-block,.reply-card,.backend-pill{overflow-wrap:anywhere}
+@media (max-width:980px){.replay-layout,.sandbox-layout{grid-template-columns:1fr}.detail-grid{grid-template-columns:1fr}.debug-toolbar,.search-input{width:100%}}
+@media (prefers-reduced-motion:reduce){.turn-card,.primary-button,.secondary-button{transition:none}.turn-card:hover{transform:none}}
 </style>

@@ -3,6 +3,7 @@ import AgentDirectorPanel from './AgentDirectorPanel.vue'
 import SessionDebugPanel from './SessionDebugPanel.vue'
 import StoryGeneratorPanel from './StoryGeneratorPanel.vue'
 import StoryGraphCanvas from './StoryGraphCanvas.vue'
+import { useUiI18n } from '../i18n'
 import type {
   AgentCatalogResponse,
   SavedSandboxPlan,
@@ -61,6 +62,7 @@ const emit = defineEmits<{
   resetSandboxPlans: []
 }>()
 
+const { t } = useUiI18n()
 const storySearch = ref('')
 const selectedNodeId = ref('')
 
@@ -117,6 +119,27 @@ function affinityToInput(value: Record<string, number>) {
   return Object.entries(value).map(([key, amount]) => `${key}:${amount}`).join(', ')
 }
 
+function displayCode(value: string) {
+  switch (value) {
+    case 'pivot':
+      return t('codePivot')
+    case 'medium':
+      return t('codeMedium')
+    case 'low':
+      return t('codeLow')
+    case 'high':
+      return t('codeHigh')
+    case 'volatile':
+      return t('codeVolatile')
+    case 'stable':
+      return t('codeStable')
+    case 'calm':
+      return t('codeCalm')
+    default:
+      return value
+  }
+}
+
 function slugifySegment(value: string) {
   const normalized = value
     .toLowerCase()
@@ -128,26 +151,26 @@ function slugifySegment(value: string) {
 function buildSandboxNarrative(plan: SavedSandboxPlan, stepIndex: number) {
   const step = plan.steps[stepIndex]
   const lines = [
-    step.consequenceSummary || `${step.label} reshapes the Agent session.`,
-    `Intent: ${step.intent}`,
-    `Risk: ${step.risk}`,
-    `Mood: ${step.targetMood}`
+    step.consequenceSummary || t('branchFallbackSummary'),
+    `${t('labelIntent')}: ${displayCode(step.intent)}`,
+    `${t('labelRisk')}: ${displayCode(step.risk)}`,
+    `${t('labelMood')}: ${displayCode(step.targetMood)}`
   ]
 
   if (step.targetAgentId) {
-    lines.push(`Focus agent: ${step.targetAgentId}`)
+    lines.push(`${t('labelFocus')}: ${step.targetAgentId}`)
   }
   if (step.addedFlags.length) {
-    lines.push(`Adds flags: ${step.addedFlags.join(', ')}`)
+    lines.push(`${t('labelFlagsToAdd')}: ${step.addedFlags.join(', ')}`)
   }
   if (step.removedFlags.length) {
-    lines.push(`Review removed flags manually: ${step.removedFlags.join(', ')}`)
+    lines.push(`${t('labelBlockedFlags')}: ${step.removedFlags.join(', ')}`)
   }
 
-  return `${plan.title} / Step ${stepIndex + 1}\n${lines.join('\n')}`
+  return `${t('sandboxStepNarrative', { title: plan.title, step: stepIndex + 1 })}\n${lines.join('\n')}`
 }
 
-function updateSelectedNode(mutator: (node: StoryNodeView) => void, status = '任务流草稿已保存到本地。') {
+function updateSelectedNode(mutator: (node: StoryNodeView) => void, status = t('flowDraftSaved')) {
   if (!props.draft || !selectedNode.value) return
   const node = props.draft.nodes.find(item => item.id === selectedNode.value?.id)
   if (!node) return
@@ -160,9 +183,9 @@ function createNodeDraft() {
   const newNode: StoryNodeView = {
     id: `draft.node.${props.draft.nodes.length + 1}`,
     sceneId: 'agent-hub',
-    title: 'New Flow Node',
+    title: t('defaultFlowNodeTitle'),
     speakerId: 'narrator',
-    narrative: 'Describe what this Agent workspace should do.',
+    narrative: t('defaultFlowNodeNarrative'),
     tags: ['draft'],
     enterFlags: [],
     enterAffinityChanges: {},
@@ -170,26 +193,26 @@ function createNodeDraft() {
   }
   props.draft.nodes.unshift(newNode)
   selectedNodeId.value = newNode.id
-  emit('persistDraft', '已创建新的任务流节点。')
+  emit('persistDraft', t('statusNewFlowNode'))
 }
 
 function duplicateSelectedNode() {
   if (!props.draft || !selectedNode.value) return
   const duplicate = JSON.parse(JSON.stringify(selectedNode.value)) as StoryNodeView
   duplicate.id = `${selectedNode.value.id}-copy-${Date.now()}`
-  duplicate.title = `${selectedNode.value.title} Copy`
+  duplicate.title = `${selectedNode.value.title} ${t('copiedSuffix')}`
   duplicate.tags = Array.from(new Set([...duplicate.tags, 'draft']))
   props.draft.nodes.unshift(duplicate)
   selectedNodeId.value = duplicate.id
-  emit('persistDraft', '已复制当前任务流节点。')
+  emit('persistDraft', t('statusDuplicatedFlowNode'))
 }
 
 function addChoiceToSelectedNode() {
   updateSelectedNode((node) => {
     node.choices.push({
       id: `choice-${Date.now()}`,
-      label: 'New Action',
-      description: 'Describe what this next action does.',
+      label: t('defaultActionLabel'),
+      description: t('defaultActionDescription'),
       targetNodeId: node.id,
       requiredFlags: [],
       blockedFlags: [],
@@ -198,13 +221,13 @@ function addChoiceToSelectedNode() {
       flagsToAdd: [],
       affinityChanges: {}
     })
-  }, '已添加新的下一步动作。')
+  }, t('statusNewAction'))
 }
 
 function removeChoice(choiceId: string) {
   updateSelectedNode((node) => {
     node.choices = node.choices.filter(choice => choice.id !== choiceId)
-  }, '已移除下一步动作。')
+  }, t('statusRemovedAction'))
 }
 
 function updateNodeField(field: keyof StoryNodeView, value: string) {
@@ -274,7 +297,7 @@ function importSandboxPlan(planId: string) {
       choices: nextStep ? [{
         id: `${nodeId}.choice.next`,
         label: nextStep.label,
-        description: nextStep.consequenceSummary || `Continue into ${nextStep.label}.`,
+        description: nextStep.consequenceSummary || t('sandboxContinueDescription', { label: nextStep.label }),
         targetNodeId: nextNodeId,
         requiredFlags: [],
         blockedFlags: [],
@@ -289,7 +312,7 @@ function importSandboxPlan(planId: string) {
   selectedNode.value.choices.push({
     id: `choice-sandbox-import-${timestamp}`,
     label: plan.steps[0].label,
-    description: `Imported sandbox route: ${plan.summary || plan.title}`,
+    description: t('sandboxImportedRoute', { summary: plan.summary || plan.title }),
     targetNodeId: importedNodes[0].id,
     requiredFlags: [],
     blockedFlags: [],
@@ -301,7 +324,7 @@ function importSandboxPlan(planId: string) {
 
   props.draft.nodes.unshift(...importedNodes)
   selectedNodeId.value = importedNodes[0].id
-  emit('persistDraft', `已将沙盘链导入为 ${importedNodes.length} 个候选任务流节点。`)
+  emit('persistDraft', t('statusSandboxImported', { count: importedNodes.length }))
 }
 </script>
 
@@ -310,16 +333,16 @@ function importSandboxPlan(planId: string) {
     <aside class="editor-sidebar">
       <div class="editor-sidebar-head">
         <div>
-          <p class="eyebrow">Task Flow</p>
-          <h2>Flow Studio</h2>
+          <p class="eyebrow">{{ t('studioTaskFlow') }}</p>
+          <h2>{{ t('studioTitle') }}</h2>
         </div>
-        <button class="primary-button" type="button" @click="createNodeDraft">New Flow Node</button>
+        <button class="primary-button" type="button" @click="createNodeDraft">{{ t('actionNewFlowNode') }}</button>
       </div>
 
       <div class="editor-toolbar">
-        <input v-model="storySearch" class="search-input" type="text" placeholder="Search node / workspace / tag">
+        <input v-model="storySearch" class="search-input" type="text" :placeholder="t('labelFlowSearchPlaceholder')">
         <button class="secondary-button" type="button" :disabled="isLoadingStory" @click="emit('loadStory')">
-          {{ isLoadingStory ? 'Loading...' : 'Refresh From Backend' }}
+          {{ isLoadingStory ? t('actionLoading') : t('actionRefreshBackend') }}
         </button>
       </div>
 
@@ -343,7 +366,7 @@ function importSandboxPlan(planId: string) {
           <p>{{ node.id }}</p>
           <div class="node-card-meta">
             <span>{{ node.speakerId }}</span>
-            <span>{{ node.choices.length }} actions</span>
+            <span>{{ t('labelActionsCount', { count: node.choices.length }) }}</span>
           </div>
         </button>
       </div>
@@ -377,46 +400,46 @@ function importSandboxPlan(planId: string) {
         <section class="editor-panel">
           <div class="panel-head">
             <div>
-              <p class="eyebrow">Flow Node Inspector</p>
+              <p class="eyebrow">{{ t('labelFlowNodeInspector') }}</p>
               <h3>{{ selectedNode.title }}</h3>
             </div>
             <div class="inline-actions">
-              <button class="secondary-button" type="button" @click="duplicateSelectedNode">Duplicate</button>
-              <button class="secondary-button" type="button" @click="addChoiceToSelectedNode">Add Action</button>
+              <button class="secondary-button" type="button" @click="duplicateSelectedNode">{{ t('actionDuplicate') }}</button>
+              <button class="secondary-button" type="button" @click="addChoiceToSelectedNode">{{ t('actionAddAction') }}</button>
             </div>
           </div>
 
           <div class="editor-fields">
             <label class="field wide">
-              <span>Node Title</span>
+              <span>{{ t('labelNodeTitle') }}</span>
               <input :value="selectedNode.title" type="text" @input="updateNodeField('title', ($event.target as HTMLInputElement).value)">
             </label>
             <label class="field">
-              <span>Node ID</span>
+              <span>{{ t('labelNodeId') }}</span>
               <input :value="selectedNode.id" type="text" @input="updateNodeField('id', ($event.target as HTMLInputElement).value)">
             </label>
             <label class="field">
-              <span>Workspace</span>
+              <span>{{ t('labelWorkspace') }}</span>
               <input :value="selectedNode.sceneId" type="text" @input="updateNodeField('sceneId', ($event.target as HTMLInputElement).value)">
             </label>
             <label class="field">
-              <span>Speaker</span>
+              <span>{{ t('labelSpeaker') }}</span>
               <input :value="selectedNode.speakerId" type="text" @input="updateNodeField('speakerId', ($event.target as HTMLInputElement).value)">
             </label>
             <label class="field">
-              <span>Tags</span>
-              <input :value="listToInput(selectedNode.tags)" type="text" placeholder="hub, interview, knowledge" @input="updateNodeField('tags', ($event.target as HTMLInputElement).value)">
+              <span>{{ t('labelTags') }}</span>
+              <input :value="listToInput(selectedNode.tags)" type="text" :placeholder="t('placeholderTags')" @input="updateNodeField('tags', ($event.target as HTMLInputElement).value)">
             </label>
             <label class="field">
-              <span>Enter Flags</span>
-              <input :value="listToInput(selectedNode.enterFlags)" type="text" placeholder="mode-interview, mode-knowledge" @input="updateNodeField('enterFlags', ($event.target as HTMLInputElement).value)">
+              <span>{{ t('labelEnterFlags') }}</span>
+              <input :value="listToInput(selectedNode.enterFlags)" type="text" :placeholder="t('placeholderFlags')" @input="updateNodeField('enterFlags', ($event.target as HTMLInputElement).value)">
             </label>
             <label class="field">
-              <span>Enter Affinity</span>
+              <span>{{ t('labelEnterAffinity') }}</span>
               <input :value="affinityToInput(selectedNode.enterAffinityChanges)" type="text" placeholder="java-rag-interviewer:1" @input="updateNodeField('enterAffinityChanges', ($event.target as HTMLInputElement).value)">
             </label>
             <label class="field wide">
-              <span>Narrative</span>
+              <span>{{ t('labelNarrative') }}</span>
               <textarea class="editor-textarea" rows="6" :value="selectedNode.narrative" @input="updateNodeField('narrative', ($event.target as HTMLTextAreaElement).value)" />
             </label>
           </div>
@@ -425,21 +448,21 @@ function importSandboxPlan(planId: string) {
         <section class="editor-panel">
           <div class="panel-head">
             <div>
-              <p class="eyebrow">Flow Preview</p>
-              <h3>Outgoing Actions</h3>
+              <p class="eyebrow">{{ t('labelFlowPreview') }}</p>
+              <h3>{{ t('labelOutgoingActions') }}</h3>
             </div>
-            <span class="metric-pill">{{ selectedNode.choices.length }} actions</span>
+            <span class="metric-pill">{{ t('labelActionsCount', { count: selectedNode.choices.length }) }}</span>
           </div>
 
           <div class="flow-list">
             <article v-for="choice in selectedNode.choices" :key="choice.id" class="flow-card">
               <div class="flow-card-top">
                 <strong>{{ choice.label }}</strong>
-                <button class="text-button" type="button" @click="removeChoice(choice.id)">Remove</button>
+                <button class="text-button" type="button" @click="removeChoice(choice.id)">{{ t('actionRemove') }}</button>
               </div>
               <p>{{ choice.description }}</p>
               <div class="flow-target">
-                <span>Targets</span>
+                <span>{{ t('labelTargets') }}</span>
                 <strong>{{ choice.targetNodeId }}</strong>
               </div>
             </article>
@@ -449,51 +472,51 @@ function importSandboxPlan(planId: string) {
         <section class="editor-panel editor-panel-wide">
           <div class="panel-head">
             <div>
-              <p class="eyebrow">Action Editor</p>
-              <h3>Conditions And Routing</h3>
+              <p class="eyebrow">{{ t('labelActionEditor') }}</p>
+              <h3>{{ t('labelConditionsRouting') }}</h3>
             </div>
           </div>
 
           <div v-for="choice in selectedNode.choices" :key="choice.id" class="choice-editor">
             <div class="editor-fields">
               <label class="field">
-                <span>Action ID</span>
+                <span>{{ t('labelActionId') }}</span>
                 <input :value="choice.id" type="text" @input="updateChoiceField(choice.id, 'id', ($event.target as HTMLInputElement).value)">
               </label>
               <label class="field">
-                <span>Label</span>
+                <span>{{ t('labelLabel') }}</span>
                 <input :value="choice.label" type="text" @input="updateChoiceField(choice.id, 'label', ($event.target as HTMLInputElement).value)">
               </label>
               <label class="field wide">
-                <span>Description</span>
+                <span>{{ t('labelDescription') }}</span>
                 <input :value="choice.description" type="text" @input="updateChoiceField(choice.id, 'description', ($event.target as HTMLInputElement).value)">
               </label>
               <label class="field">
-                <span>Target Node</span>
+                <span>{{ t('labelTargetNode') }}</span>
                 <input :value="choice.targetNodeId" type="text" @input="updateChoiceField(choice.id, 'targetNodeId', ($event.target as HTMLInputElement).value)">
               </label>
               <label class="field">
-                <span>Keywords</span>
-                <input :value="listToInput(choice.keywords)" type="text" placeholder="java, rag, project, writing" @input="updateChoiceField(choice.id, 'keywords', ($event.target as HTMLInputElement).value)">
+                <span>{{ t('labelKeywords') }}</span>
+                <input :value="listToInput(choice.keywords)" type="text" :placeholder="t('placeholderActionKeywords')" @input="updateChoiceField(choice.id, 'keywords', ($event.target as HTMLInputElement).value)">
               </label>
               <label class="field">
-                <span>Required Flags</span>
-                <input :value="listToInput(choice.requiredFlags)" type="text" placeholder="mode-interview, mode-knowledge" @input="updateChoiceField(choice.id, 'requiredFlags', ($event.target as HTMLInputElement).value)">
+                <span>{{ t('labelRequiredFlags') }}</span>
+                <input :value="listToInput(choice.requiredFlags)" type="text" :placeholder="t('placeholderFlags')" @input="updateChoiceField(choice.id, 'requiredFlags', ($event.target as HTMLInputElement).value)">
               </label>
               <label class="field">
-                <span>Blocked Flags</span>
-                <input :value="listToInput(choice.blockedFlags)" type="text" placeholder="needs-reroute" @input="updateChoiceField(choice.id, 'blockedFlags', ($event.target as HTMLInputElement).value)">
+                <span>{{ t('labelBlockedFlags') }}</span>
+                <input :value="listToInput(choice.blockedFlags)" type="text" :placeholder="t('placeholderBlockedFlags')" @input="updateChoiceField(choice.id, 'blockedFlags', ($event.target as HTMLInputElement).value)">
               </label>
               <label class="field">
-                <span>Minimum Affinity</span>
+                <span>{{ t('labelMinimumAffinity') }}</span>
                 <input :value="affinityToInput(choice.minimumAffinity)" type="text" placeholder="java-rag-interviewer:2, narrator:0" @input="updateChoiceField(choice.id, 'minimumAffinity', ($event.target as HTMLInputElement).value)">
               </label>
               <label class="field">
-                <span>Flags To Add</span>
-                <input :value="listToInput(choice.flagsToAdd)" type="text" placeholder="mode-interview, reusable-flow" @input="updateChoiceField(choice.id, 'flagsToAdd', ($event.target as HTMLInputElement).value)">
+                <span>{{ t('labelFlagsToAdd') }}</span>
+                <input :value="listToInput(choice.flagsToAdd)" type="text" :placeholder="t('placeholderFlagsToAdd')" @input="updateChoiceField(choice.id, 'flagsToAdd', ($event.target as HTMLInputElement).value)">
               </label>
               <label class="field">
-                <span>Affinity Changes</span>
+                <span>{{ t('labelAffinityChanges') }}</span>
                 <input :value="affinityToInput(choice.affinityChanges)" type="text" placeholder="knowledge-curator:1" @input="updateChoiceField(choice.id, 'affinityChanges', ($event.target as HTMLInputElement).value)">
               </label>
             </div>
@@ -502,7 +525,7 @@ function importSandboxPlan(planId: string) {
       </div>
 
       <div v-else class="empty-state">
-        <p>No editable flow node is loaded yet. Load from backend or create a draft node first.</p>
+        <p>{{ t('emptyNoFlowNode') }}</p>
       </div>
 
       <AgentDirectorPanel
@@ -539,33 +562,33 @@ function importSandboxPlan(planId: string) {
 
     <aside class="editor-inspector">
       <div class="editor-panel compact">
-        <p class="eyebrow">Flow Draft Status</p>
+        <p class="eyebrow">{{ t('labelFlowDraftStatus') }}</p>
         <div class="metric-grid">
-          <div><span>Nodes</span><strong>{{ draft?.nodes.length || 0 }}</strong></div>
-          <div><span>Entry</span><strong>{{ draft?.entryNodeId || '-' }}</strong></div>
-          <div><span>Tags</span><strong>{{ allTags.length }}</strong></div>
-          <div><span>Backend</span><strong>{{ backendUrl || 'Not set' }}</strong></div>
+          <div><span>{{ t('labelNodes') }}</span><strong>{{ draft?.nodes.length || 0 }}</strong></div>
+          <div><span>{{ t('labelEntry') }}</span><strong>{{ draft?.entryNodeId || '-' }}</strong></div>
+          <div><span>{{ t('labelTags') }}</span><strong>{{ allTags.length }}</strong></div>
+          <div><span>{{ t('labelBackendShort') }}</span><strong>{{ backendUrl || t('fieldNotConfigured') }}</strong></div>
         </div>
       </div>
 
       <div class="editor-panel compact">
-        <p class="eyebrow">Draft Actions</p>
+        <p class="eyebrow">{{ t('labelDraftActions') }}</p>
         <div class="stack-actions">
-          <button class="primary-button" type="button" @click="emit('persistDraft', 'Flow draft saved manually.')">Save Draft</button>
+          <button class="primary-button" type="button" @click="emit('persistDraft', t('statusManualFlowSaved'))">{{ t('actionSaveDraft') }}</button>
           <button class="primary-button" type="button" :disabled="isSavingStory || !draft" @click="emit('publishDraft')">
-            {{ isSavingStory ? 'Saving...' : 'Publish To Backend' }}
+            {{ isSavingStory ? t('actionSaving') : t('actionPublishBackend') }}
           </button>
-          <button class="secondary-button" type="button" @click="emit('exportDraft')">Copy JSON</button>
-          <button class="secondary-button" type="button" @click="emit('resetDraft')">Clear Local Draft</button>
+          <button class="secondary-button" type="button" @click="emit('exportDraft')">{{ t('actionCopyJson') }}</button>
+          <button class="secondary-button" type="button" @click="emit('resetDraft')">{{ t('actionClearLocalDraft') }}</button>
         </div>
       </div>
 
       <div class="editor-panel compact">
-        <p class="eyebrow">Container Notes</p>
+        <p class="eyebrow">{{ t('labelContainerNotes') }}</p>
         <div class="notes-list">
-          <p>Nodes carry workspace context. Actions carry routing, flag conditions, and Agent affinity changes.</p>
-          <p>The studio is draft-first. Use it to reshape reusable task flows before publishing them to the backend.</p>
-          <p>Sandbox imports become candidate flow chains. Review removed flags and side effects manually before publishing.</p>
+          <p>{{ t('noteNodes') }}</p>
+          <p>{{ t('noteDraftFirst') }}</p>
+          <p>{{ t('noteSandboxImport') }}</p>
         </div>
       </div>
 
@@ -581,46 +604,46 @@ function importSandboxPlan(planId: string) {
 
 <style scoped>
 .editor-view{display:grid;grid-template-columns:320px minmax(0,1fr) 300px;gap:18px}
-.editor-sidebar,.editor-inspector,.editor-panel{border:1px solid var(--color-border);background:rgba(255,255,255,.9);box-shadow:var(--shadow-card)}
+.editor-sidebar,.editor-inspector,.editor-panel{border:1px solid var(--color-border);background:var(--color-surface-panel);box-shadow:var(--shadow-card)}
 .editor-sidebar,.editor-inspector{display:grid;align-content:start;gap:20px;padding:20px;border-radius:var(--radius)}
 .editor-main,.editor-main-grid,.editor-toolbar,.node-list,.editor-fields,.flow-list,.notes-list,.stack-actions{display:grid;gap:12px}
 .editor-panel{padding:20px;border-radius:var(--radius)}
-.editor-panel.compact{background:#f7fffd;border-radius:var(--radius)}
+.editor-panel.compact{background:var(--color-bg-soft);border-radius:var(--radius)}
 .editor-panel-wide{grid-column:1/-1}
 .editor-sidebar-head,.panel-head,.inline-actions,.node-card-top,.node-card-meta,.flow-card-top,.flow-target{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}
 .eyebrow{margin:0 0 8px;font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--color-primary-strong);font-weight:800}
 h2,h3,p{margin:0}
-h2{font-size:clamp(28px,4vw,40px);line-height:1.05;color:#102f2d}
-h3{color:#173f3b}
-.search-input,.field input,.editor-textarea{width:100%;min-height:44px;padding:10px 14px;border:1px solid var(--color-border);border-radius:var(--radius);outline:none;color:var(--color-text);background:#fff;font:inherit}
+h2{font-size:clamp(28px,4vw,40px);line-height:1.05;color:var(--color-heading)}
+h3{color:var(--color-heading-soft)}
+.search-input,.field input,.editor-textarea{width:100%;min-height:44px;padding:10px 14px;border:1px solid var(--color-border);border-radius:var(--radius);outline:none;color:var(--color-text);background:var(--color-input);font:inherit}
 .editor-textarea{resize:vertical;min-height:124px}
-.search-input:focus,.field input:focus,.editor-textarea:focus{border-color:var(--color-primary);box-shadow:0 0 0 4px rgba(13,148,136,.12)}
+.search-input:focus,.field input:focus,.editor-textarea:focus{border-color:var(--color-primary);box-shadow:0 0 0 4px var(--color-focus-ring)}
 .field{display:grid;gap:10px}
 .field.wide{grid-column:1/-1}
 .field span{font-size:14px;color:var(--color-text);font-weight:700}
 .tag-cloud,.token-row{display:flex;flex-wrap:wrap;gap:8px}
-.token{padding:5px 10px;border-radius:var(--radius);background:#eef6f4;color:var(--color-faint);font-size:13px;cursor:pointer}
+.token{padding:5px 10px;border-radius:var(--radius);background:var(--color-token-muted-bg);color:var(--color-faint);font-size:13px;cursor:pointer}
 .node-list{max-height:calc(100vh - 340px);overflow:auto;padding-right:4px}
-.node-card{appearance:none;border:1px solid #d7eeea;border-radius:var(--radius);padding:14px;background:#fff;color:var(--color-text);text-align:left;cursor:pointer;transition:background 180ms var(--ease),border-color 180ms var(--ease),box-shadow 180ms var(--ease)}
-.node-card.active{border-color:var(--color-primary);background:#ecfdf5;box-shadow:0 8px 18px rgba(13,148,136,.1)}
+.node-card{appearance:none;border:1px solid var(--color-border-soft);border-radius:var(--radius);padding:14px;background:var(--color-surface);color:var(--color-text);text-align:left;cursor:pointer;transition:background 180ms var(--ease),border-color 180ms var(--ease),box-shadow 180ms var(--ease)}
+.node-card.active{border-color:var(--color-primary);background:var(--color-surface-muted);box-shadow:var(--shadow-active)}
 .node-card p,.node-card-meta span{color:var(--color-faint);font-size:13px}
-.flow-card,.choice-editor{display:grid;gap:10px;padding:14px;border:1px solid #d7eeea;border-radius:var(--radius);background:#fff}
+.flow-card,.choice-editor{display:grid;gap:10px;padding:14px;border:1px solid var(--color-border-soft);border-radius:var(--radius);background:var(--color-surface)}
 .flow-card p,.notes-list p{color:var(--color-muted);line-height:1.65}
 .metric-grid{display:grid;gap:14px}
 .metric-grid div{display:flex;justify-content:space-between;gap:12px;color:var(--color-text)}
 .metric-grid span,.flow-target span{color:var(--color-faint)}
-.metric-pill{padding:5px 10px;border-radius:var(--radius);background:#fff7ed;color:#9a3412;font-size:12px;font-weight:800}
+.metric-pill{padding:5px 10px;border-radius:var(--radius);background:var(--color-warning-bg);color:var(--color-warning-text);font-size:12px;font-weight:800}
 .primary-button,.secondary-button,.text-button{appearance:none;border:0;cursor:pointer;transition:background 180ms var(--ease),border-color 180ms var(--ease),box-shadow 180ms var(--ease)}
 .primary-button,.secondary-button{min-height:44px;padding:0 16px;border-radius:var(--radius);font-weight:800}
-.primary-button{background:var(--color-accent);color:#fff}
-.secondary-button{border:1px solid var(--color-border);background:#fff;color:var(--color-primary-strong)}
-.text-button{min-height:44px;padding:0;background:transparent;color:#b91c1c;font-weight:800}
-.primary-button:hover{background:#c2410c;box-shadow:0 10px 22px rgba(234,88,12,.18)}
-.secondary-button:hover,.node-card:hover{border-color:var(--color-primary);background:#ecfdf5}
-.empty-state{display:grid;place-items:center;min-height:60vh;border:1px dashed var(--color-border);border-radius:var(--radius);color:var(--color-faint);background:#fff}
+.primary-button{background:var(--color-accent);color:var(--color-on-accent)}
+.secondary-button{border:1px solid var(--color-border);background:var(--color-input);color:var(--color-primary-strong)}
+.text-button{min-height:44px;padding:0;background:transparent;color:var(--color-danger-action);font-weight:800}
+.primary-button:hover{background:var(--color-accent-hover);box-shadow:var(--shadow-accent)}
+.secondary-button:hover,.node-card:hover{border-color:var(--color-primary);background:var(--color-hover)}
+.empty-state{display:grid;place-items:center;min-height:60vh;border:1px dashed var(--color-border);border-radius:var(--radius);color:var(--color-faint);background:var(--color-surface)}
 .status{display:inline-flex;align-items:center;min-height:44px;padding:10px 14px;border-radius:var(--radius);line-height:1.5}
-.status.success{color:#166534;background:#dcfce7;border:1px solid #bbf7d0}
-.status.error{color:#991b1b;background:#fee2e2;border:1px solid #fecaca}
+.status.success{color:var(--color-success-text);background:var(--color-success-bg);border:1px solid var(--color-success-border)}
+.status.error{color:var(--color-danger-text);background:var(--color-danger-bg);border:1px solid var(--color-danger-border)}
 @media (max-width:1200px){.editor-view{grid-template-columns:1fr}.node-list{max-height:none}}
 @media (max-width:960px){.editor-fields{grid-template-columns:1fr}}
 </style>

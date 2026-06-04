@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { localeOptions, useUiI18n } from '../i18n'
 import type { ApiSettings } from '../types/game'
 
 defineProps<{
@@ -10,78 +11,120 @@ const emit = defineEmits<{
   persist: []
   reset: []
 }>()
+
+const { t } = useUiI18n()
+const themeOptions: ApiSettings['theme'][] = ['light', 'dark']
 </script>
 
 <template>
   <section class="settings-view">
     <div class="settings-hero">
-      <p class="eyebrow">API 接入</p>
-      <h2>设置页</h2>
-      <p>这里统一管理 Agent 容器后端与上游模型接口配置。对话页和 Agent Studio 都会复用这一组设置。</p>
+      <p class="eyebrow">{{ t('settingsEyebrow') }}</p>
+      <h2>{{ t('settingsTitle') }}</h2>
+      <p>{{ t('settingsIntro') }}</p>
     </div>
 
     <div class="settings-grid">
       <label class="field">
-        <span>容器后端地址</span>
+        <span>{{ t('settingsLanguage') }}</span>
+        <select v-model="settings.locale">
+          <option v-for="option in localeOptions" :key="option.code" :value="option.code">
+            {{ option.code === 'zh-CN' ? t('localeChinese') : t('localeEnglish') }}
+          </option>
+        </select>
+        <small>{{ t('settingsLanguageHelp') }}</small>
+      </label>
+
+      <div class="field theme-field">
+        <span>{{ t('settingsTheme') }}</span>
+        <div class="theme-toggle" role="radiogroup" :aria-label="t('settingsTheme')">
+          <label
+            v-for="theme in themeOptions"
+            :key="theme"
+            class="theme-option"
+            :class="{ active: settings.theme === theme }"
+          >
+            <input v-model="settings.theme" type="radio" name="theme" :value="theme">
+            <span class="theme-swatch" :class="theme"></span>
+            <strong>{{ theme === 'light' ? t('themeLight') : t('themeDark') }}</strong>
+          </label>
+        </div>
+        <small>{{ t('settingsThemeHelp') }}</small>
+      </div>
+
+      <label class="field">
+        <span>{{ t('settingsBackendUrl') }}</span>
         <input v-model="settings.backendUrl" type="url" placeholder="http://localhost:8080">
-        <small>用于请求 `/agent/next`、`/agent/story` 与 `/agent/agents`。</small>
+        <small>{{ t('settingsBackendHelp') }}</small>
       </label>
 
       <label class="field">
-        <span>上游 API Base URL</span>
+        <span>{{ t('settingsProviderUrl') }}</span>
         <input v-model="settings.providerUrl" type="url" placeholder="https://api.openai.com/v1">
-        <small>预留给真实 LLM 接入，当前通过请求头透传。</small>
+        <small>{{ t('settingsProviderHelp') }}</small>
       </label>
 
       <label class="field">
-        <span>API Key</span>
+        <span>{{ t('settingsApiKey') }}</span>
         <input v-model="settings.apiKey" type="password" placeholder="sk-...">
-        <small>本地持久化，请求时附带 `Authorization` 与 `X-API-Key`。</small>
+        <small>{{ t('settingsApiKeyHelp') }}</small>
       </label>
 
       <label class="field">
-        <span>模型名</span>
+        <span>{{ t('settingsModel') }}</span>
         <input v-model="settings.model" type="text" placeholder="gpt-4.1-mini">
-        <small>后端会把这一项透传给 OpenAI-compatible chat completions 接口。</small>
+        <small>{{ t('settingsModelHelp') }}</small>
       </label>
     </div>
 
     <div class="settings-actions">
-      <button class="primary-button" type="button" @click="emit('persist')">保存设置</button>
-      <button class="secondary-button" type="button" @click="emit('reset')">恢复默认</button>
+      <button class="primary-button" type="button" @click="emit('persist')">{{ t('actionSaveSettings') }}</button>
+      <button class="secondary-button" type="button" @click="emit('reset')">{{ t('actionResetDefault') }}</button>
       <span v-if="saveStatus" class="status success">{{ saveStatus }}</span>
     </div>
 
     <div class="settings-note">
-      <h3>当前接线方式</h3>
-      <p>对话请求走 Spring Boot `/agent/next`，旧的 `/game/next` 仍保留兼容。</p>
-      <p>Agent Studio 从 `/agent/story` 与 `/agent/agents` 读取任务流和 Agent 目录，进入本地草稿编辑模式。</p>
+      <h3>{{ t('settingsWiring') }}</h3>
+      <p>{{ t('settingsWiringChat') }}</p>
+      <p>{{ t('settingsWiringStudio') }}</p>
     </div>
   </section>
 </template>
 
 <style scoped>
-.settings-view{display:grid;gap:24px;align-content:start;padding:24px;border:1px solid var(--color-border);border-radius:var(--radius);background:rgba(255,255,255,.9);box-shadow:var(--shadow-card)}
+.settings-view{display:grid;gap:24px;align-content:start;padding:24px;border:1px solid var(--color-border);border-radius:var(--radius);background:var(--color-surface-panel);box-shadow:var(--shadow-card)}
 .settings-hero,.settings-note{display:grid;gap:12px}
 .eyebrow{margin:0 0 8px;font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--color-primary-strong);font-weight:800}
 h2,h3,p{margin:0}
-h2{font-size:clamp(28px,4vw,40px);line-height:1.05;color:#102f2d}
+h2{font-size:clamp(28px,4vw,40px);line-height:1.05;color:var(--color-heading)}
 .settings-hero p:last-child,.settings-note p{color:var(--color-muted);line-height:1.65}
 .settings-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
 .field{display:grid;gap:10px}
 .field span{font-size:14px;color:var(--color-text);font-weight:700}
-.field input{width:100%;min-height:44px;padding:10px 14px;border:1px solid var(--color-border);border-radius:var(--radius);outline:none;color:var(--color-text);background:#fff;font:inherit}
-.field input:focus{border-color:var(--color-primary);box-shadow:0 0 0 4px rgba(13,148,136,.12)}
+.field input,.field select{width:100%;min-height:44px;padding:10px 14px;border:1px solid var(--color-border);border-radius:var(--radius);outline:none;color:var(--color-text);background:var(--color-input);font:inherit}
+.field input:focus,.field select:focus{border-color:var(--color-primary);box-shadow:0 0 0 4px var(--color-focus-ring)}
 .field small{color:var(--color-faint);line-height:1.55}
+.theme-field{align-content:start}
+.theme-toggle{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:4px;border:1px solid var(--color-border);border-radius:var(--radius);background:var(--color-input)}
+.theme-option{position:relative;display:flex;align-items:center;gap:10px;min-height:44px;padding:8px 12px;border:1px solid transparent;border-radius:6px;color:var(--color-muted);cursor:pointer;transition:background 180ms var(--ease),border-color 180ms var(--ease),color 180ms var(--ease),box-shadow 180ms var(--ease)}
+.theme-option input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.theme-option.active{border-color:var(--color-primary);background:var(--color-surface-muted);color:var(--color-primary-strong);box-shadow:var(--shadow-active)}
+.theme-option:hover{background:var(--color-hover);color:var(--color-primary-strong)}
+.theme-option:has(input:focus-visible){outline:3px solid var(--color-focus-global);outline-offset:2px}
+.theme-swatch{width:22px;height:22px;flex:0 0 auto;border-radius:50%;border:1px solid var(--color-border);box-shadow:inset 0 0 0 3px var(--color-surface)}
+.theme-swatch.light{background:linear-gradient(135deg,#ffffff 0%,#ccfbf1 100%)}
+.theme-swatch.dark{background:linear-gradient(135deg,#061211 0%,#2dd4bf 100%)}
+.theme-option strong{font-size:14px}
 .settings-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .primary-button,.secondary-button{appearance:none;border:0;cursor:pointer;min-height:44px;padding:0 18px;border-radius:var(--radius);font-weight:800;transition:background 180ms var(--ease),border-color 180ms var(--ease),box-shadow 180ms var(--ease)}
-.primary-button{background:var(--color-accent);color:#fff}
-.secondary-button{border:1px solid var(--color-border);background:#fff;color:var(--color-primary-strong)}
-.primary-button:hover{background:#c2410c;box-shadow:0 10px 22px rgba(234,88,12,.18)}
-.secondary-button:hover{border-color:var(--color-primary);background:#ecfdf5}
-.settings-note{padding-top:8px;border-top:1px solid #d7eeea}
+.primary-button{background:var(--color-accent);color:var(--color-on-accent)}
+.secondary-button{border:1px solid var(--color-border);background:var(--color-input);color:var(--color-primary-strong)}
+.primary-button:hover{background:var(--color-accent-hover);box-shadow:var(--shadow-accent)}
+.secondary-button:hover{border-color:var(--color-primary);background:var(--color-hover)}
+.settings-note{padding-top:8px;border-top:1px solid var(--color-border-soft)}
 .settings-note h3{font-size:15px;color:var(--color-text)}
 .status{display:inline-flex;align-items:center;min-height:44px;padding:10px 14px;border-radius:var(--radius);line-height:1.5}
-.status.success{color:#166534;background:#dcfce7;border:1px solid #bbf7d0}
+.status.success{color:var(--color-success-text);background:var(--color-success-bg);border:1px solid var(--color-success-border)}
 @media (max-width:960px){.settings-grid{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){.theme-option,.primary-button,.secondary-button{transition:none}}
 </style>

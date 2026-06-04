@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { useUiI18n } from '../i18n'
 import type { StoryNodeView } from '../types/game'
 
 type PositionedNode = {
@@ -30,6 +31,7 @@ const emit = defineEmits<{
   selectNode: [nodeId: string]
 }>()
 
+const { t } = useUiI18n()
 const CARD_WIDTH = 220
 const CARD_HEIGHT = 110
 const COLUMN_GAP = 92
@@ -157,12 +159,12 @@ function shortLabel(value: string, length = 28) {
   <section class="graph-panel">
     <div class="graph-head">
       <div>
-        <p class="eyebrow">Canvas</p>
-        <h3>任务流画布</h3>
+        <p class="eyebrow">{{ t('labelFlowCanvas') }}</p>
+        <h3>{{ t('labelFlowCanvas') }}</h3>
       </div>
       <div class="graph-meta">
-        <span>{{ nodes.length }} 节点</span>
-        <span>{{ graph.edges.length }} 连线</span>
+        <span>{{ t('labelNodes') }} {{ nodes.length }}</span>
+        <span>{{ t('labelConnections') }} {{ graph.edges.length }}</span>
       </div>
     </div>
 
@@ -172,7 +174,7 @@ function shortLabel(value: string, length = 28) {
         :viewBox="`0 0 ${graph.canvasWidth} ${graph.canvasHeight}`"
         :style="{ minWidth: `${graph.canvasWidth}px`, minHeight: `${graph.canvasHeight}px` }"
         role="img"
-        aria-label="Agent flow canvas"
+        :aria-label="t('graphAria')"
       >
         <defs>
           <marker
@@ -184,7 +186,7 @@ function shortLabel(value: string, length = 28) {
             orient="auto"
             markerUnits="strokeWidth"
           >
-            <path d="M0,0 L0,6 L9,3 z" fill="#c5b59a" />
+            <path class="graph-arrow" d="M0,0 L0,6 L9,3 z" />
           </marker>
         </defs>
 
@@ -227,14 +229,14 @@ function shortLabel(value: string, length = 28) {
             {{ shortLabel(node.node.id, 24) }}
           </text>
           <text :x="node.x + 16" :y="node.y + 94" class="meta-text">
-            {{ node.node.choices.length }} 动作 · {{ node.node.speakerId }}
+            {{ t('labelActions') }} {{ node.node.choices.length }} · {{ node.node.speakerId }}
           </text>
         </g>
       </svg>
     </div>
 
     <p class="graph-hint">
-      点击画布节点会同步选中右侧编辑器。搜索后画布会聚焦当前筛选结果。
+      {{ t('flowCanvasHint') }}
     </p>
   </section>
 </template>
@@ -244,22 +246,24 @@ function shortLabel(value: string, length = 28) {
 .graph-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .eyebrow{margin:0 0 8px;font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--color-primary-strong);font-weight:800}
 h3,p{margin:0}
-h3{font-size:15px;color:#173f3b}
+h3{font-size:15px;color:var(--color-heading-soft)}
 .graph-meta{display:flex;gap:8px;flex-wrap:wrap}
-.graph-meta span{padding:5px 9px;border-radius:var(--radius);background:#eef6f4;color:var(--color-faint);font-size:12px;font-weight:700}
-.graph-stage{overflow:auto;padding:8px;border:1px solid #d7eeea;border-radius:var(--radius);background:#f8fffd}
+.graph-meta span{padding:5px 9px;border-radius:var(--radius);background:var(--color-token-muted-bg);color:var(--color-faint);font-size:12px;font-weight:700}
+.graph-stage{overflow:auto;padding:8px;border:1px solid var(--color-border-soft);border-radius:var(--radius);background:var(--color-graph-bg);scrollbar-gutter:stable}
 .graph-svg{display:block}
-.graph-edge{fill:none;stroke:rgba(13,148,136,.34);stroke-width:2;opacity:.82}
+.graph-arrow{fill:var(--color-graph-arrow)}
+.graph-edge{fill:none;stroke:var(--color-graph-edge);stroke-width:2;opacity:.82}
 .graph-edge.selected{stroke:var(--color-primary);stroke-width:2.6;opacity:1}
 .graph-edge.dangling{stroke-dasharray:7 7;opacity:.5}
 .graph-node{cursor:pointer}
-.graph-node rect{fill:#fff;stroke:#bfe7df;stroke-width:1.2;transition:fill 180ms var(--ease),stroke 180ms var(--ease)}
-.graph-node.selected rect{fill:#ccfbf1;stroke:var(--color-primary);stroke-width:2}
-.graph-node.entry rect{stroke:#16a34a}
-.graph-node:hover rect{fill:#ecfdf5}
+.graph-node rect{fill:var(--color-graph-node);stroke:var(--color-graph-node-border);stroke-width:1.2;transition:fill 180ms var(--ease),stroke 180ms var(--ease)}
+.graph-node.selected rect{fill:var(--color-graph-node-selected);stroke:var(--color-primary);stroke-width:2}
+.graph-node.entry rect{stroke:var(--color-graph-entry)}
+.graph-node:hover rect{fill:var(--color-surface-muted)}
 .scene-text,.meta-text,.title-text{font-family:"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;pointer-events:none}
-.scene-text{font-size:11px;letter-spacing:.1em;text-transform:uppercase;fill:#0f766e}
-.title-text{font-size:16px;font-weight:700;fill:#173f3b}
-.meta-text{font-size:12px;fill:#55706d}
+.scene-text{font-size:11px;letter-spacing:.1em;text-transform:uppercase;fill:var(--color-primary-strong)}
+.title-text{font-size:16px;font-weight:700;fill:var(--color-heading-soft)}
+.meta-text{font-size:12px;fill:var(--color-muted)}
 .graph-hint{color:var(--color-faint);line-height:1.6}
+@media (prefers-reduced-motion:reduce){.graph-node rect{transition:none}}
 </style>

@@ -3,6 +3,8 @@ export type ApiSettings = {
   providerUrl: string
   apiKey: string
   model: string
+  locale: 'zh-CN' | 'en-US'
+  theme: 'light' | 'dark'
 }
 
 export type Agent = {
