@@ -259,9 +259,11 @@ function displayCode(value: string) {
         </div>
         <div class="sandbox-actions">
           <button class="sandbox-button primary" type="button" @click="addPreviewToSandbox">{{ t('actionAddSandbox') }}</button>
+          <button class="sandbox-button primary" type="button" :disabled="!sandboxQueue.length" @click="saveSandbox">{{ t('actionSaveSandbox') }}</button>
           <button class="sandbox-button" type="button" :disabled="!sandboxQueue.length" @click="removeLastSandboxStep">{{ t('actionUndoStep') }}</button>
           <button class="sandbox-button" type="button" :disabled="!sandboxQueue.length" @click="clearSandbox">{{ t('actionClear') }}</button>
         </div>
+        <p v-if="sandboxStatus" class="hint">{{ sandboxStatus }}</p>
       </div>
       <div v-if="sandboxOptions.length" class="state-block">
         <div class="preview-head">
@@ -405,6 +407,17 @@ function displayCode(value: string) {
     </aside>
 
     <section class="dialogue-panel">
+      <header class="session-bar">
+        <div>
+          <p class="eyebrow">{{ t('labelCurrentWorkspace') }}</p>
+          <h2>{{ sceneLabel }}</h2>
+        </div>
+        <div class="session-meta">
+          <span>{{ worldState.currentNodeId || t('fieldNotEntered') }}</span>
+          <span>{{ settings.backendUrl || t('fieldNotConfigured') }}</span>
+        </div>
+      </header>
+
       <div class="dialogue-feed">
         <article v-for="message in messages" :key="message.id" class="message" :class="message.role">
           <p class="speaker">{{ message.speaker }}</p>
@@ -456,29 +469,31 @@ function displayCode(value: string) {
 </template>
 
 <style scoped>
-.game-view{display:grid;grid-template-columns:minmax(300px,360px) minmax(0,1fr);gap:20px;align-items:start}
-.scene-panel,.dialogue-panel{border:1px solid var(--color-border);background:var(--color-surface-panel-strong);box-shadow:var(--shadow-card);backdrop-filter:blur(14px)}
-.scene-panel{display:grid;align-content:start;gap:20px;max-height:calc(100dvh - 146px);overflow:auto;padding:22px;border-radius:var(--radius);scrollbar-gutter:stable}
-.eyebrow{margin:0 0 8px;font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--color-primary-strong);font-weight:700}
+.game-view{display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,360px);gap:14px;align-items:stretch;min-height:calc(100dvh - 28px)}
+.scene-panel,.dialogue-panel{border:1px solid var(--color-border);background:var(--color-surface-panel-strong);box-shadow:var(--shadow-card)}
+.scene-panel{order:2;display:grid;align-content:start;gap:16px;max-height:calc(100dvh - 28px);overflow:auto;padding:18px;border-radius:var(--radius);scrollbar-gutter:stable}
+.dialogue-panel{order:1}
+.scene-panel > .scene-copy,.scene-panel > .state-block:nth-of-type(n+5){display:none}
+.eyebrow{margin:0 0 6px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--color-primary-strong);font-weight:800;line-height:1.2}
 h2,h3,p{margin:0}
-h2{font-size:clamp(28px,4vw,40px);line-height:1.05;color:var(--color-heading)}
-h3{font-size:18px;line-height:1.2;color:var(--color-heading-soft)}
+h2{font-size:24px;line-height:1.15;color:var(--color-heading);overflow-wrap:anywhere}
+h3{font-size:16px;line-height:1.25;color:var(--color-heading-soft);overflow-wrap:anywhere}
 .scene-copy,.hint{color:var(--color-muted);line-height:1.65}
 .scene-meta,.affinity-list,.state-block,.composer,.orchestration-meta,.plan-list{display:grid;gap:12px}
-.state-block{padding-top:18px;border-top:1px solid var(--color-border-soft)}
+.state-block{padding-top:14px;border-top:1px solid var(--color-border-soft)}
 .preview-head{display:flex;justify-content:space-between;gap:12px;align-items:center}
-.preview-risk{display:inline-flex;padding:5px 9px;border-radius:var(--radius);background:var(--color-warning-bg);color:var(--color-warning-text);font-size:12px;text-transform:uppercase;letter-spacing:.08em;font-weight:800}
+.preview-risk{display:inline-flex;padding:5px 9px;border-radius:var(--radius);background:var(--color-warning-bg);color:var(--color-warning-text);font-size:11px;text-transform:uppercase;letter-spacing:.08em;font-weight:800;white-space:nowrap}
 .sandbox-actions{display:flex;flex-wrap:wrap;gap:8px}
-.sandbox-button{appearance:none;border:1px solid var(--color-border);cursor:pointer;min-height:44px;padding:0 14px;border-radius:var(--radius);background:var(--color-input);color:var(--color-primary-strong);font-weight:700;transition:background 180ms var(--ease),border-color 180ms var(--ease),opacity 180ms var(--ease),box-shadow 180ms var(--ease)}
+.sandbox-button{appearance:none;border:1px solid var(--color-border);cursor:pointer;min-height:38px;padding:0 12px;border-radius:var(--radius);background:var(--color-input);color:var(--color-primary-strong);font-size:13px;font-weight:800;transition:background 180ms var(--ease),border-color 180ms var(--ease),opacity 180ms var(--ease),box-shadow 180ms var(--ease)}
 .sandbox-button.primary{background:var(--color-primary);border-color:var(--color-primary);color:var(--color-on-primary)}
 .sandbox-button:hover{background:var(--color-hover);border-color:var(--color-border-strong)}
 .sandbox-button.primary:hover{background:var(--color-primary-strong);box-shadow:var(--shadow-primary)}
 .scene-meta div,.affinity-item,.orchestration-meta div,.plan-head{display:flex;justify-content:space-between;gap:12px;color:var(--color-text);align-items:center}
-.scene-meta span,.affinity-item span,.orchestration-meta span,.plan-head span{color:var(--color-faint)}
+.scene-meta span,.affinity-item span,.orchestration-meta span,.plan-head span{color:var(--color-faint);font-size:12px;line-height:1.35}
 .scene-meta strong,.affinity-item strong,.orchestration-meta strong,.plan-head strong{min-width:0;overflow-wrap:anywhere}
 .token-row{display:flex;flex-wrap:wrap;gap:8px}
-.choice-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-.token{padding:5px 10px;border-radius:var(--radius);background:var(--color-token-bg);color:var(--color-token-text);font-size:13px;font-weight:700;overflow-wrap:anywhere}
+.choice-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.token{padding:5px 9px;border-radius:var(--radius);background:var(--color-token-bg);color:var(--color-token-text);font-size:12px;font-weight:800;line-height:1.25;overflow-wrap:anywhere}
 .token.muted{background:var(--color-token-muted-bg);color:var(--color-faint)}
 .token.added{background:var(--color-success-bg);color:var(--color-success-text)}
 .token.removed{background:var(--color-danger-bg);color:var(--color-danger-text)}
@@ -487,25 +502,29 @@ h3{font-size:18px;line-height:1.2;color:var(--color-heading-soft)}
 .plan-card.active{border-color:var(--color-primary);background:var(--color-surface-muted)}
 .plan-card p,.plan-card small,.plan-copy{margin:0;color:var(--color-muted);line-height:1.5}
 .plan-card small{color:var(--color-faint)}
-.dialogue-panel{display:grid;grid-template-rows:minmax(360px,1fr) auto auto;gap:16px;min-height:calc(100dvh - 146px);padding:20px;border-radius:var(--radius)}
-.dialogue-feed{display:grid;gap:12px;align-content:start;overflow:auto;padding-right:4px;scrollbar-gutter:stable}
-.message{max-width:min(82%,760px);padding:14px 16px;border:1px solid var(--color-border-soft);border-radius:var(--radius);line-height:1.65;background:var(--color-surface);overflow-wrap:anywhere}
+.dialogue-panel{display:grid;grid-template-rows:auto minmax(300px,1fr) auto auto;gap:12px;min-height:calc(100dvh - 28px);padding:16px;border-radius:var(--radius)}
+.session-bar{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding-bottom:12px;border-bottom:1px solid var(--color-border-soft)}
+.session-meta{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;max-width:52%;min-width:0}
+.session-meta span{padding:5px 8px;border-radius:var(--radius);background:var(--color-token-muted-bg);color:var(--color-muted);font-size:12px;font-weight:700;line-height:1.3;overflow-wrap:anywhere}
+.dialogue-feed{display:grid;gap:10px;align-content:start;min-height:0;overflow:auto;padding-right:4px;scrollbar-gutter:stable}
+.message{max-width:min(76%,780px);padding:13px 15px;border:1px solid var(--color-border-soft);border-radius:var(--radius);line-height:1.62;background:var(--color-surface);overflow-wrap:anywhere}
 .message.assistant,.message.system{background:var(--color-row)}
 .message.player{justify-self:end;background:var(--color-primary);border-color:var(--color-primary);color:var(--color-on-primary)}
-.speaker{margin-bottom:6px;font-size:12px;letter-spacing:.12em;text-transform:uppercase;opacity:.75;font-weight:800}
+.speaker{margin-bottom:5px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;opacity:.75;font-weight:800;line-height:1.2}
 .choice-button,.primary-button{appearance:none;border:0;cursor:pointer;transition:background 180ms var(--ease),border-color 180ms var(--ease),opacity 180ms var(--ease),box-shadow 180ms var(--ease),transform 180ms var(--ease)}
-.choice-button{display:grid;gap:4px;min-height:98px;padding:12px 14px;border:1px solid var(--color-border-soft);border-radius:var(--radius);background:var(--color-surface);color:var(--color-text);text-align:left;overflow-wrap:anywhere}
+.choice-button{display:grid;gap:4px;min-height:92px;padding:11px 13px;border:1px solid var(--color-border-soft);border-radius:var(--radius);background:var(--color-surface);color:var(--color-text);text-align:left;overflow-wrap:anywhere}
 .choice-button:hover{border-color:var(--color-primary);background:var(--color-surface-muted);box-shadow:var(--shadow-active);transform:translateY(-1px)}
-.choice-button small{color:var(--color-muted);line-height:1.45}
-.composer-label{font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--color-primary-strong);font-weight:800}
-.composer-input{width:100%;resize:vertical;min-height:118px;padding:14px 16px;border:1px solid var(--color-border);border-radius:var(--radius);outline:none;color:var(--color-text);background:var(--color-input);font:inherit;line-height:1.6}
+.choice-button strong{line-height:1.25}
+.choice-button small{color:var(--color-muted);font-size:12px;line-height:1.4}
+.composer-label{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--color-primary-strong);font-weight:800}
+.composer-input{width:100%;resize:vertical;min-height:108px;padding:13px 15px;border:1px solid var(--color-border);border-radius:var(--radius);outline:none;color:var(--color-text);background:var(--color-input);font:inherit;line-height:1.6}
 .composer-input:focus{border-color:var(--color-primary);box-shadow:0 0 0 4px var(--color-focus-ring)}
 .composer-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .composer-footer .hint{min-width:0;overflow-wrap:anywhere}
-.primary-button{min-height:44px;padding:0 18px;border-radius:var(--radius);background:var(--color-accent);color:var(--color-on-accent);font-weight:800}
+.primary-button{min-height:42px;padding:0 18px;border-radius:var(--radius);background:var(--color-accent);color:var(--color-on-accent);font-weight:800}
 .primary-button:hover{background:var(--color-accent-hover);box-shadow:var(--shadow-accent)}
 .choice-button:disabled,.primary-button:disabled,.sandbox-button:disabled{opacity:.46;cursor:not-allowed;box-shadow:none;transform:none}
-@media (max-width:1100px){.game-view{grid-template-columns:300px minmax(0,1fr)}}
-@media (max-width:960px){.game-view{grid-template-columns:1fr}.scene-panel,.dialogue-panel{max-height:none;min-height:auto}.choice-row{grid-template-columns:1fr}.message{max-width:100%}.composer-footer .primary-button{width:100%}}
+@media (max-width:1180px){.game-view{grid-template-columns:minmax(0,1fr) 300px}}
+@media (max-width:960px){.game-view{grid-template-columns:1fr;min-height:auto}.scene-panel,.dialogue-panel{max-height:none;min-height:auto}.scene-panel{order:2}.dialogue-panel{order:1}.session-bar{display:grid}.session-meta{max-width:none;justify-content:flex-start}.choice-row{grid-template-columns:1fr}.message{max-width:100%}.composer-footer .primary-button{width:100%}}
 @media (prefers-reduced-motion:reduce){.choice-button,.primary-button,.sandbox-button{transition:none}.choice-button:hover{transform:none}}
 </style>

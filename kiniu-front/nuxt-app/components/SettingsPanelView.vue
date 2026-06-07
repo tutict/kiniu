@@ -92,15 +92,15 @@ const themeOptions: ApiSettings['theme'][] = ['light', 'dark']
 </template>
 
 <style scoped>
-.settings-view{display:grid;gap:24px;align-content:start;padding:24px;border:1px solid var(--color-border);border-radius:var(--radius);background:var(--color-surface-panel);box-shadow:var(--shadow-card)}
+.settings-view{display:grid;gap:18px;align-content:start;max-width:980px;padding:20px;border:1px solid var(--color-border);border-radius:var(--radius);background:var(--color-surface-panel);box-shadow:var(--shadow-card)}
 .settings-hero,.settings-note{display:grid;gap:12px}
-.eyebrow{margin:0 0 8px;font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--color-primary-strong);font-weight:800}
+.eyebrow{margin:0 0 6px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--color-primary-strong);font-weight:800;line-height:1.2}
 h2,h3,p{margin:0}
-h2{font-size:clamp(28px,4vw,40px);line-height:1.05;color:var(--color-heading)}
-.settings-hero p:last-child,.settings-note p{color:var(--color-muted);line-height:1.65}
+h2{font-size:24px;line-height:1.15;color:var(--color-heading);overflow-wrap:anywhere}
+.settings-hero p:last-child,.settings-note p{max-width:72ch;color:var(--color-muted);line-height:1.6}
 .settings-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
 .field{display:grid;gap:10px}
-.field span{font-size:14px;color:var(--color-text);font-weight:700}
+.field span{font-size:13px;color:var(--color-text);font-weight:800;line-height:1.25}
 .field input,.field select{width:100%;min-height:44px;padding:10px 14px;border:1px solid var(--color-border);border-radius:var(--radius);outline:none;color:var(--color-text);background:var(--color-input);font:inherit}
 .field input:focus,.field select:focus{border-color:var(--color-primary);box-shadow:0 0 0 4px var(--color-focus-ring)}
 .field small{color:var(--color-faint);line-height:1.55}

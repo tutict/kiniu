@@ -643,11 +643,12 @@ function displayCode(value: string) {
 </template>
 
 <style scoped>
-.debug-stage{display:grid;gap:18px;padding:20px;border:1px solid var(--color-border);border-radius:var(--radius);background:var(--color-bg-soft)}
-.debug-head,.debug-toolbar,.panel-head,.metric-strip,.footer-actions,.status-row{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}
-.debug-grid{display:grid;gap:18px}
-.debug-panel{border:1px solid var(--color-border-soft);background:var(--color-surface);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow-card)}
+.debug-stage{display:grid;gap:18px;min-width:0;padding:18px;border:1px solid var(--color-border);border-radius:var(--radius);background:var(--color-bg-soft);overflow:hidden}
+.debug-head,.debug-toolbar,.panel-head,.footer-actions,.status-row{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}
+.debug-grid{display:grid;gap:18px;min-width:0}
+.debug-panel{min-width:0;border:1px solid var(--color-border-soft);background:var(--color-surface);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow-card)}
 .summary-panel{display:grid;gap:18px}
+.metric-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(92px,1fr));gap:10px;min-width:0}
 .metric-strip div,.detail-grid div{display:grid;gap:4px;min-width:92px}
 .metric-strip span,.detail-grid span,.block-label{color:var(--color-faint);font-size:12px;text-transform:uppercase;letter-spacing:.1em}
 .metric-strip strong,.detail-grid strong{color:var(--color-text);font-size:15px}
@@ -681,7 +682,7 @@ function displayCode(value: string) {
 .reply-card{display:grid;gap:4px;padding:12px;border:1px solid var(--color-border-soft);border-radius:var(--radius);background:var(--color-surface)}
 .reply-card span,.reply-card small{color:var(--color-faint)}
 .reply-card p{margin:0;color:var(--color-text)}
-.eyebrow{margin:0 0 8px;font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--color-primary-strong);font-weight:800}
+.eyebrow{margin:0 0 6px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--color-primary-strong);font-weight:800;line-height:1.2}
 .search-input{width:min(320px,100%);min-height:44px;padding:10px 14px;border:1px solid var(--color-border);border-radius:var(--radius);outline:none;color:var(--color-text);background:var(--color-input);font:inherit}
 .search-input:focus{border-color:var(--color-primary);box-shadow:0 0 0 4px var(--color-focus-ring)}
 .primary-button,.secondary-button{appearance:none;border:0;cursor:pointer;min-height:44px;padding:0 16px;border-radius:var(--radius);font-weight:800;transition:background 180ms var(--ease),border-color 180ms var(--ease),box-shadow 180ms var(--ease)}
@@ -693,9 +694,10 @@ function displayCode(value: string) {
 .status.success{color:var(--color-success-text);background:var(--color-success-bg);border:1px solid var(--color-success-border)}
 .status.error{color:var(--color-danger-text);background:var(--color-danger-bg);border:1px solid var(--color-danger-border)}
 h3,h4,p{margin:0}
-h3{font-size:clamp(28px,4vw,38px);line-height:1.05;color:var(--color-heading)}
-h4{font-size:18px;line-height:1.1;color:var(--color-heading-soft)}
+h3{font-size:24px;line-height:1.15;color:var(--color-heading);overflow-wrap:anywhere}
+h4{font-size:17px;line-height:1.2;color:var(--color-heading-soft);overflow-wrap:anywhere}
 .debug-panel,.turn-card,.detail-block,.reply-card,.backend-pill{overflow-wrap:anywhere}
 @media (max-width:980px){.replay-layout,.sandbox-layout{grid-template-columns:1fr}.detail-grid{grid-template-columns:1fr}.debug-toolbar,.search-input{width:100%}}
+@media (max-width:520px){.debug-stage{padding:14px}.debug-panel{padding:14px}.metric-strip{grid-template-columns:repeat(2,minmax(0,1fr))}.metric-strip div,.detail-grid div{min-width:0}.footer-actions .primary-button,.footer-actions .secondary-button{flex:1 1 140px}}
 @media (prefers-reduced-motion:reduce){.turn-card,.primary-button,.secondary-button{transition:none}.turn-card:hover{transform:none}}
 </style>

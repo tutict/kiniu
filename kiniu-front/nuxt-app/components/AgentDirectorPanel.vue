@@ -449,10 +449,10 @@ function updateAgentField(field: keyof Agent, value: string) {
 .primary-button:hover{background:var(--color-accent-hover);box-shadow:var(--shadow-accent)}
 .secondary-button:hover{border-color:var(--color-primary);background:var(--color-hover)}
 .text-button{min-height:44px;padding:0;background:transparent;color:var(--color-danger-action);font-weight:800}
-.eyebrow{margin:0 0 8px;font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--color-primary-strong);font-weight:800}
+.eyebrow{margin:0 0 6px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--color-primary-strong);font-weight:800;line-height:1.2}
 h3,h4,p{margin:0}
-h3{font-size:clamp(28px,4vw,38px);line-height:1.05;color:var(--color-heading)}
-h4{font-size:20px;line-height:1.1;color:var(--color-heading-soft)}
+h3{font-size:24px;line-height:1.15;color:var(--color-heading);overflow-wrap:anywhere}
+h4{font-size:18px;line-height:1.2;color:var(--color-heading-soft);overflow-wrap:anywhere}
 .status{display:inline-flex;align-items:center;min-height:44px;padding:10px 14px;border-radius:var(--radius);line-height:1.5}
 .status.success{color:var(--color-success-text);background:var(--color-success-bg);border:1px solid var(--color-success-border)}
 .status.error{color:var(--color-danger-text);background:var(--color-danger-bg);border:1px solid var(--color-danger-border)}

@@ -16,6 +16,7 @@ import type {
 } from '../types/game'
 
 const props = defineProps<{
+  mode: 'flow' | 'agents' | 'debug'
   draft: StoryCatalogResponse | null
   agentDraft: AgentCatalogResponse | null
   sessionExport: SessionExportResponse | null
@@ -329,7 +330,7 @@ function importSandboxPlan(planId: string) {
 </script>
 
 <template>
-  <section class="editor-view">
+  <section v-if="props.mode === 'flow'" class="editor-view flow-workspace">
     <aside class="editor-sidebar">
       <div class="editor-sidebar-head">
         <div>
@@ -528,36 +529,6 @@ function importSandboxPlan(planId: string) {
         <p>{{ t('emptyNoFlowNode') }}</p>
       </div>
 
-      <AgentDirectorPanel
-        :draft="agentDraft"
-        :backend-url="backendUrl"
-        :is-loading-agents="isLoadingAgents"
-        :is-saving-agents="isSavingAgents"
-        :agent-status="agentStatus"
-        :agent-error="agentError"
-        @load-agents="emit('loadAgents')"
-        @persist-agents="emit('persistAgents', $event)"
-        @publish-agents="emit('publishAgents')"
-        @export-agents="emit('exportAgents')"
-        @reset-agents="emit('resetAgents')"
-      />
-
-      <SessionDebugPanel
-        :export-data="sessionExport"
-        :sandbox-plans="sandboxPlans"
-        :can-import-sandbox="!!draft"
-        :backend-url="backendUrl"
-        :current-session-id="currentSessionId"
-        :is-loading-session="isLoadingSession"
-        :session-status="sessionStatus"
-        :session-error="sessionError"
-        @load-session="emit('loadSession', $event)"
-        @export-session="emit('exportSession')"
-        @reset-session="emit('resetSession')"
-        @export-sandbox-plans="emit('exportSandboxPlans')"
-        @reset-sandbox-plans="emit('resetSandboxPlans')"
-        @promote-sandbox="importSandboxPlan"
-      />
     </section>
 
     <aside class="editor-inspector">
@@ -600,21 +571,58 @@ function importSandboxPlan(planId: string) {
       <p v-if="sessionError" class="status error">{{ sessionError }}</p>
     </aside>
   </section>
+
+  <section v-else-if="props.mode === 'agents'" class="tool-workspace">
+    <AgentDirectorPanel
+      :draft="agentDraft"
+      :backend-url="backendUrl"
+      :is-loading-agents="isLoadingAgents"
+      :is-saving-agents="isSavingAgents"
+      :agent-status="agentStatus"
+      :agent-error="agentError"
+      @load-agents="emit('loadAgents')"
+      @persist-agents="emit('persistAgents', $event)"
+      @publish-agents="emit('publishAgents')"
+      @export-agents="emit('exportAgents')"
+      @reset-agents="emit('resetAgents')"
+    />
+  </section>
+
+  <section v-else class="tool-workspace">
+    <SessionDebugPanel
+      :export-data="sessionExport"
+      :sandbox-plans="sandboxPlans"
+      :can-import-sandbox="!!draft"
+      :backend-url="backendUrl"
+      :current-session-id="currentSessionId"
+      :is-loading-session="isLoadingSession"
+      :session-status="sessionStatus"
+      :session-error="sessionError"
+      @load-session="emit('loadSession', $event)"
+      @export-session="emit('exportSession')"
+      @reset-session="emit('resetSession')"
+      @export-sandbox-plans="emit('exportSandboxPlans')"
+      @reset-sandbox-plans="emit('resetSandboxPlans')"
+      @promote-sandbox="importSandboxPlan"
+    />
+  </section>
 </template>
 
 <style scoped>
-.editor-view{display:grid;grid-template-columns:320px minmax(0,1fr) 300px;gap:18px}
+.editor-view{display:grid;grid-template-columns:300px minmax(0,1fr) 280px;gap:14px;min-height:calc(100dvh - 28px)}
+.tool-workspace{min-height:calc(100dvh - 28px)}
 .editor-sidebar,.editor-inspector,.editor-panel{border:1px solid var(--color-border);background:var(--color-surface-panel);box-shadow:var(--shadow-card)}
-.editor-sidebar,.editor-inspector{display:grid;align-content:start;gap:20px;padding:20px;border-radius:var(--radius)}
+.editor-sidebar,.editor-inspector{display:grid;align-content:start;gap:16px;padding:18px;border-radius:var(--radius);min-width:0}
 .editor-main,.editor-main-grid,.editor-toolbar,.node-list,.editor-fields,.flow-list,.notes-list,.stack-actions{display:grid;gap:12px}
-.editor-panel{padding:20px;border-radius:var(--radius)}
+.editor-main{min-width:0}
+.editor-panel{padding:18px;border-radius:var(--radius);min-width:0}
 .editor-panel.compact{background:var(--color-bg-soft);border-radius:var(--radius)}
 .editor-panel-wide{grid-column:1/-1}
 .editor-sidebar-head,.panel-head,.inline-actions,.node-card-top,.node-card-meta,.flow-card-top,.flow-target{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}
-.eyebrow{margin:0 0 8px;font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--color-primary-strong);font-weight:800}
+.eyebrow{margin:0 0 6px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--color-primary-strong);font-weight:800;line-height:1.2}
 h2,h3,p{margin:0}
-h2{font-size:clamp(28px,4vw,40px);line-height:1.05;color:var(--color-heading)}
-h3{color:var(--color-heading-soft)}
+h2{font-size:24px;line-height:1.15;color:var(--color-heading);overflow-wrap:anywhere}
+h3{font-size:18px;line-height:1.25;color:var(--color-heading-soft);overflow-wrap:anywhere}
 .search-input,.field input,.editor-textarea{width:100%;min-height:44px;padding:10px 14px;border:1px solid var(--color-border);border-radius:var(--radius);outline:none;color:var(--color-text);background:var(--color-input);font:inherit}
 .editor-textarea{resize:vertical;min-height:124px}
 .search-input:focus,.field input:focus,.editor-textarea:focus{border-color:var(--color-primary);box-shadow:0 0 0 4px var(--color-focus-ring)}
@@ -624,11 +632,12 @@ h3{color:var(--color-heading-soft)}
 .tag-cloud,.token-row{display:flex;flex-wrap:wrap;gap:8px}
 .token{padding:5px 10px;border-radius:var(--radius);background:var(--color-token-muted-bg);color:var(--color-faint);font-size:13px;cursor:pointer}
 .node-list{max-height:calc(100vh - 340px);overflow:auto;padding-right:4px}
-.node-card{appearance:none;border:1px solid var(--color-border-soft);border-radius:var(--radius);padding:14px;background:var(--color-surface);color:var(--color-text);text-align:left;cursor:pointer;transition:background 180ms var(--ease),border-color 180ms var(--ease),box-shadow 180ms var(--ease)}
+.node-card{appearance:none;border:1px solid var(--color-border-soft);border-radius:var(--radius);padding:12px;background:var(--color-surface);color:var(--color-text);text-align:left;cursor:pointer;transition:background 180ms var(--ease),border-color 180ms var(--ease),box-shadow 180ms var(--ease)}
 .node-card.active{border-color:var(--color-primary);background:var(--color-surface-muted);box-shadow:var(--shadow-active)}
-.node-card p,.node-card-meta span{color:var(--color-faint);font-size:13px}
+.node-card strong,.flow-card strong{overflow-wrap:anywhere}
+.node-card p,.node-card-meta span{color:var(--color-faint);font-size:13px;line-height:1.35;overflow-wrap:anywhere}
 .flow-card,.choice-editor{display:grid;gap:10px;padding:14px;border:1px solid var(--color-border-soft);border-radius:var(--radius);background:var(--color-surface)}
-.flow-card p,.notes-list p{color:var(--color-muted);line-height:1.65}
+.flow-card p,.notes-list p{color:var(--color-muted);line-height:1.6;overflow-wrap:anywhere}
 .metric-grid{display:grid;gap:14px}
 .metric-grid div{display:flex;justify-content:space-between;gap:12px;color:var(--color-text)}
 .metric-grid span,.flow-target span{color:var(--color-faint)}
@@ -644,6 +653,6 @@ h3{color:var(--color-heading-soft)}
 .status{display:inline-flex;align-items:center;min-height:44px;padding:10px 14px;border-radius:var(--radius);line-height:1.5}
 .status.success{color:var(--color-success-text);background:var(--color-success-bg);border:1px solid var(--color-success-border)}
 .status.error{color:var(--color-danger-text);background:var(--color-danger-bg);border:1px solid var(--color-danger-border)}
-@media (max-width:1200px){.editor-view{grid-template-columns:1fr}.node-list{max-height:none}}
+@media (max-width:1200px){.editor-view{grid-template-columns:1fr;min-height:auto}.tool-workspace{min-height:auto}.node-list{max-height:none}}
 @media (max-width:960px){.editor-fields{grid-template-columns:1fr}}
 </style>

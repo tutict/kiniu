@@ -196,9 +196,9 @@ function issueLocation(issue: { nodeId?: string | null; choiceId?: string | null
 .primary-button:hover{background:var(--color-accent-hover);box-shadow:var(--shadow-accent)}
 .secondary-button:hover{border-color:var(--color-primary);background:var(--color-hover)}
 .primary-button:disabled,.secondary-button:disabled{opacity:.5;cursor:not-allowed}
-.eyebrow{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--color-primary-strong);font-weight:800}
+.eyebrow{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--color-primary-strong);font-weight:800;line-height:1.2}
 h3,h4{margin:0}
-h3{font-size:clamp(28px,4vw,38px);line-height:1.05;color:var(--color-heading)}
-h4{color:var(--color-heading-soft)}
+h3{font-size:22px;line-height:1.18;color:var(--color-heading);overflow-wrap:anywhere}
+h4{font-size:16px;line-height:1.25;color:var(--color-heading-soft);overflow-wrap:anywhere}
 @media (max-width:1100px){.generator-grid,.issue-columns,.field-grid,.metric-grid{grid-template-columns:1fr}}
 </style>
