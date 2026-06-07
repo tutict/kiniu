@@ -15,10 +15,11 @@ import com.kiniu.game.memory.MemoryService;
 import com.kiniu.game.state.WorldState;
 import com.kiniu.game.story.StoryEngine;
 import com.kiniu.game.story.StoryEvent;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -40,7 +41,8 @@ public class GameEngine {
     private final SessionArchiveService sessionArchiveService;
     private final MemoryService memoryService;
     private final StoryEngine storyEngine;
-    private final ConcurrentMap<String, WorldState> sessionStates = new ConcurrentHashMap<>();
+    private final int maxSessionStates;
+    private final Map<String, WorldState> sessionStates = new LinkedHashMap<>(16, 0.75f, true);
 
     public GameEngine(
             AgentService agentService,
@@ -56,7 +58,8 @@ public class GameEngine {
             AITelemetryCollector aiTelemetryCollector,
             SessionArchiveService sessionArchiveService,
             MemoryService memoryService,
-            StoryEngine storyEngine) {
+            StoryEngine storyEngine,
+            @Value("${game.sessions.max-state-sessions:3}") int maxSessionStates) {
         this.agentService = agentService;
         this.agentManager = agentManager;
         this.agentOrchestratorService = agentOrchestratorService;
@@ -71,6 +74,7 @@ public class GameEngine {
         this.sessionArchiveService = sessionArchiveService;
         this.memoryService = memoryService;
         this.storyEngine = storyEngine;
+        this.maxSessionStates = Math.max(1, maxSessionStates);
     }
 
     public GameResponse next(GameRequest request) {
@@ -78,7 +82,7 @@ public class GameEngine {
         String input = normalizeText(request.input());
         String choice = normalizeText(request.choice());
 
-        WorldState state = sessionStates.computeIfAbsent(sessionId, key -> WorldState.initial());
+        WorldState state = getSessionState(sessionId);
         updateWorldState(state, input, choice);
 
         memoryService.storeDialogue(sessionId, "Player", buildPlayerTurn(input, choice));
@@ -179,6 +183,15 @@ public class GameEngine {
                 directedBeat.directorSummary(),
                 directedBeat,
                 orchestration);
+    }
+
+    private synchronized WorldState getSessionState(String sessionId) {
+        WorldState state = sessionStates.computeIfAbsent(sessionId, key -> WorldState.initial());
+        while (sessionStates.size() > maxSessionStates) {
+            String eldestSessionId = sessionStates.keySet().iterator().next();
+            sessionStates.remove(eldestSessionId);
+        }
+        return state;
     }
 
     private void updateWorldState(WorldState state, String input, String choice) {

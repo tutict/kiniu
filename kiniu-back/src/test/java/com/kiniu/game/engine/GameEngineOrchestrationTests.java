@@ -7,6 +7,8 @@ import com.kiniu.game.dto.GameRequest;
 import com.kiniu.game.dto.GameResponse;
 import com.kiniu.game.dto.SandboxPlanRequest;
 import com.kiniu.game.dto.SessionExportResponse;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -57,6 +59,11 @@ class GameEngineOrchestrationTests {
         assertThat(exportResponse.turns().get(0).orchestration()).isNotNull();
         assertThat(exportResponse.turns().get(0).orchestration().critic().notes()).isNotEmpty();
         assertThat(exportResponse.turns().get(0).orchestration().aiInvocations()).isNotEmpty();
+
+        Path exportDirectory = Path.of("target/test-agent-container-session-exports");
+        assertThat(Files.exists(exportDirectory.resolve(sessionId + ".session.json"))).isTrue();
+        assertThat(Files.exists(exportDirectory.resolve(sessionId + ".turns.jsonl"))).isTrue();
+        assertThat(Files.exists(exportDirectory.resolve(sessionId + ".json"))).isFalse();
     }
 
     @Test

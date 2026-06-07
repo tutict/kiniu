@@ -12,3 +12,6 @@ game:
     catalog-path: data/agent-catalog.json
   sessions:
     export-path: data/session-exports
+    max-state-sessions: 3
+    max-memory-sessions: 3
+    max-cached-archives: 3
