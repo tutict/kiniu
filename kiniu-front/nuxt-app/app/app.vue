@@ -21,7 +21,8 @@ import type {
   WorldState
 } from '../types/game'
 
-type ViewMode = 'chat' | 'flow' | 'agents' | 'debug' | 'settings'
+type ViewMode = 'chat' | 'studio' | 'settings'
+type StudioMode = 'flow' | 'agents' | 'debug'
 type ThemeMode = ApiSettings['theme']
 
 const SETTINGS_STORAGE_KEY = 'kiniu.agent.settings'
@@ -41,6 +42,7 @@ const defaultSettings: ApiSettings = {
 }
 
 const activeView = ref<ViewMode>('chat')
+const activeStudioView = ref<StudioMode>('flow')
 const isHydrated = ref(false)
 const isSending = ref(false)
 const isLoadingStory = ref(false)
@@ -93,11 +95,22 @@ const messages = ref<ChatMessage[]>([
 ])
 
 const navigationItems = computed(() => [
-  { id: 'chat' as const, label: t('navChat'), meta: sceneLabel.value, key: 'C' },
-  { id: 'flow' as const, label: t('studioTitle'), meta: storyDraft.value?.entryNodeId || t('fieldNotEntered'), key: 'F' },
-  { id: 'agents' as const, label: t('agentStageTitle'), meta: `${agentDraft.value?.agents.length ?? 0}`, key: 'A' },
-  { id: 'debug' as const, label: t('sessionDebugTitle'), meta: `${sessionExport.value?.turns.length ?? 0}`, key: 'D' },
-  { id: 'settings' as const, label: t('navSettings'), meta: settings.backendUrl || t('fieldNotConfigured'), key: 'S' }
+  { id: 'chat' as const, label: t('navChat'), meta: sceneLabel.value, key: '1' },
+  { id: 'studio' as const, label: t('navStudio'), meta: `${storyDraft.value?.nodes.length ?? 0} ${t('labelNodes')}`, key: '2' },
+  { id: 'settings' as const, label: t('navSettings'), meta: settings.backendUrl || t('fieldNotConfigured'), key: '3' }
+])
+
+const studioItems = computed(() => [
+  { id: 'flow' as const, label: t('studioTaskFlow'), meta: storyDraft.value?.entryNodeId || t('fieldNotEntered') },
+  { id: 'agents' as const, label: t('agentStageTitle'), meta: `${agentDraft.value?.agents.length ?? 0}` },
+  { id: 'debug' as const, label: t('sessionDebugTitle'), meta: `${sessionExport.value?.turns.length ?? 0} ${t('labelTurns')}` }
+])
+
+const statusItems = computed(() => [
+  { label: t('labelSession'), value: sessionId.value || '-' },
+  { label: t('labelBackendShort'), value: settings.backendUrl || t('fieldNotConfigured') },
+  { label: t('settingsModel'), value: settings.model || t('fieldNoModel') },
+  { label: 'AI', value: `${currentOrchestration.value?.aiInvocations.length ?? 0}` }
 ])
 
 const sceneLabel = computed(() => {
@@ -216,16 +229,17 @@ onMounted(() => {
   }
 })
 
-watch(() => activeView.value, async (view) => {
+watch([() => activeView.value, () => activeStudioView.value], async ([view, studioView]) => {
   saveStatus.value = ''
   errorMessage.value = ''
-  if (view === 'flow' && !storyDraft.value) {
+  if (view !== 'studio') return
+  if (studioView === 'flow' && !storyDraft.value) {
     await loadStoryCatalog()
   }
-  if (view === 'agents' && !agentDraft.value) {
+  if (studioView === 'agents' && !agentDraft.value) {
     await loadAgentCatalog()
   }
-  if (view === 'debug' && !sessionExport.value && settings.backendUrl.trim()) {
+  if (studioView === 'debug' && !sessionExport.value && settings.backendUrl.trim()) {
     await loadSessionExport()
   }
 })
@@ -879,6 +893,17 @@ async function sendTurn(choice = '') {
       </aside>
 
       <main class="workspace">
+        <div class="top-strip">
+          <div
+            v-for="item in statusItems"
+            :key="item.label"
+            class="status-chip"
+          >
+            <span>{{ item.label }}</span>
+            <strong>{{ item.value }}</strong>
+          </div>
+        </div>
+
         <AgentConsoleView
           v-if="activeView === 'chat'"
           v-model:player-input="playerInput"
@@ -894,51 +919,68 @@ async function sendTurn(choice = '') {
           @send-turn="sendTurn"
         />
 
-        <AgentStudioView
-          v-else-if="activeView === 'flow' || activeView === 'agents' || activeView === 'debug'"
-          :mode="activeView"
-          :draft="storyDraft"
-          :agent-draft="agentDraft"
-          :session-export="sessionExport"
-          :sandbox-plans="sandboxPlans"
-          :story-analysis="storyAnalysis"
-          :current-session-id="sessionId"
-          :backend-url="settings.backendUrl"
-          :is-loading-story="isLoadingStory"
-          :is-saving-story="isSavingStory"
-          :is-loading-agents="isLoadingAgents"
-          :is-saving-agents="isSavingAgents"
-          :is-loading-session="isLoadingSessionExport"
-          :is-generating-story="isGeneratingStory"
-          :is-validating-story="isValidatingStory"
-          :story-status="storyStatus"
-          :story-error="storyError"
-          :agent-status="agentStatus"
-          :agent-error="agentError"
-          :session-status="sessionStatus"
-          :session-error="sessionError"
-          :generator-status="generatorStatus"
-          :generator-error="generatorError"
-          :validation-status="validationStatus"
-          :validation-error="validationError"
-          @load-story="loadStoryCatalog"
-          @persist-draft="persistStoryDraft"
-          @publish-draft="saveStoryDraftToBackend"
-          @export-draft="exportStoryDraft"
-          @reset-draft="resetStoryDraft"
-          @load-agents="loadAgentCatalog"
-          @persist-agents="persistAgentDraft"
-          @publish-agents="saveAgentDraftToBackend"
-          @export-agents="exportAgentDraft"
-          @reset-agents="resetAgentDraft"
-          @validate-story="validateStoryDraft"
-          @generate-story="generateStoryDraft"
-          @load-session="loadSessionExport"
-          @export-session="exportSessionJson"
-          @reset-session="resetSessionExport"
-          @export-sandbox-plans="exportSandboxPlans"
-          @reset-sandbox-plans="resetSandboxPlans"
-        />
+        <section v-else-if="activeView === 'studio'" class="studio-frame">
+          <div class="studio-switcher" role="tablist" aria-label="Studio">
+            <button
+              v-for="item in studioItems"
+              :key="item.id"
+              class="studio-tab"
+              :class="{ active: activeStudioView === item.id }"
+              type="button"
+              role="tab"
+              :aria-selected="activeStudioView === item.id"
+              @click="activeStudioView = item.id"
+            >
+              <strong>{{ item.label }}</strong>
+              <span>{{ item.meta }}</span>
+            </button>
+          </div>
+
+          <AgentStudioView
+            :mode="activeStudioView"
+            :draft="storyDraft"
+            :agent-draft="agentDraft"
+            :session-export="sessionExport"
+            :sandbox-plans="sandboxPlans"
+            :story-analysis="storyAnalysis"
+            :current-session-id="sessionId"
+            :backend-url="settings.backendUrl"
+            :is-loading-story="isLoadingStory"
+            :is-saving-story="isSavingStory"
+            :is-loading-agents="isLoadingAgents"
+            :is-saving-agents="isSavingAgents"
+            :is-loading-session="isLoadingSessionExport"
+            :is-generating-story="isGeneratingStory"
+            :is-validating-story="isValidatingStory"
+            :story-status="storyStatus"
+            :story-error="storyError"
+            :agent-status="agentStatus"
+            :agent-error="agentError"
+            :session-status="sessionStatus"
+            :session-error="sessionError"
+            :generator-status="generatorStatus"
+            :generator-error="generatorError"
+            :validation-status="validationStatus"
+            :validation-error="validationError"
+            @load-story="loadStoryCatalog"
+            @persist-draft="persistStoryDraft"
+            @publish-draft="saveStoryDraftToBackend"
+            @export-draft="exportStoryDraft"
+            @reset-draft="resetStoryDraft"
+            @load-agents="loadAgentCatalog"
+            @persist-agents="persistAgentDraft"
+            @publish-agents="saveAgentDraftToBackend"
+            @export-agents="exportAgentDraft"
+            @reset-agents="resetAgentDraft"
+            @validate-story="validateStoryDraft"
+            @generate-story="generateStoryDraft"
+            @load-session="loadSessionExport"
+            @export-session="exportSessionJson"
+            @reset-session="resetSessionExport"
+            @export-sandbox-plans="exportSandboxPlans"
+            @reset-sandbox-plans="resetSandboxPlans"
+          />
+        </section>
 
         <SettingsPanelView
           v-else
@@ -1007,11 +1049,11 @@ async function sendTurn(choice = '') {
   --color-graph-node-selected:#d8eee9;
   --color-graph-entry:#16a34a;
   --page-background:linear-gradient(180deg,#f4f5f1 0%,#f8faf9 48%,#eef3f1 100%);
-  --shadow-soft:0 18px 42px rgba(24,35,34,.08);
-  --shadow-card:0 1px 2px rgba(15,23,42,.06),0 12px 28px rgba(24,35,34,.08);
-  --shadow-active:0 8px 18px rgba(15,118,110,.12);
-  --shadow-primary:0 8px 20px rgba(15,118,110,.2);
-  --shadow-accent:0 10px 22px rgba(180,83,9,.18);
+  --shadow-soft:0 12px 28px rgba(24,35,34,.06);
+  --shadow-card:0 1px 2px rgba(15,23,42,.06),0 8px 18px rgba(24,35,34,.06);
+  --shadow-active:0 6px 14px rgba(15,118,110,.1);
+  --shadow-primary:0 8px 18px rgba(15,118,110,.16);
+  --shadow-accent:0 8px 18px rgba(180,83,9,.14);
   --radius:8px;
   --ease:cubic-bezier(.2,.8,.2,1);
 }
@@ -1065,11 +1107,11 @@ async function sendTurn(choice = '') {
   --color-graph-node-selected:#123f39;
   --color-graph-entry:#4ade80;
   --page-background:linear-gradient(180deg,#0f1413 0%,#151b1a 50%,#0f1413 100%);
-  --shadow-soft:0 18px 48px rgba(0,0,0,.28);
-  --shadow-card:0 1px 2px rgba(0,0,0,.35),0 16px 36px rgba(0,0,0,.22);
-  --shadow-active:0 8px 18px rgba(0,0,0,.28);
-  --shadow-primary:0 8px 22px rgba(45,212,191,.18);
-  --shadow-accent:0 10px 22px rgba(251,146,60,.14);
+  --shadow-soft:0 12px 30px rgba(0,0,0,.22);
+  --shadow-card:0 1px 2px rgba(0,0,0,.32),0 10px 24px rgba(0,0,0,.18);
+  --shadow-active:0 6px 14px rgba(0,0,0,.22);
+  --shadow-primary:0 8px 18px rgba(45,212,191,.14);
+  --shadow-accent:0 8px 18px rgba(251,146,60,.12);
 }
 :global(body){
   margin:0;
@@ -1082,11 +1124,11 @@ async function sendTurn(choice = '') {
 :global(button),:global(input),:global(textarea){font:inherit}
 :global(:focus-visible){outline:3px solid var(--color-focus-global);outline-offset:2px}
 .shell{min-height:100dvh;background:var(--page-background);color:var(--color-text)}
-.workbench{display:grid;grid-template-columns:248px minmax(0,1fr);gap:16px;width:min(1640px,calc(100vw - 28px));min-height:calc(100dvh - 28px);margin:0 auto;padding:14px 0}
-.rail{position:sticky;top:14px;display:grid;grid-template-rows:auto 1fr auto;gap:18px;height:calc(100dvh - 28px);padding:16px;border:1px solid var(--color-border);border-radius:var(--radius);background:var(--color-surface-panel);box-shadow:var(--shadow-card)}
+.workbench{display:grid;grid-template-columns:220px minmax(0,1fr);gap:12px;width:min(1660px,calc(100vw - 24px));min-height:calc(100dvh - 24px);margin:0 auto;padding:12px 0}
+.rail{position:sticky;top:12px;display:grid;grid-template-rows:auto 1fr auto;gap:16px;height:calc(100dvh - 24px);padding:14px;border:1px solid var(--color-border);border-radius:var(--radius);background:var(--color-surface-panel);box-shadow:var(--shadow-card)}
 .brand-lockup{display:grid;grid-template-columns:38px minmax(0,1fr);gap:12px;align-items:center;min-width:0}
 .brand-mark{display:grid;place-items:center;width:38px;height:38px;border-radius:var(--radius);background:var(--color-heading);color:var(--color-bg);font-size:16px;font-weight:900}
-.eyebrow{margin:0 0 4px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--color-primary-strong);font-weight:800;line-height:1.2}
+.eyebrow{margin:0 0 4px;font-size:11px;letter-spacing:0;color:var(--color-primary-strong);font-weight:800;line-height:1.2}
 h1,p{margin:0}
 h1{font-size:20px;line-height:1.1;letter-spacing:0;color:var(--color-heading);overflow-wrap:anywhere}
 .nav{display:grid;align-content:start;gap:6px;min-height:0}
@@ -1099,20 +1141,32 @@ h1{font-size:20px;line-height:1.1;letter-spacing:0;color:var(--color-heading);ov
 .nav-button.active .nav-key{background:var(--color-primary);color:var(--color-on-primary)}
 .nav-button:hover{border-color:var(--color-border);background:var(--color-hover);color:var(--color-primary-strong)}
 .rail-status{display:grid;gap:6px;padding-top:14px;border-top:1px solid var(--color-border-soft);min-width:0}
-.rail-status span{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--color-faint);font-weight:800}
+.rail-status span{font-size:11px;letter-spacing:0;color:var(--color-faint);font-weight:800}
 .rail-status strong{font-size:12px;line-height:1.35;color:var(--color-muted);overflow-wrap:anywhere}
-.workspace{display:grid;min-width:0;min-height:calc(100dvh - 28px)}
+.workspace{display:grid;grid-template-rows:auto minmax(0,1fr);gap:10px;min-width:0;min-height:calc(100dvh - 24px)}
+.top-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;min-width:0}
+.status-chip{display:grid;gap:3px;min-width:0;min-height:48px;padding:8px 10px;border:1px solid var(--color-border-soft);border-radius:var(--radius);background:var(--color-surface-panel);color:var(--color-muted)}
+.status-chip span{font-size:11px;line-height:1.2;color:var(--color-faint);font-weight:700;letter-spacing:0}
+.status-chip strong{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;line-height:1.2;color:var(--color-text)}
+.studio-frame{display:grid;grid-template-rows:auto minmax(0,1fr);gap:10px;min-width:0;min-height:0}
+.studio-switcher{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;min-width:0}
+.studio-tab{appearance:none;border:1px solid var(--color-border-soft);cursor:pointer;display:grid;gap:3px;min-height:52px;padding:9px 12px;border-radius:var(--radius);background:var(--color-surface-panel);color:var(--color-muted);text-align:left;transition:background 180ms var(--ease),border-color 180ms var(--ease),box-shadow 180ms var(--ease),color 180ms var(--ease)}
+.studio-tab strong{min-width:0;font-size:14px;line-height:1.25;color:inherit;overflow-wrap:anywhere}
+.studio-tab span{min-width:0;font-size:12px;line-height:1.25;color:var(--color-faint);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.studio-tab.active{border-color:var(--color-border-strong);background:var(--color-surface-muted);color:var(--color-primary-strong);box-shadow:var(--shadow-active)}
+.studio-tab:hover{border-color:var(--color-border-strong);background:var(--color-hover);color:var(--color-primary-strong)}
 .status-row{grid-column:2;display:flex;justify-content:flex-start;gap:12px;flex-wrap:wrap}
 .status{display:inline-flex;align-items:center;min-height:44px;padding:10px 14px;border-radius:var(--radius);line-height:1.5}
 .status.error{color:var(--color-danger-text);background:var(--color-danger-bg);border:1px solid var(--color-danger-border)}
 @media (max-width:1100px){
   .workbench{grid-template-columns:1fr;width:min(100vw - 20px,1640px)}
   .rail{position:static;height:auto;grid-template-rows:auto auto;gap:12px}
-  .nav{grid-template-columns:repeat(5,minmax(0,1fr))}
+  .nav{grid-template-columns:repeat(3,minmax(0,1fr))}
   .nav-button{grid-template-columns:1fr;justify-items:center;min-height:62px;text-align:center}
   .nav-copy small{display:none}
   .rail-status{display:none}
   .workspace{min-height:auto}
+  .top-strip{grid-template-columns:repeat(2,minmax(0,1fr))}
   .status-row{grid-column:1}
 }
 @media (max-width:720px){
@@ -1124,8 +1178,11 @@ h1{font-size:20px;line-height:1.1;letter-spacing:0;color:var(--color-heading);ov
   .nav{grid-template-columns:repeat(3,minmax(0,1fr))}
   .nav-button{min-height:54px}
   .nav-copy strong{font-size:12px}
+  .top-strip{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .studio-switcher{grid-template-columns:1fr}
+  .status-chip{min-height:42px}
 }
 @media (prefers-reduced-motion:reduce){
-  .nav-button{transition:none}
+  .nav-button,.studio-tab{transition:none}
 }
 </style>

@@ -161,22 +161,22 @@ function issueLocation(issue: { nodeId?: string | null; choiceId?: string | null
 </template>
 
 <style scoped>
-.generator-stage{display:grid;gap:18px;padding:20px;border:1px solid var(--color-border);border-radius:var(--radius);background:var(--color-bg-soft)}
+.generator-stage{display:grid;gap:12px;padding:14px;border:1px solid var(--color-border);border-radius:var(--radius);background:var(--color-bg-soft);box-shadow:var(--shadow-card)}
 .panel-head,.panel-actions,.group-head{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}
-.generator-grid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);gap:18px}
-.generator-panel,.analysis-panel{display:grid;gap:16px;padding:20px;border:1px solid var(--color-border-soft);border-radius:var(--radius);background:var(--color-surface)}
+.generator-grid{display:grid;grid-template-columns:1fr;gap:12px}
+.generator-panel,.analysis-panel{display:grid;gap:12px;padding:12px;border:1px solid var(--color-border-soft);border-radius:var(--radius);background:var(--color-surface)}
 .field-grid,.status-column,.issue-columns,.issue-list{display:grid;gap:12px}
-.field-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.field-grid{grid-template-columns:1fr}
 .field{display:grid;gap:10px}
 .field.wide{grid-column:1/-1}
-.field span,.metric-grid span{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--color-primary-strong);font-weight:800}
+.field span,.metric-grid span{font-size:12px;letter-spacing:0;color:var(--color-primary-strong);font-weight:800}
 .field input,.editor-textarea{width:100%;min-height:44px;padding:10px 14px;border:1px solid var(--color-border);border-radius:var(--radius);outline:none;color:var(--color-text);background:var(--color-input);font:inherit}
 .editor-textarea{resize:vertical;min-height:112px}
 .field input:focus,.editor-textarea:focus{border-color:var(--color-primary);box-shadow:0 0 0 4px var(--color-focus-ring)}
-.metric-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
-.metric-grid div{display:grid;gap:4px;padding:14px;border:1px solid var(--color-border-soft);border-radius:var(--radius);background:var(--color-bg-soft)}
+.metric-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.metric-grid div{display:grid;gap:4px;padding:10px;border:1px solid var(--color-border-soft);border-radius:var(--radius);background:var(--color-bg-soft)}
 .metric-grid strong{font-size:18px;color:var(--color-text)}
-.issue-columns{grid-template-columns:repeat(2,minmax(0,1fr))}
+.issue-columns{grid-template-columns:1fr}
 .issue-group{display:grid;gap:10px}
 .group-head h4,.eyebrow,.panel-note,p{margin:0}
 .group-head span{display:inline-flex;padding:5px 9px;border-radius:var(--radius);background:var(--color-token-muted-bg);color:var(--color-faint);font-size:12px;font-weight:700}
@@ -196,9 +196,9 @@ function issueLocation(issue: { nodeId?: string | null; choiceId?: string | null
 .primary-button:hover{background:var(--color-accent-hover);box-shadow:var(--shadow-accent)}
 .secondary-button:hover{border-color:var(--color-primary);background:var(--color-hover)}
 .primary-button:disabled,.secondary-button:disabled{opacity:.5;cursor:not-allowed}
-.eyebrow{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--color-primary-strong);font-weight:800;line-height:1.2}
+.eyebrow{font-size:11px;letter-spacing:0;color:var(--color-primary-strong);font-weight:800;line-height:1.2}
 h3,h4{margin:0}
-h3{font-size:22px;line-height:1.18;color:var(--color-heading);overflow-wrap:anywhere}
+h3{font-size:18px;line-height:1.18;color:var(--color-heading);overflow-wrap:anywhere}
 h4{font-size:16px;line-height:1.25;color:var(--color-heading-soft);overflow-wrap:anywhere}
 @media (max-width:1100px){.generator-grid,.issue-columns,.field-grid,.metric-grid{grid-template-columns:1fr}}
 </style>

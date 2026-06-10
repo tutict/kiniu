@@ -389,9 +389,7 @@ function updateAgentField(field: keyof Agent, value: string) {
       <div v-else class="director-empty">
         <p>{{ t('emptyNoAgentDraft') }}</p>
       </div>
-    </div>
-
-    <div class="footer-strip">
+      <aside class="footer-strip">
       <div class="footer-actions">
         <button class="primary-button" type="button" @click="emit('persistAgents', t('statusManualAgentSaved'))">{{ t('actionSaveAgentDraft') }}</button>
         <button class="primary-button" type="button" :disabled="isSavingAgents || !draft" @click="emit('publishAgents')">
@@ -405,35 +403,36 @@ function updateAgentField(field: keyof Agent, value: string) {
         <p v-if="agentStatus" class="status success">{{ agentStatus }}</p>
         <p v-if="agentError" class="status error">{{ agentError }}</p>
       </div>
+      </aside>
     </div>
   </section>
 </template>
 
 <style scoped>
-.agent-stage{display:grid;gap:18px;padding:20px;border:1px solid var(--color-border);border-radius:var(--radius);background:var(--color-bg-soft)}
+.agent-stage{display:grid;gap:12px;min-height:calc(100dvh - 154px);padding:14px;border:1px solid var(--color-border);border-radius:var(--radius);background:var(--color-bg-soft)}
 .stage-head,.stage-actions,.panel-head,.hero-metrics,.trajectory-strip,.footer-actions{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
-.stage-grid{display:grid;grid-template-columns:300px minmax(0,1fr);gap:18px}
+.stage-grid{display:grid;grid-template-columns:300px minmax(0,1fr) 280px;gap:10px;min-width:0}
 .cast-column,.director-panel{border:1px solid var(--color-border-soft);background:var(--color-surface);border-radius:var(--radius)}
-.cast-column{display:grid;align-content:start;gap:14px;padding:18px}
+.cast-column{display:grid;align-content:start;gap:12px;max-height:calc(100dvh - 232px);overflow:auto;padding:14px;scrollbar-gutter:stable}
 .cast-toolbar,.cast-list,.director-main,.editor-fields,.footer-status{display:grid;gap:12px}
-.cast-list{max-height:740px;overflow:auto;padding-right:4px}
+.cast-list{max-height:none;overflow:auto;padding-right:4px}
 .cast-item{appearance:none;border:1px solid var(--color-border-soft);border-radius:var(--radius);padding:14px;background:var(--color-surface);color:var(--color-text);text-align:left;cursor:pointer;transition:background 180ms var(--ease),border-color 180ms var(--ease),box-shadow 180ms var(--ease)}
 .cast-item.active{border-color:var(--color-primary);background:var(--color-surface-muted);box-shadow:var(--shadow-active)}
 .cast-item:hover{border-color:var(--color-primary);background:var(--color-hover)}
 .cast-top,.cast-scenes{display:flex;gap:8px;justify-content:space-between;align-items:center;flex-wrap:wrap}
 .cast-item p{margin:6px 0 0;color:var(--color-faint);font-size:13px}
 .cast-scenes span,.scene-ribbon span{display:inline-flex;padding:5px 9px;border-radius:var(--radius);background:var(--color-token-muted-bg);color:var(--color-faint);font-size:12px;font-weight:700}
-.director-main{grid-auto-rows:min-content}
-.director-panel{padding:20px}
+.director-main{grid-auto-rows:min-content;max-height:calc(100dvh - 232px);overflow:auto;scrollbar-gutter:stable}
+.director-panel{padding:14px}
 .hero-panel{background:var(--color-hero-surface)}
 .hero-metrics div,.trajectory-strip div{display:grid;gap:4px;min-width:92px}
-.hero-metrics span,.trajectory-strip span{color:var(--color-faint);font-size:12px;text-transform:uppercase;letter-spacing:.1em}
+.hero-metrics span,.trajectory-strip span{color:var(--color-faint);font-size:12px;letter-spacing:0}
 .hero-metrics strong,.trajectory-strip strong{font-size:15px;color:var(--color-text)}
 .trajectory-strip{padding-top:18px;border-top:1px solid var(--color-border-soft)}
 .editor-fields{grid-template-columns:repeat(2,minmax(0,1fr))}
 .field{display:grid;gap:10px}
 .field.wide{grid-column:1/-1}
-.field span{font-size:13px;color:var(--color-text);letter-spacing:.08em;text-transform:uppercase;font-weight:800}
+.field span{font-size:13px;color:var(--color-text);letter-spacing:0;font-weight:800}
 .search-input,.field input,.editor-textarea{width:100%;min-height:44px;padding:10px 14px;border:1px solid var(--color-border);border-radius:var(--radius);outline:none;color:var(--color-text);background:var(--color-input);font:inherit}
 .editor-textarea{resize:vertical;min-height:124px}
 .search-input:focus,.field input:focus,.editor-textarea:focus{border-color:var(--color-primary);box-shadow:0 0 0 4px var(--color-focus-ring)}
@@ -441,7 +440,8 @@ function updateAgentField(field: keyof Agent, value: string) {
 .orchestration-panel{display:grid;gap:16px}
 .scene-ribbon{display:flex;gap:8px;flex-wrap:wrap}
 .director-empty{display:grid;place-items:center;min-height:320px;border:1px dashed var(--color-border);border-radius:var(--radius);color:var(--color-faint);background:var(--color-surface)}
-.footer-strip{display:grid;gap:12px;padding-top:6px}
+.footer-strip{display:grid;align-content:start;gap:12px;max-height:calc(100dvh - 232px);overflow:auto;padding:14px;border:1px solid var(--color-border-soft);border-radius:var(--radius);background:var(--color-surface);scrollbar-gutter:stable}
+.footer-actions{display:grid;justify-content:stretch}
 .primary-button,.secondary-button,.text-button{appearance:none;border:0;cursor:pointer;transition:background 180ms var(--ease),border-color 180ms var(--ease),box-shadow 180ms var(--ease),opacity 180ms var(--ease)}
 .primary-button,.secondary-button{min-height:44px;padding:0 16px;border-radius:var(--radius);font-weight:800}
 .primary-button{background:var(--color-accent);color:var(--color-on-accent)}
@@ -449,7 +449,7 @@ function updateAgentField(field: keyof Agent, value: string) {
 .primary-button:hover{background:var(--color-accent-hover);box-shadow:var(--shadow-accent)}
 .secondary-button:hover{border-color:var(--color-primary);background:var(--color-hover)}
 .text-button{min-height:44px;padding:0;background:transparent;color:var(--color-danger-action);font-weight:800}
-.eyebrow{margin:0 0 6px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--color-primary-strong);font-weight:800;line-height:1.2}
+.eyebrow{margin:0 0 6px;font-size:11px;letter-spacing:0;color:var(--color-primary-strong);font-weight:800;line-height:1.2}
 h3,h4,p{margin:0}
 h3{font-size:24px;line-height:1.15;color:var(--color-heading);overflow-wrap:anywhere}
 h4{font-size:18px;line-height:1.2;color:var(--color-heading-soft);overflow-wrap:anywhere}
@@ -457,6 +457,7 @@ h4{font-size:18px;line-height:1.2;color:var(--color-heading-soft);overflow-wrap:
 .status.success{color:var(--color-success-text);background:var(--color-success-bg);border:1px solid var(--color-success-border)}
 .status.error{color:var(--color-danger-text);background:var(--color-danger-bg);border:1px solid var(--color-danger-border)}
 .tight{margin-bottom:12px}
-@media (max-width:1200px){.stage-grid{grid-template-columns:1fr}.cast-list{max-height:none}}
+@media (max-width:1280px){.stage-grid{grid-template-columns:280px minmax(0,1fr) 240px}}
+@media (max-width:1100px){.agent-stage{min-height:auto}.stage-grid{grid-template-columns:1fr}.cast-column,.director-main,.footer-strip{max-height:none;overflow:visible}.cast-list{max-height:none}}
 @media (max-width:860px){.editor-fields,.dual-panel{grid-template-columns:1fr}}
 </style>

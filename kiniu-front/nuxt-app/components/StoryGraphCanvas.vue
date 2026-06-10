@@ -217,7 +217,7 @@ function shortLabel(value: string, length = 28) {
             :y="node.y"
             :width="node.width"
             :height="node.height"
-            rx="18"
+            rx="8"
           />
           <text :x="node.x + 16" :y="node.y + 24" class="scene-text">
             {{ shortLabel(node.node.sceneId, 24) }}
@@ -244,7 +244,7 @@ function shortLabel(value: string, length = 28) {
 <style scoped>
 .graph-panel{display:grid;gap:16px}
 .graph-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
-.eyebrow{margin:0 0 8px;font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--color-primary-strong);font-weight:800}
+.eyebrow{margin:0 0 8px;font-size:12px;letter-spacing:0;color:var(--color-primary-strong);font-weight:800}
 h3,p{margin:0}
 h3{font-size:15px;color:var(--color-heading-soft)}
 .graph-meta{display:flex;gap:8px;flex-wrap:wrap}
@@ -261,7 +261,7 @@ h3{font-size:15px;color:var(--color-heading-soft)}
 .graph-node.entry rect{stroke:var(--color-graph-entry)}
 .graph-node:hover rect{fill:var(--color-surface-muted)}
 .scene-text,.meta-text,.title-text{font-family:"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;pointer-events:none}
-.scene-text{font-size:11px;letter-spacing:.1em;text-transform:uppercase;fill:var(--color-primary-strong)}
+.scene-text{font-size:11px;letter-spacing:0;fill:var(--color-primary-strong)}
 .title-text{font-size:16px;font-weight:700;fill:var(--color-heading-soft)}
 .meta-text{font-size:12px;fill:var(--color-muted)}
 .graph-hint{color:var(--color-faint);line-height:1.6}

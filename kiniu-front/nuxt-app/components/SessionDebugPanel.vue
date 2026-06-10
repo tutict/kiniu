@@ -435,7 +435,7 @@ function displayCode(value: string) {
               :class="{ selected: node.id === selectedTurnId }"
               @click="selectedTurnId = node.id"
             >
-              <rect :x="node.x" :y="node.y" width="210" height="42" rx="14" />
+              <rect :x="node.x" :y="node.y" width="210" height="42" rx="8" />
               <text :x="node.x + 14" :y="node.y + 17" class="branch-title">
                 {{ shortText(node.turn.storyEvent?.title || node.turn.sceneId, 24) }}
               </text>
@@ -643,14 +643,18 @@ function displayCode(value: string) {
 </template>
 
 <style scoped>
-.debug-stage{display:grid;gap:18px;min-width:0;padding:18px;border:1px solid var(--color-border);border-radius:var(--radius);background:var(--color-bg-soft);overflow:hidden}
+.debug-stage{display:grid;gap:12px;min-width:0;min-height:calc(100dvh - 154px);padding:14px;border:1px solid var(--color-border);border-radius:var(--radius);background:var(--color-bg-soft);overflow:hidden}
 .debug-head,.debug-toolbar,.panel-head,.footer-actions,.status-row{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}
-.debug-grid{display:grid;gap:18px;min-width:0}
-.debug-panel{min-width:0;border:1px solid var(--color-border-soft);background:var(--color-surface);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow-card)}
-.summary-panel{display:grid;gap:18px}
+.debug-grid{display:grid;grid-template-columns:300px minmax(0,1fr);grid-template-areas:"summary summary" "sandbox branch" "sandbox replay";gap:10px;min-width:0}
+.debug-panel{min-width:0;border:1px solid var(--color-border-soft);background:var(--color-surface);border-radius:var(--radius);padding:14px;box-shadow:var(--shadow-card)}
+.summary-panel{grid-area:summary}
+.sandbox-panel{grid-area:sandbox}
+.branch-panel{grid-area:branch}
+.replay-panel{grid-area:replay}
+.summary-panel{display:grid;gap:12px}
 .metric-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(92px,1fr));gap:10px;min-width:0}
 .metric-strip div,.detail-grid div{display:grid;gap:4px;min-width:92px}
-.metric-strip span,.detail-grid span,.block-label{color:var(--color-faint);font-size:12px;text-transform:uppercase;letter-spacing:.1em}
+.metric-strip span,.detail-grid span,.block-label{color:var(--color-faint);font-size:12px;letter-spacing:0}
 .metric-strip strong,.detail-grid strong{color:var(--color-text);font-size:15px}
 .summary-copy{display:grid;gap:8px;color:var(--color-muted);line-height:1.65}
 .backend-pill{display:inline-flex;padding:6px 10px;border-radius:var(--radius);background:var(--color-token-muted-bg);color:var(--color-faint);font-size:12px;font-weight:700}
@@ -663,7 +667,7 @@ function displayCode(value: string) {
 .branch-title,.branch-meta{font-family:"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;pointer-events:none}
 .branch-title{fill:var(--color-heading-soft);font-size:13px;font-weight:700}
 .branch-meta{fill:var(--color-muted);font-size:11px}
-.replay-layout,.sandbox-layout{display:grid;grid-template-columns:280px minmax(0,1fr);gap:16px}
+.replay-layout,.sandbox-layout{display:grid;grid-template-columns:260px minmax(0,1fr);gap:12px}
 .turn-list,.sandbox-list,.reply-list,.detail-grid{display:grid;gap:10px}
 .turn-list{max-height:520px;overflow:auto;padding-right:4px;scrollbar-gutter:stable}
 .sandbox-list{max-height:420px;overflow:auto;padding-right:4px;scrollbar-gutter:stable}
@@ -682,7 +686,7 @@ function displayCode(value: string) {
 .reply-card{display:grid;gap:4px;padding:12px;border:1px solid var(--color-border-soft);border-radius:var(--radius);background:var(--color-surface)}
 .reply-card span,.reply-card small{color:var(--color-faint)}
 .reply-card p{margin:0;color:var(--color-text)}
-.eyebrow{margin:0 0 6px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--color-primary-strong);font-weight:800;line-height:1.2}
+.eyebrow{margin:0 0 6px;font-size:11px;letter-spacing:0;color:var(--color-primary-strong);font-weight:800;line-height:1.2}
 .search-input{width:min(320px,100%);min-height:44px;padding:10px 14px;border:1px solid var(--color-border);border-radius:var(--radius);outline:none;color:var(--color-text);background:var(--color-input);font:inherit}
 .search-input:focus{border-color:var(--color-primary);box-shadow:0 0 0 4px var(--color-focus-ring)}
 .primary-button,.secondary-button{appearance:none;border:0;cursor:pointer;min-height:44px;padding:0 16px;border-radius:var(--radius);font-weight:800;transition:background 180ms var(--ease),border-color 180ms var(--ease),box-shadow 180ms var(--ease)}
@@ -697,7 +701,8 @@ h3,h4,p{margin:0}
 h3{font-size:24px;line-height:1.15;color:var(--color-heading);overflow-wrap:anywhere}
 h4{font-size:17px;line-height:1.2;color:var(--color-heading-soft);overflow-wrap:anywhere}
 .debug-panel,.turn-card,.detail-block,.reply-card,.backend-pill{overflow-wrap:anywhere}
-@media (max-width:980px){.replay-layout,.sandbox-layout{grid-template-columns:1fr}.detail-grid{grid-template-columns:1fr}.debug-toolbar,.search-input{width:100%}}
+@media (max-width:1180px){.debug-grid{grid-template-columns:1fr;grid-template-areas:"summary" "branch" "sandbox" "replay"}}
+@media (max-width:980px){.debug-stage{min-height:auto}.replay-layout,.sandbox-layout{grid-template-columns:1fr}.detail-grid{grid-template-columns:1fr}.debug-toolbar,.search-input{width:100%}}
 @media (max-width:520px){.debug-stage{padding:14px}.debug-panel{padding:14px}.metric-strip{grid-template-columns:repeat(2,minmax(0,1fr))}.metric-strip div,.detail-grid div{min-width:0}.footer-actions .primary-button,.footer-actions .secondary-button{flex:1 1 140px}}
 @media (prefers-reduced-motion:reduce){.turn-card,.primary-button,.secondary-button{transition:none}.turn-card:hover{transform:none}}
 </style>

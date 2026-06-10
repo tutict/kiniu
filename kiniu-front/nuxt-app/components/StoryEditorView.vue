@@ -374,20 +374,6 @@ function importSandboxPlan(planId: string) {
     </aside>
 
     <section class="editor-main">
-      <StoryGeneratorPanel
-        :backend-url="backendUrl"
-        :has-draft="!!draft"
-        :analysis="storyAnalysis"
-        :is-generating="isGeneratingStory"
-        :is-validating="isValidatingStory"
-        :generator-status="generatorStatus"
-        :generator-error="generatorError"
-        :validation-status="validationStatus"
-        :validation-error="validationError"
-        @validate-draft="emit('validateStory')"
-        @generate-draft="emit('generateStory', $event)"
-      />
-
       <div v-if="selectedNode" class="editor-main-grid">
         <section class="editor-panel editor-panel-wide">
           <StoryGraphCanvas
@@ -542,6 +528,20 @@ function importSandboxPlan(planId: string) {
         </div>
       </div>
 
+      <StoryGeneratorPanel
+        :backend-url="backendUrl"
+        :has-draft="!!draft"
+        :analysis="storyAnalysis"
+        :is-generating="isGeneratingStory"
+        :is-validating="isValidatingStory"
+        :generator-status="generatorStatus"
+        :generator-error="generatorError"
+        :validation-status="validationStatus"
+        :validation-error="validationError"
+        @validate-draft="emit('validateStory')"
+        @generate-draft="emit('generateStory', $event)"
+      />
+
       <div class="editor-panel compact">
         <p class="eyebrow">{{ t('labelDraftActions') }}</p>
         <div class="stack-actions">
@@ -609,17 +609,17 @@ function importSandboxPlan(planId: string) {
 </template>
 
 <style scoped>
-.editor-view{display:grid;grid-template-columns:300px minmax(0,1fr) 280px;gap:14px;min-height:calc(100dvh - 28px)}
-.tool-workspace{min-height:calc(100dvh - 28px)}
+.editor-view{display:grid;grid-template-columns:300px minmax(0,1fr) 300px;gap:10px;min-height:calc(100dvh - 154px);min-width:0}
+.tool-workspace{min-height:calc(100dvh - 154px);min-width:0}
 .editor-sidebar,.editor-inspector,.editor-panel{border:1px solid var(--color-border);background:var(--color-surface-panel);box-shadow:var(--shadow-card)}
-.editor-sidebar,.editor-inspector{display:grid;align-content:start;gap:16px;padding:18px;border-radius:var(--radius);min-width:0}
+.editor-sidebar,.editor-inspector{display:grid;align-content:start;gap:12px;max-height:calc(100dvh - 154px);overflow:auto;padding:14px;border-radius:var(--radius);min-width:0;scrollbar-gutter:stable}
 .editor-main,.editor-main-grid,.editor-toolbar,.node-list,.editor-fields,.flow-list,.notes-list,.stack-actions{display:grid;gap:12px}
-.editor-main{min-width:0}
-.editor-panel{padding:18px;border-radius:var(--radius);min-width:0}
+.editor-main{min-width:0;max-height:calc(100dvh - 154px);overflow:auto;scrollbar-gutter:stable}
+.editor-panel{padding:14px;border-radius:var(--radius);min-width:0}
 .editor-panel.compact{background:var(--color-bg-soft);border-radius:var(--radius)}
 .editor-panel-wide{grid-column:1/-1}
 .editor-sidebar-head,.panel-head,.inline-actions,.node-card-top,.node-card-meta,.flow-card-top,.flow-target{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}
-.eyebrow{margin:0 0 6px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--color-primary-strong);font-weight:800;line-height:1.2}
+.eyebrow{margin:0 0 6px;font-size:11px;letter-spacing:0;color:var(--color-primary-strong);font-weight:800;line-height:1.2}
 h2,h3,p{margin:0}
 h2{font-size:24px;line-height:1.15;color:var(--color-heading);overflow-wrap:anywhere}
 h3{font-size:18px;line-height:1.25;color:var(--color-heading-soft);overflow-wrap:anywhere}
@@ -628,10 +628,11 @@ h3{font-size:18px;line-height:1.25;color:var(--color-heading-soft);overflow-wrap
 .search-input:focus,.field input:focus,.editor-textarea:focus{border-color:var(--color-primary);box-shadow:0 0 0 4px var(--color-focus-ring)}
 .field{display:grid;gap:10px}
 .field.wide{grid-column:1/-1}
-.field span{font-size:14px;color:var(--color-text);font-weight:700}
+.editor-fields{grid-template-columns:repeat(2,minmax(0,1fr))}
+.field span{font-size:13px;color:var(--color-text);font-weight:700;letter-spacing:0}
 .tag-cloud,.token-row{display:flex;flex-wrap:wrap;gap:8px}
 .token{padding:5px 10px;border-radius:var(--radius);background:var(--color-token-muted-bg);color:var(--color-faint);font-size:13px;cursor:pointer}
-.node-list{max-height:calc(100vh - 340px);overflow:auto;padding-right:4px}
+.node-list{max-height:calc(100dvh - 380px);overflow:auto;padding-right:4px;scrollbar-gutter:stable}
 .node-card{appearance:none;border:1px solid var(--color-border-soft);border-radius:var(--radius);padding:12px;background:var(--color-surface);color:var(--color-text);text-align:left;cursor:pointer;transition:background 180ms var(--ease),border-color 180ms var(--ease),box-shadow 180ms var(--ease)}
 .node-card.active{border-color:var(--color-primary);background:var(--color-surface-muted);box-shadow:var(--shadow-active)}
 .node-card strong,.flow-card strong{overflow-wrap:anywhere}
@@ -653,6 +654,6 @@ h3{font-size:18px;line-height:1.25;color:var(--color-heading-soft);overflow-wrap
 .status{display:inline-flex;align-items:center;min-height:44px;padding:10px 14px;border-radius:var(--radius);line-height:1.5}
 .status.success{color:var(--color-success-text);background:var(--color-success-bg);border:1px solid var(--color-success-border)}
 .status.error{color:var(--color-danger-text);background:var(--color-danger-bg);border:1px solid var(--color-danger-border)}
-@media (max-width:1200px){.editor-view{grid-template-columns:1fr;min-height:auto}.tool-workspace{min-height:auto}.node-list{max-height:none}}
+@media (max-width:1200px){.editor-view{grid-template-columns:1fr;min-height:auto}.tool-workspace{min-height:auto}.editor-sidebar,.editor-inspector,.editor-main{max-height:none;overflow:visible}.node-list{max-height:none}}
 @media (max-width:960px){.editor-fields{grid-template-columns:1fr}}
 </style>
