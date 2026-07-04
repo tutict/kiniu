@@ -1,75 +1,58 @@
-# Nuxt Minimal Starter
+﻿# 灵枢智能体容器前端
 
-Look at the [Nuxt documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.
+这是灵枢智能体容器的前端界面，基于 Nuxt 4 和 Vue 3 构建。界面以本地桌面工作台为主，提供对话入口、任务流编排、智能体管理、会话回放和运行设置。
 
-## Setup
+## 功能模块
 
-Make sure to install dependencies:
+- **对话**：主入口，负责接收用户需求并展示下一步动作。
+- **编排台**：包含任务流、智能体和导出回放三个子工作区。
+- **设置**：配置语言、主题、后端地址、上游接口、密钥和模型名。
+
+## 本地开发
+
+安装依赖：
 
 ```bash
-# npm
 npm install
-
-# pnpm
-pnpm install
-
-# yarn
-yarn install
-
-# bun
-bun install
 ```
 
-## Development Server
-
-Start the development server on `http://localhost:3000`:
+启动开发服务：
 
 ```bash
-# npm
 npm run dev
-
-# pnpm
-pnpm dev
-
-# yarn
-yarn dev
-
-# bun
-bun run dev
 ```
 
-## Production
+默认访问地址：
 
-Build the application for production:
+```text
+http://localhost:3000
+```
+
+## 生产构建
 
 ```bash
-# npm
 npm run build
-
-# pnpm
-pnpm build
-
-# yarn
-yarn build
-
-# bun
-bun run build
 ```
 
-Locally preview production build:
+本地预览生产构建：
 
 ```bash
-# npm
 npm run preview
-
-# pnpm
-pnpm preview
-
-# yarn
-yarn preview
-
-# bun
-bun run preview
 ```
 
-Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
+## 后端连接
+
+前端默认连接后端地址：
+
+```text
+http://localhost:8080
+```
+
+可以在设置页修改“容器后端地址”。前端会使用该地址请求会话推进、任务流、智能体配置和会话导出接口。
+
+## 设计原则
+
+- 不引入额外 UI 组件库，减少前端依赖和打包体积。
+- 对话页优先，复杂状态通过上下文面板和工作台逐步展开。
+- 保持中文排版简洁，减少首屏长说明和过度装饰。
+- 适配桌面优先的本地工具场景，移动端保证可读可用。
