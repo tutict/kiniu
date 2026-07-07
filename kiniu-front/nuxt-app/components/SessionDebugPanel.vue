@@ -91,7 +91,8 @@ const sessionMetrics = computed(() => {
   const seedTurns = turns.filter(turn => turn.storyEvent?.sourceType === 'seed').length
   const uniqueScenes = new Set(turns.map(turn => turn.sceneId).filter(Boolean)).size
   return {
-    totalTurns: turns.length,
+    visibleTurns: turns.length,
+    totalTurns: props.exportData?.totalTurns ?? turns.length,
     generatedTurns,
     seedTurns,
     uniqueScenes
@@ -245,7 +246,7 @@ function displayCode(value: string) {
           </div>
           <div>
             <span>{{ t('labelTurns') }}</span>
-            <strong>{{ sessionMetrics.totalTurns }}</strong>
+            <strong>{{ sessionMetrics.visibleTurns }}/{{ sessionMetrics.totalTurns }}</strong>
           </div>
           <div>
             <span>{{ t('labelGenerated') }}</span>

@@ -12,6 +12,7 @@ import com.kiniu.game.dto.GameRequest;
 import com.kiniu.game.dto.GameResponse;
 import com.kiniu.game.dto.OrchestrationTraceView;
 import com.kiniu.game.memory.MemoryService;
+import com.kiniu.game.security.SessionIdValidator;
 import com.kiniu.game.state.WorldState;
 import com.kiniu.game.story.StoryEngine;
 import com.kiniu.game.story.StoryEvent;
@@ -24,8 +25,6 @@ import org.springframework.stereotype.Service;
 
 @Service
 public class GameEngine {
-
-    private static final String DEFAULT_SESSION_ID = "default-session";
 
     private final AgentService agentService;
     private final AgentManager agentManager;
@@ -41,6 +40,7 @@ public class GameEngine {
     private final SessionArchiveService sessionArchiveService;
     private final MemoryService memoryService;
     private final StoryEngine storyEngine;
+    private final SessionIdValidator sessionIdValidator;
     private final int maxSessionStates;
     private final Map<String, WorldState> sessionStates = new LinkedHashMap<>(16, 0.75f, true);
 
@@ -59,6 +59,7 @@ public class GameEngine {
             SessionArchiveService sessionArchiveService,
             MemoryService memoryService,
             StoryEngine storyEngine,
+            SessionIdValidator sessionIdValidator,
             @Value("${game.sessions.max-state-sessions:3}") int maxSessionStates) {
         this.agentService = agentService;
         this.agentManager = agentManager;
@@ -74,6 +75,7 @@ public class GameEngine {
         this.sessionArchiveService = sessionArchiveService;
         this.memoryService = memoryService;
         this.storyEngine = storyEngine;
+        this.sessionIdValidator = sessionIdValidator;
         this.maxSessionStates = Math.max(1, maxSessionStates);
     }
 
@@ -218,7 +220,7 @@ public class GameEngine {
             state.adjustRelationship("writing-coach", 1, 0, 1);
             state.addFlag("mode-writing");
         }
-        if (containsAny(combined, "help", "帮", "建议", "下一步", "plan", "review", "复盘", "总结")) {
+        if (containsAny(combined, "help", "帮助", "建议", "下一步", "plan", "review", "复盘", "总结")) {
             state.adjustRelationship("narrator", 1, 0, 1);
         }
         if (containsAny(combined, "doubt", "refuse", "不对", "换一个", "别", "不要")) {
@@ -265,10 +267,7 @@ public class GameEngine {
     }
 
     private String normalizeSessionId(String sessionId) {
-        if (sessionId == null || sessionId.isBlank()) {
-            return DEFAULT_SESSION_ID;
-        }
-        return sessionId.trim();
+        return sessionIdValidator.normalize(sessionId);
     }
 
     private String normalizeText(String value) {

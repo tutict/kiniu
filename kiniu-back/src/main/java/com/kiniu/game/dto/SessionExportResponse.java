@@ -11,5 +11,8 @@ public record SessionExportResponse(
         WorldState currentState,
         List<Agent> agents,
         List<SessionTurnView> turns,
+        int totalTurns,
+        int offset,
+        int limit,
         List<SandboxPlanView> sandboxPlans) {
 }

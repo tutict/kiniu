@@ -1,6 +1,7 @@
 package com.kiniu.game.engine;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.kiniu.game.dto.BranchOptionView;
 import com.kiniu.game.dto.GameRequest;
@@ -140,5 +141,36 @@ class GameEngineOrchestrationTests {
         assertThat(reloadedExport.turns()).hasSize(2);
         assertThat(reloadedExport.sandboxPlans()).hasSize(1);
         assertThat(reloadedExport.sandboxPlans().get(0).summary()).isEqualTo("Test branch rehearsal");
+    }
+    @Test
+    void shouldRejectUnsafeSessionIdsBeforeWritingArchive() {
+        Path exportDirectory = Path.of("target/test-agent-container-session-exports");
+
+        assertThatThrownBy(() -> gameEngine.next(new GameRequest("../escape", "hello", "")))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Session id");
+        assertThat(Files.exists(exportDirectory.resolve("escape.session.json"))).isFalse();
+    }
+
+    @Test
+    void shouldPageSessionExports() {
+        String sessionId = "paged-" + UUID.randomUUID();
+
+        gameEngine.next(new GameRequest(sessionId, "java rag interview", ""));
+        gameEngine.next(new GameRequest(sessionId, "continue with JVM and thread pools", ""));
+
+        SessionExportResponse firstPage = sessionArchiveService.getSessionExport(sessionId, 0, 1);
+        assertThat(firstPage.turns()).hasSize(1);
+        assertThat(firstPage.turns().get(0).id()).isEqualTo("turn-0");
+        assertThat(firstPage.totalTurns()).isEqualTo(2);
+        assertThat(firstPage.offset()).isZero();
+        assertThat(firstPage.limit()).isEqualTo(1);
+
+        SessionExportResponse secondPage = sessionArchiveService.getSessionExport(sessionId, 1, 1);
+        assertThat(secondPage.turns()).hasSize(1);
+        assertThat(secondPage.turns().get(0).id()).isEqualTo("turn-1");
+        assertThat(secondPage.totalTurns()).isEqualTo(2);
+        assertThat(secondPage.offset()).isEqualTo(1);
+        assertThat(secondPage.limit()).isEqualTo(1);
     }
 }

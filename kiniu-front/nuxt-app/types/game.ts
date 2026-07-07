@@ -1,5 +1,6 @@
 export type ApiSettings = {
   backendUrl: string
+  localToken: string
   providerUrl: string
   apiKey: string
   model: string
@@ -176,6 +177,9 @@ export type SessionExportResponse = {
   currentState: WorldState
   agents: Agent[]
   turns: SessionTurnView[]
+  totalTurns: number
+  offset: number
+  limit: number
   sandboxPlans: SavedSandboxPlan[]
 }
 

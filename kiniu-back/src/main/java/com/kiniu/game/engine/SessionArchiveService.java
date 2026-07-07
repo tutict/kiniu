@@ -9,6 +9,7 @@ import com.kiniu.game.dto.SandboxPlanRequest;
 import com.kiniu.game.dto.SandboxPlanView;
 import com.kiniu.game.dto.SessionExportResponse;
 import com.kiniu.game.dto.SessionTurnView;
+import com.kiniu.game.security.SessionIdValidator;
 import com.kiniu.game.state.WorldState;
 import com.kiniu.game.story.StoryEvent;
 import java.io.IOException;
@@ -29,7 +30,11 @@ import org.springframework.stereotype.Service;
 @Service
 public class SessionArchiveService {
 
+    private static final int DEFAULT_EXPORT_LIMIT = 50;
+    private static final int MAX_EXPORT_LIMIT = 200;
+
     private final ObjectMapper objectMapper;
+    private final SessionIdValidator sessionIdValidator;
     private final Path exportDirectory;
     private final int maxCachedArchives;
     private final Map<String, SessionArchiveState> sessionArchives = new LinkedHashMap<>(16, 0.75f, true);
@@ -37,10 +42,12 @@ public class SessionArchiveService {
     @Autowired
     public SessionArchiveService(
             ObjectMapper objectMapper,
+            SessionIdValidator sessionIdValidator,
             @Value("${game.sessions.export-path:data/session-exports}") String exportDirectory,
             @Value("${game.sessions.max-cached-archives:3}") int maxCachedArchives) {
         this.objectMapper = objectMapper;
-        this.exportDirectory = Paths.get(exportDirectory).toAbsolutePath();
+        this.sessionIdValidator = sessionIdValidator;
+        this.exportDirectory = Paths.get(exportDirectory).toAbsolutePath().normalize();
         this.maxCachedArchives = Math.max(1, maxCachedArchives);
     }
 
@@ -57,6 +64,7 @@ public class SessionArchiveService {
             String directorMessage,
             String combinedSummary,
             OrchestrationTraceView orchestration) {
+        sessionId = sessionIdValidator.normalize(sessionId);
         SessionArchiveState previousState = getArchiveState(sessionId);
         List<SandboxPlanView> sandboxPlans = previousState == null
                 ? List.of()
@@ -96,6 +104,7 @@ public class SessionArchiveService {
     }
 
     public synchronized SessionExportResponse saveSandboxPlan(String sessionId, SandboxPlanRequest request) {
+        sessionId = sessionIdValidator.normalize(sessionId);
         SessionArchiveState previousState = getArchiveState(sessionId);
         if (previousState == null) {
             throw new IllegalArgumentException("No exported session found for " + sessionId);
@@ -125,19 +134,25 @@ public class SessionArchiveService {
                 previousState.lastTurnId());
         cacheArchiveState(sessionId, archiveState);
         persistHeader(archiveState);
-        return buildExportResponse(sessionId, archiveState);
+        return buildExportResponse(sessionId, archiveState, 0, DEFAULT_EXPORT_LIMIT);
     }
 
     public synchronized SessionExportResponse getSessionExport(String sessionId) {
+        return getSessionExport(sessionId, 0, DEFAULT_EXPORT_LIMIT);
+    }
+
+    public synchronized SessionExportResponse getSessionExport(String sessionId, int offset, int limit) {
+        sessionId = sessionIdValidator.normalize(sessionId);
         SessionArchiveState archiveState = getArchiveState(sessionId);
         if (archiveState == null) {
             throw new IllegalArgumentException("No exported session found for " + sessionId);
         }
 
-        return buildExportResponse(sessionId, archiveState);
+        return buildExportResponse(sessionId, archiveState, offset, limit);
     }
 
     private SessionArchiveState getArchiveState(String sessionId) {
+        sessionId = sessionIdValidator.normalize(sessionId);
         SessionArchiveState archiveState = sessionArchives.get(sessionId);
         if (archiveState != null) {
             return archiveState;
@@ -145,8 +160,8 @@ public class SessionArchiveService {
 
         SessionExportResponse header = readExportIfExists(headerPath(sessionId));
         SessionExportResponse legacyExport = readExportIfExists(legacyExportPath(sessionId));
-        List<SessionTurnView> turns = readPersistedTurns(sessionId, legacyExport);
-        SessionTurnView lastTurn = turns.isEmpty() ? null : turns.get(turns.size() - 1);
+        TurnPage turnPage = readPersistedTurns(sessionId, legacyExport, 0, 0);
+        SessionTurnView lastTurn = turnPage.lastTurn();
         SessionExportResponse stateSource = header != null ? header : legacyExport;
         if (stateSource == null && lastTurn == null) {
             return null;
@@ -158,7 +173,7 @@ public class SessionArchiveService {
                 stateSource == null ? lastTurn.stateSnapshot() : stateSource.currentState(),
                 List.copyOf(stateSource == null ? List.of() : stateSource.agents()),
                 List.copyOf(stateSource == null ? List.of() : stateSource.sandboxPlans()),
-                turns.size(),
+                turnPage.totalTurns(),
                 lastTurn == null ? null : lastTurn.id());
         cacheArchiveState(sessionId, archiveState);
         return archiveState;
@@ -172,36 +187,63 @@ public class SessionArchiveService {
         }
     }
 
-    private SessionExportResponse buildExportResponse(String sessionId, SessionArchiveState archiveState) {
-        List<SessionTurnView> turns = readPersistedTurns(sessionId, readExportIfExists(legacyExportPath(sessionId)));
+    private SessionExportResponse buildExportResponse(String sessionId, SessionArchiveState archiveState, int offset, int limit) {
+        int safeOffset = Math.max(0, offset);
+        int safeLimit = normalizeExportLimit(limit);
+        TurnPage turnPage = readPersistedTurns(sessionId, readExportIfExists(legacyExportPath(sessionId)), safeOffset, safeLimit);
         return new SessionExportResponse(
                 archiveState.sessionId(),
                 archiveState.updatedAt(),
                 archiveState.currentState(),
                 archiveState.agents(),
-                List.copyOf(turns),
+                turnPage.turns(),
+                turnPage.totalTurns(),
+                turnPage.offset(),
+                turnPage.limit(),
                 archiveState.sandboxPlans());
     }
 
-    private List<SessionTurnView> readPersistedTurns(String sessionId, SessionExportResponse legacyExport) {
-        List<SessionTurnView> turns = new ArrayList<>();
-        if (legacyExport != null) {
-            turns.addAll(legacyExport.turns());
+    private TurnPage readPersistedTurns(String sessionId, SessionExportResponse legacyExport, int offset, int limit) {
+        int safeOffset = Math.max(0, offset);
+        int safeLimit = Math.max(0, Math.min(limit, MAX_EXPORT_LIMIT));
+        List<SessionTurnView> page = new ArrayList<>();
+        int totalTurns = 0;
+        SessionTurnView lastTurn = null;
+
+        List<SessionTurnView> legacyTurns = legacyExport == null || legacyExport.turns() == null
+                ? List.of()
+                : legacyExport.turns();
+        for (SessionTurnView turn : legacyTurns) {
+            if (turn == null) {
+                continue;
+            }
+            if (totalTurns >= safeOffset && page.size() < safeLimit) {
+                page.add(turn);
+            }
+            lastTurn = turn;
+            totalTurns++;
         }
 
         Path turnLogPath = turnLogPath(sessionId);
         if (!Files.exists(turnLogPath)) {
-            return turns;
+            return new TurnPage(List.copyOf(page), totalTurns, safeOffset, safeLimit, lastTurn);
         }
 
-        try {
-            List<String> lines = Files.readAllLines(turnLogPath, StandardCharsets.UTF_8);
-            for (String line : lines) {
-                if (!line.isBlank()) {
-                    turns.add(objectMapper.readValue(line, SessionTurnView.class));
+        try (var lines = Files.lines(turnLogPath, StandardCharsets.UTF_8)) {
+            var iterator = lines.iterator();
+            while (iterator.hasNext()) {
+                String line = iterator.next();
+                if (line.isBlank()) {
+                    continue;
                 }
+                SessionTurnView turn = objectMapper.readValue(line, SessionTurnView.class);
+                if (totalTurns >= safeOffset && page.size() < safeLimit) {
+                    page.add(turn);
+                }
+                lastTurn = turn;
+                totalTurns++;
             }
-            return turns;
+            return new TurnPage(List.copyOf(page), totalTurns, safeOffset, safeLimit, lastTurn);
         } catch (IOException exception) {
             throw new IllegalStateException("Failed to read session turns for " + sessionId, exception);
         }
@@ -228,6 +270,9 @@ public class SessionArchiveService {
                     archiveState.currentState(),
                     archiveState.agents(),
                     List.of(),
+                    archiveState.turnCount(),
+                    0,
+                    0,
                     archiveState.sandboxPlans()));
         } catch (IOException exception) {
             throw new IllegalStateException("Failed to persist session header for " + archiveState.sessionId(), exception);
@@ -249,15 +294,24 @@ public class SessionArchiveService {
     }
 
     private Path legacyExportPath(String sessionId) {
-        return exportDirectory.resolve(sessionId + ".json");
+        return resolveSessionPath(sessionId, ".json");
     }
 
     private Path headerPath(String sessionId) {
-        return exportDirectory.resolve(sessionId + ".session.json");
+        return resolveSessionPath(sessionId, ".session.json");
     }
 
     private Path turnLogPath(String sessionId) {
-        return exportDirectory.resolve(sessionId + ".turns.jsonl");
+        return resolveSessionPath(sessionId, ".turns.jsonl");
+    }
+
+    private Path resolveSessionPath(String sessionId, String suffix) {
+        String normalizedSessionId = sessionIdValidator.normalize(sessionId);
+        Path resolved = exportDirectory.resolve(normalizedSessionId + suffix).normalize();
+        if (!resolved.startsWith(exportDirectory)) {
+            throw new IllegalArgumentException("Session export path escaped the configured export directory.");
+        }
+        return resolved;
     }
 
     private SessionExportResponse normalizeExport(SessionExportResponse exportResponse) {
@@ -265,17 +319,39 @@ public class SessionArchiveService {
             return null;
         }
 
+        List<SessionTurnView> turns = List.copyOf(exportResponse.turns() == null ? List.of() : exportResponse.turns());
+        int totalTurns = exportResponse.totalTurns() > 0 ? exportResponse.totalTurns() : turns.size();
+        int offset = Math.max(0, exportResponse.offset());
+        int limit = exportResponse.limit() > 0 ? Math.min(exportResponse.limit(), MAX_EXPORT_LIMIT) : turns.size();
         return new SessionExportResponse(
-                exportResponse.sessionId(),
+                sessionIdValidator.normalize(exportResponse.sessionId()),
                 exportResponse.updatedAt(),
                 exportResponse.currentState(),
                 List.copyOf(exportResponse.agents() == null ? List.of() : exportResponse.agents()),
-                List.copyOf(exportResponse.turns() == null ? List.of() : exportResponse.turns()),
+                turns,
+                totalTurns,
+                offset,
+                limit,
                 List.copyOf(exportResponse.sandboxPlans() == null ? List.of() : exportResponse.sandboxPlans()));
+    }
+
+    private int normalizeExportLimit(int limit) {
+        if (limit <= 0) {
+            return DEFAULT_EXPORT_LIMIT;
+        }
+        return Math.min(limit, MAX_EXPORT_LIMIT);
     }
 
     private String blankIfNull(String value) {
         return value == null ? "" : value;
+    }
+
+    private record TurnPage(
+            List<SessionTurnView> turns,
+            int totalTurns,
+            int offset,
+            int limit,
+            SessionTurnView lastTurn) {
     }
 
     private record SessionArchiveState(

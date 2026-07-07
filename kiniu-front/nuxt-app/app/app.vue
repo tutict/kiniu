@@ -34,6 +34,7 @@ const SANDBOX_PLAN_STORAGE_KEY = 'kiniu.agent.sandboxPlans'
 
 const defaultSettings: ApiSettings = {
   backendUrl: 'http://localhost:8080',
+  localToken: '',
   providerUrl: '',
   apiKey: '',
   model: 'gpt-4.1-mini',
@@ -429,6 +430,22 @@ function normalizeOrchestration(orchestration: OrchestrationTraceView | null | u
 }
 
 function normalizeSessionExport(exportData: SessionExportResponse): SessionExportResponse {
+  const turns = (exportData.turns ?? []).map(turn => ({
+    ...turn,
+    parentTurnId: turn.parentTurnId ?? null,
+    storyEventId: turn.storyEventId ?? null,
+    directorMessage: turn.directorMessage ?? '',
+    presentedChoices: turn.presentedChoices ?? [],
+    presentedBranchOptions: normalizeBranchOptions(turn.presentedBranchOptions, turn.presentedChoices ?? []),
+    agentReplies: turn.agentReplies ?? [],
+    orchestration: normalizeOrchestration(turn.orchestration),
+    stateSnapshot: {
+      ...turn.stateSnapshot,
+      flags: turn.stateSnapshot?.flags ?? [],
+      affinityScores: turn.stateSnapshot?.affinityScores ?? {},
+      relationships: turn.stateSnapshot?.relationships ?? {}
+    }
+  }))
   return {
     ...exportData,
     agents: exportData.agents ?? [],
@@ -439,22 +456,10 @@ function normalizeSessionExport(exportData: SessionExportResponse): SessionExpor
       relationships: exportData.currentState?.relationships ?? {}
     },
     sandboxPlans: normalizeSandboxPlans(exportData.sandboxPlans),
-    turns: (exportData.turns ?? []).map(turn => ({
-      ...turn,
-      parentTurnId: turn.parentTurnId ?? null,
-      storyEventId: turn.storyEventId ?? null,
-      directorMessage: turn.directorMessage ?? '',
-      presentedChoices: turn.presentedChoices ?? [],
-      presentedBranchOptions: normalizeBranchOptions(turn.presentedBranchOptions, turn.presentedChoices ?? []),
-      agentReplies: turn.agentReplies ?? [],
-      orchestration: normalizeOrchestration(turn.orchestration),
-      stateSnapshot: {
-        ...turn.stateSnapshot,
-        flags: turn.stateSnapshot?.flags ?? [],
-        affinityScores: turn.stateSnapshot?.affinityScores ?? {},
-        relationships: turn.stateSnapshot?.relationships ?? {}
-      }
-    }))
+    turns,
+    totalTurns: Number.isFinite(exportData.totalTurns) ? exportData.totalTurns : turns.length,
+    offset: Number.isFinite(exportData.offset) ? exportData.offset : 0,
+    limit: Number.isFinite(exportData.limit) ? exportData.limit : turns.length
   }
 }
 
@@ -545,7 +550,8 @@ async function loadSessionExport(targetSessionId = sessionId.value) {
   try {
     const response = await $fetch<SessionExportResponse>(`/agent/export/${encodeURIComponent(normalizedSessionId)}`, {
       baseURL: settings.backendUrl.trim(),
-      headers: buildHeaders()
+      headers: buildHeaders(),
+      query: { offset: 0, limit: 50 }
     })
     sessionExport.value = normalizeSessionExport(JSON.parse(JSON.stringify(response)) as SessionExportResponse)
     replaceSessionSandboxPlans(sessionExport.value.sessionId, sessionExport.value.sandboxPlans)
@@ -797,13 +803,21 @@ function resetSandboxPlans() {
 }
 
 function buildHeaders() {
-  return {
-    ...(settings.apiKey.trim()
-      ? { Authorization: `Bearer ${settings.apiKey.trim()}`, 'X-API-Key': settings.apiKey.trim() }
-      : {}),
-    ...(settings.providerUrl.trim() ? { 'X-Provider-Url': settings.providerUrl.trim() } : {}),
-    ...(settings.model.trim() ? { 'X-Model': settings.model.trim() } : {})
+  const headers: Record<string, string> = {}
+  if (settings.apiKey.trim()) {
+    headers.Authorization = `Bearer ${settings.apiKey.trim()}`
+    headers['X-API-Key'] = settings.apiKey.trim()
   }
+  if (settings.localToken.trim()) {
+    headers['X-Local-Token'] = settings.localToken.trim()
+  }
+  if (settings.providerUrl.trim()) {
+    headers['X-Provider-Url'] = settings.providerUrl.trim()
+  }
+  if (settings.model.trim()) {
+    headers['X-Model'] = settings.model.trim()
+  }
+  return headers
 }
 
 async function sendTurn(choice = '') {

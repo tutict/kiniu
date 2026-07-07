@@ -61,6 +61,12 @@ const themeOptions: ApiSettings['theme'][] = ['light', 'dark']
       </label>
 
       <label class="field">
+        <span>{{ t('settingsLocalToken') }}</span>
+        <input v-model="settings.localToken" type="password" placeholder="optional">
+        <small>{{ t('settingsLocalTokenHelp') }}</small>
+      </label>
+
+      <label class="field">
         <span>{{ t('settingsProviderUrl') }}</span>
         <input v-model="settings.providerUrl" type="url" placeholder="https://api.openai.com/v1">
         <small>{{ t('settingsProviderHelp') }}</small>
