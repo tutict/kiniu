@@ -5,3 +5,7 @@
 *.iml
 .gitignore
 .gitattributes
+
+# Local runtime files
+.run/
+logs/
