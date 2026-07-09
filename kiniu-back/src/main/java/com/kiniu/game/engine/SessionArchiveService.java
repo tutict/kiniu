@@ -1,5 +1,6 @@
 package com.kiniu.game.engine;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kiniu.game.agent.Agent;
 import com.kiniu.game.dto.AgentReplyView;
@@ -23,12 +24,16 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Service
 public class SessionArchiveService {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(SessionArchiveService.class);
 
     private static final int DEFAULT_EXPORT_LIMIT = 50;
     private static final int MAX_EXPORT_LIMIT = 200;
@@ -122,7 +127,7 @@ public class SessionArchiveService {
                 List.copyOf(request.steps() == null ? List.of() : request.steps()),
                 request.totalRelationshipDelta(),
                 List.copyOf(request.finalFlags() == null ? List.of() : request.finalFlags()),
-                Map.copyOf(request.finalAffinityScores() == null ? Map.of() : request.finalAffinityScores())));
+                copyAffinityScores(request.finalAffinityScores())));
 
         SessionArchiveState archiveState = new SessionArchiveState(
                 previousState.sessionId(),
@@ -169,8 +174,8 @@ public class SessionArchiveService {
 
         archiveState = new SessionArchiveState(
                 sessionId,
-                stateSource == null ? lastTurn.timestamp() : stateSource.updatedAt(),
-                stateSource == null ? lastTurn.stateSnapshot() : stateSource.currentState(),
+                stateSource == null ? safeInstant(lastTurn.timestamp()) : safeInstant(stateSource.updatedAt()),
+                stateSource == null ? safeWorldState(lastTurn.stateSnapshot()) : safeWorldState(stateSource.currentState()),
                 List.copyOf(stateSource == null ? List.of() : stateSource.agents()),
                 List.copyOf(stateSource == null ? List.of() : stateSource.sandboxPlans()),
                 turnPage.totalTurns(),
@@ -231,12 +236,20 @@ public class SessionArchiveService {
 
         try (var lines = Files.lines(turnLogPath, StandardCharsets.UTF_8)) {
             var iterator = lines.iterator();
+            int lineNumber = 0;
             while (iterator.hasNext()) {
+                lineNumber++;
                 String line = iterator.next();
                 if (line.isBlank()) {
                     continue;
                 }
-                SessionTurnView turn = objectMapper.readValue(line, SessionTurnView.class);
+                SessionTurnView turn;
+                try {
+                    turn = objectMapper.readValue(line, SessionTurnView.class);
+                } catch (JsonProcessingException exception) {
+                    LOGGER.warn("Skipping malformed session turn line {} for {}.", lineNumber, sessionId);
+                    continue;
+                }
                 if (totalTurns >= safeOffset && page.size() < safeLimit) {
                     page.add(turn);
                 }
@@ -257,7 +270,8 @@ public class SessionArchiveService {
         try {
             return normalizeExport(objectMapper.readValue(exportPath.toFile(), SessionExportResponse.class));
         } catch (IOException exception) {
-            throw new IllegalStateException("Failed to read session export " + exportPath, exception);
+            LOGGER.warn("Ignoring unreadable session export {}.", exportPath, exception);
+            return null;
         }
     }
 
@@ -325,8 +339,8 @@ public class SessionArchiveService {
         int limit = exportResponse.limit() > 0 ? Math.min(exportResponse.limit(), MAX_EXPORT_LIMIT) : turns.size();
         return new SessionExportResponse(
                 sessionIdValidator.normalize(exportResponse.sessionId()),
-                exportResponse.updatedAt(),
-                exportResponse.currentState(),
+                safeInstant(exportResponse.updatedAt()),
+                safeWorldState(exportResponse.currentState()),
                 List.copyOf(exportResponse.agents() == null ? List.of() : exportResponse.agents()),
                 turns,
                 totalTurns,
@@ -342,8 +356,30 @@ public class SessionArchiveService {
         return Math.min(limit, MAX_EXPORT_LIMIT);
     }
 
+    private Map<String, Integer> copyAffinityScores(Map<String, Integer> values) {
+        if (values == null || values.isEmpty()) {
+            return Map.of();
+        }
+
+        Map<String, Integer> normalized = new LinkedHashMap<>();
+        values.forEach((key, value) -> {
+            if (key != null && !key.isBlank() && value != null) {
+                normalized.put(key.trim(), value);
+            }
+        });
+        return normalized.isEmpty() ? Map.of() : Map.copyOf(normalized);
+    }
+
+    private Instant safeInstant(Instant value) {
+        return value == null ? Instant.EPOCH : value;
+    }
+
+    private WorldState safeWorldState(WorldState value) {
+        return value == null ? WorldState.initial() : value;
+    }
+
     private String blankIfNull(String value) {
-        return value == null ? "" : value;
+        return value == null ? "" : value.trim();
     }
 
     private record TurnPage(

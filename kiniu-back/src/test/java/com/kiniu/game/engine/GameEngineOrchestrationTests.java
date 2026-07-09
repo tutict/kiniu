@@ -8,8 +8,11 @@ import com.kiniu.game.dto.GameRequest;
 import com.kiniu.game.dto.GameResponse;
 import com.kiniu.game.dto.SandboxPlanRequest;
 import com.kiniu.game.dto.SessionExportResponse;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -172,5 +175,23 @@ class GameEngineOrchestrationTests {
         assertThat(secondPage.totalTurns()).isEqualTo(2);
         assertThat(secondPage.offset()).isEqualTo(1);
         assertThat(secondPage.limit()).isEqualTo(1);
+    }
+
+    @Test
+    void shouldSkipMalformedSessionTurnLines() throws IOException {
+        String sessionId = "corrupt-" + UUID.randomUUID();
+        Path exportDirectory = Path.of("target/test-agent-container-session-exports");
+
+        gameEngine.next(new GameRequest(sessionId, "java rag interview", ""));
+        Files.writeString(
+                exportDirectory.resolve(sessionId + ".turns.jsonl"),
+                "{not-json}" + System.lineSeparator(),
+                StandardCharsets.UTF_8,
+                StandardOpenOption.APPEND);
+
+        SessionExportResponse exportResponse = sessionArchiveService.getSessionExport(sessionId, 0, 10);
+
+        assertThat(exportResponse.turns()).hasSize(1);
+        assertThat(exportResponse.totalTurns()).isEqualTo(1);
     }
 }

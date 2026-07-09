@@ -34,6 +34,7 @@ const SANDBOX_PLAN_STORAGE_KEY = 'kiniu.agent.sandboxPlans'
 const API_KEY_STORAGE_KEY = 'kiniu.agent.apiKey'
 const LOCAL_TOKEN_STORAGE_KEY = 'kiniu.agent.localToken'
 const SESSION_PAGE_LIMIT = 50
+const SESSION_PAGE_MAX = 200
 
 const defaultSettings: ApiSettings = {
   backendUrl: 'http://localhost:8080',
@@ -183,60 +184,64 @@ function createIntroMessages(): ChatMessage[] {
     }
   ]
 }
+function readStoredJson<T>(key: string, normalize: (value: T) => T): T | null {
+  const storedValue = localStorage.getItem(key)
+  if (!storedValue) return null
+
+  try {
+    return normalize(JSON.parse(storedValue) as T)
+  } catch {
+    localStorage.removeItem(key)
+    errorMessage.value = t('cacheRestoreFailed')
+    return null
+  }
+}
+
+function createLocalSandboxPlan(plan: SandboxPlanDraft): SavedSandboxPlan {
+  return normalizeSandboxPlan({
+    ...plan,
+    id: `sandbox-${Date.now()}`,
+    sessionId: sessionId.value,
+    createdAt: new Date().toISOString()
+  })
+}
+
 
 onMounted(() => {
   isHydrated.value = true
 
-  try {
-    const savedSettings = localStorage.getItem(SETTINGS_STORAGE_KEY)
-    if (savedSettings) {
-      const parsedSettings = JSON.parse(savedSettings) as Partial<ApiSettings>
-      Object.assign(settings, defaultSettings, parsedSettings, {
-        apiKey: '',
-        localToken: '',
-        locale: normalizeLocale(parsedSettings.locale),
-        theme: normalizeTheme(parsedSettings.theme)
-      })
-    } else {
-      settings.locale = normalizeLocale(settings.locale)
-      settings.theme = normalizeTheme(settings.theme)
-    }
+  const savedSettings = readStoredJson<Partial<ApiSettings>>(SETTINGS_STORAGE_KEY, value => value)
+  if (savedSettings) {
+    Object.assign(settings, defaultSettings, savedSettings, {
+      apiKey: '',
+      localToken: '',
+      locale: normalizeLocale(savedSettings.locale),
+      theme: normalizeTheme(savedSettings.theme)
+    })
+  } else {
+    settings.locale = normalizeLocale(settings.locale)
+    settings.theme = normalizeTheme(settings.theme)
+  }
 
-    settings.apiKey = sessionStorage.getItem(API_KEY_STORAGE_KEY) || ''
-    settings.localToken = sessionStorage.getItem(LOCAL_TOKEN_STORAGE_KEY) || ''
+  settings.apiKey = sessionStorage.getItem(API_KEY_STORAGE_KEY) || ''
+  settings.localToken = sessionStorage.getItem(LOCAL_TOKEN_STORAGE_KEY) || ''
 
   const savedSessionId = localStorage.getItem(SESSION_STORAGE_KEY)
   sessionId.value = savedSessionId || `session-${Date.now()}`
   localStorage.setItem(SESSION_STORAGE_KEY, sessionId.value)
 
-  const savedDraft = localStorage.getItem(STORY_DRAFT_STORAGE_KEY)
-  if (savedDraft) {
-    storyDraft.value = normalizeStoryCatalog(JSON.parse(savedDraft) as StoryCatalogResponse)
-    storyStatus.value = t('storyDraftRestored')
-  }
+  storyDraft.value = readStoredJson<StoryCatalogResponse>(STORY_DRAFT_STORAGE_KEY, normalizeStoryCatalog)
+  if (storyDraft.value) storyStatus.value = t('storyDraftRestored')
 
-  const savedAgents = localStorage.getItem(AGENT_DRAFT_STORAGE_KEY)
-  if (savedAgents) {
-    agentDraft.value = normalizeAgentCatalog(JSON.parse(savedAgents) as AgentCatalogResponse)
-    agentStatus.value = t('agentDraftRestored')
-  }
+  agentDraft.value = readStoredJson<AgentCatalogResponse>(AGENT_DRAFT_STORAGE_KEY, normalizeAgentCatalog)
+  if (agentDraft.value) agentStatus.value = t('agentDraftRestored')
 
-  const savedSessionExport = localStorage.getItem(SESSION_EXPORT_STORAGE_KEY)
-  if (savedSessionExport) {
-    sessionExport.value = normalizeSessionExport(JSON.parse(savedSessionExport) as SessionExportResponse)
-    sessionStatus.value = t('sessionExportRestored')
-  }
+  sessionExport.value = readStoredJson<SessionExportResponse>(SESSION_EXPORT_STORAGE_KEY, normalizeSessionExport)
+  if (sessionExport.value) sessionStatus.value = t('sessionExportRestored')
 
-  const savedSandboxPlans = localStorage.getItem(SANDBOX_PLAN_STORAGE_KEY)
-  if (savedSandboxPlans) {
-    sandboxPlans.value = normalizeSandboxPlans(JSON.parse(savedSandboxPlans) as SavedSandboxPlan[])
-  }
-
+  sandboxPlans.value = readStoredJson<SavedSandboxPlan[]>(SANDBOX_PLAN_STORAGE_KEY, normalizeSandboxPlans) ?? []
   if (sessionExport.value) {
     replaceSessionSandboxPlans(sessionExport.value.sessionId, sessionExport.value.sandboxPlans)
-  }
-  } catch {
-    errorMessage.value = t('cacheRestoreFailed')
   }
 })
 
@@ -324,6 +329,40 @@ function replaceSessionSandboxPlans(targetSessionId: string, plans: SavedSandbox
     ...(normalizedPlans.length ? normalizedPlans : existingPlans),
     ...sandboxPlans.value.filter(plan => plan.sessionId !== targetSessionId)
   ]
+}
+
+function normalizeSessionPageLimit(limit: number) {
+  if (!Number.isFinite(limit) || limit <= 0) return SESSION_PAGE_LIMIT
+  return Math.min(Math.max(1, Math.floor(limit)), SESSION_PAGE_MAX)
+}
+
+function clampSessionPageOffset(offset: number) {
+  const safeOffset = Number.isFinite(offset) ? Math.max(0, Math.floor(offset)) : 0
+  const totalTurns = sessionExport.value?.totalTurns ?? 0
+  const limit = normalizeSessionPageLimit(sessionExportLimit.value)
+  if (totalTurns <= 0) return safeOffset
+  return Math.min(safeOffset, Math.max(0, totalTurns - limit))
+}
+
+function formatRequestError(error: unknown, messageKey: I18nKey, fallbackKey: I18nKey) {
+  return error instanceof Error ? t(messageKey, { message: error.message }) : t(fallbackKey)
+}
+
+async function copyJsonPayload(
+  payload: unknown,
+  successKey: I18nKey,
+  blockedKey: I18nKey,
+  setStatus: (status: string) => void,
+  clearError?: () => void
+) {
+  try {
+    await navigator.clipboard.writeText(JSON.stringify(payload, null, 2))
+    setStatus(t(successKey))
+  } catch {
+    setStatus(t(blockedKey))
+  } finally {
+    clearError?.()
+  }
 }
 
 function normalizeStoryCatalog(catalog: StoryCatalogResponse): StoryCatalogResponse {
@@ -490,7 +529,7 @@ function normalizeSessionExport(exportData: SessionExportResponse): SessionExpor
     turns,
     totalTurns: Number.isFinite(exportData.totalTurns) ? exportData.totalTurns : turns.length,
     offset: Number.isFinite(exportData.offset) ? exportData.offset : 0,
-    limit: Number.isFinite(exportData.limit) ? exportData.limit : turns.length
+    limit: normalizeSessionPageLimit(exportData.limit || turns.length || SESSION_PAGE_LIMIT)
   }
 }
 
@@ -531,7 +570,7 @@ async function loadStoryCatalog() {
     storyAnalysis.value = null
     persistStoryDraft(t('storyDraftLoaded'))
   } catch (error) {
-    storyError.value = error instanceof Error ? t('loadFailed', { message: error.message }) : t('loadFailedGeneric')
+    storyError.value = formatRequestError(error, 'loadFailed', 'loadFailedGeneric')
   } finally {
     isLoadingStory.value = false
   }
@@ -556,7 +595,7 @@ async function loadAgentCatalog() {
     agentDraft.value = normalizeAgentCatalog(JSON.parse(JSON.stringify(response)) as AgentCatalogResponse)
     persistAgentDraft(t('agentDraftLoaded'))
   } catch (error) {
-    agentError.value = error instanceof Error ? t('loadFailed', { message: error.message }) : t('loadFailedGeneric')
+    agentError.value = formatRequestError(error, 'loadFailed', 'loadFailedGeneric')
   } finally {
     isLoadingAgents.value = false
   }
@@ -578,20 +617,23 @@ async function loadSessionExport(targetSessionId = sessionId.value, offset = ses
   sessionStatus.value = ''
   sessionError.value = ''
 
+  const safeOffset = Number.isFinite(offset) ? Math.max(0, Math.floor(offset)) : 0
+  const safeLimit = normalizeSessionPageLimit(limit)
+
   try {
     const response = await $fetch<SessionExportResponse>(`/agent/export/${encodeURIComponent(normalizedSessionId)}`, {
       baseURL: settings.backendUrl.trim(),
       headers: buildHeaders(),
-      query: { offset: Math.max(0, offset), limit: Math.max(1, limit) }
+      query: { offset: safeOffset, limit: safeLimit }
     })
     sessionExport.value = normalizeSessionExport(JSON.parse(JSON.stringify(response)) as SessionExportResponse)
     sessionExportOffset.value = sessionExport.value.offset
-    sessionExportLimit.value = sessionExport.value.limit || SESSION_PAGE_LIMIT
+    sessionExportLimit.value = normalizeSessionPageLimit(sessionExport.value.limit || safeLimit)
     replaceSessionSandboxPlans(sessionExport.value.sessionId, sessionExport.value.sandboxPlans)
     localStorage.setItem(SANDBOX_PLAN_STORAGE_KEY, JSON.stringify(sandboxPlans.value))
     persistSessionExport(t('sessionExportLoaded'))
   } catch (error) {
-    sessionError.value = error instanceof Error ? t('readFailed', { message: error.message }) : t('readFailedGeneric')
+    sessionError.value = formatRequestError(error, 'readFailed', 'readFailedGeneric')
   } finally {
     isLoadingSessionExport.value = false
   }
@@ -599,47 +641,27 @@ async function loadSessionExport(targetSessionId = sessionId.value, offset = ses
 
 async function exportStoryDraft() {
   if (!storyDraft.value) return
-  const payload = JSON.stringify(storyDraft.value, null, 2)
-  try {
-    await navigator.clipboard.writeText(payload)
-    storyStatus.value = t('storyJsonCopied')
-  } catch {
-    storyStatus.value = t('clipboardBlockedStory')
-  }
+  await copyJsonPayload(storyDraft.value, 'storyJsonCopied', 'clipboardBlockedStory', status => { storyStatus.value = status })
 }
 
 async function exportAgentDraft() {
   if (!agentDraft.value) return
-  const payload = JSON.stringify(agentDraft.value, null, 2)
-  try {
-    await navigator.clipboard.writeText(payload)
-    agentStatus.value = t('agentJsonCopied')
-  } catch {
-    agentStatus.value = t('clipboardBlockedAgent')
-  }
+  await copyJsonPayload(agentDraft.value, 'agentJsonCopied', 'clipboardBlockedAgent', status => { agentStatus.value = status })
 }
 
 async function exportSessionJson() {
   if (!sessionExport.value) return
-  const payload = JSON.stringify(sessionExport.value, null, 2)
-  try {
-    await navigator.clipboard.writeText(payload)
-    sessionStatus.value = t('sessionJsonCopied')
-  } catch {
-    sessionStatus.value = t('clipboardBlockedSession')
-  }
+  await copyJsonPayload(sessionExport.value, 'sessionJsonCopied', 'clipboardBlockedSession', status => { sessionStatus.value = status })
 }
 
 async function exportSandboxPlans() {
-  const payload = JSON.stringify(sandboxPlans.value, null, 2)
-  try {
-    await navigator.clipboard.writeText(payload)
-    sessionStatus.value = t('sandboxJsonCopied')
-    sessionError.value = ''
-  } catch {
-    sessionStatus.value = t('clipboardBlockedSandbox')
-    sessionError.value = ''
-  }
+  await copyJsonPayload(
+    sandboxPlans.value,
+    'sandboxJsonCopied',
+    'clipboardBlockedSandbox',
+    status => { sessionStatus.value = status },
+    () => { sessionError.value = '' }
+  )
 }
 
 async function saveStoryDraftToBackend() {
@@ -666,7 +688,7 @@ async function saveStoryDraftToBackend() {
     storyAnalysis.value = null
     persistStoryDraft(t('storyDraftSavedBackend'))
   } catch (error) {
-    storyError.value = error instanceof Error ? t('saveFailed', { message: error.message }) : t('saveFailedGeneric')
+    storyError.value = formatRequestError(error, 'saveFailed', 'saveFailedGeneric')
   } finally {
     isSavingStory.value = false
   }
@@ -700,7 +722,7 @@ async function validateStoryDraft() {
     storyAnalysis.value = normalizeStoryAnalysis(response)
     validationStatus.value = t('validationComplete', { errors: response.errorCount, warnings: response.warningCount })
   } catch (error) {
-    validationError.value = error instanceof Error ? t('validationFailed', { message: error.message }) : t('validationFailedGeneric')
+    validationError.value = formatRequestError(error, 'validationFailed', 'validationFailedGeneric')
   } finally {
     isValidatingStory.value = false
   }
@@ -732,7 +754,7 @@ async function generateStoryDraft(request: StoryGenerationRequest) {
     validationStatus.value = t('validationComplete', { errors: response.analysis.errorCount, warnings: response.analysis.warningCount })
     validationError.value = ''
   } catch (error) {
-    generatorError.value = error instanceof Error ? t('generationFailed', { message: error.message }) : t('generationFailedGeneric')
+    generatorError.value = formatRequestError(error, 'generationFailed', 'generationFailedGeneric')
   } finally {
     isGeneratingStory.value = false
   }
@@ -761,7 +783,7 @@ async function saveAgentDraftToBackend() {
     agentDraft.value = normalizeAgentCatalog(response)
     persistAgentDraft(t('agentDraftSavedBackend'))
   } catch (error) {
-    agentError.value = error instanceof Error ? t('saveFailed', { message: error.message }) : t('saveFailedGeneric')
+    agentError.value = formatRequestError(error, 'saveFailed', 'saveFailedGeneric')
   } finally {
     isSavingAgents.value = false
   }
@@ -791,12 +813,7 @@ function resetSessionExport() {
 
 async function saveSandboxPlan(plan: SandboxPlanDraft) {
   if (!settings.backendUrl.trim()) {
-    const savedPlan = normalizeSandboxPlan({
-      ...plan,
-      id: `sandbox-${Date.now()}`,
-      sessionId: sessionId.value,
-      createdAt: new Date().toISOString()
-    })
+    const savedPlan = createLocalSandboxPlan(plan)
     sandboxPlans.value = [savedPlan, ...sandboxPlans.value]
     persistSandboxPlans(t('sandboxSavedLocal', { workspace: savedPlan.sceneId || t('fieldWorkspace') }))
     return
@@ -811,22 +828,15 @@ async function saveSandboxPlan(plan: SandboxPlanDraft) {
     })
     sessionExport.value = normalizeSessionExport(JSON.parse(JSON.stringify(response)) as SessionExportResponse)
     sessionExportOffset.value = sessionExport.value.offset
-    sessionExportLimit.value = sessionExport.value.limit || SESSION_PAGE_LIMIT
+    sessionExportLimit.value = normalizeSessionPageLimit(sessionExport.value.limit || SESSION_PAGE_LIMIT)
     replaceSessionSandboxPlans(sessionExport.value.sessionId, sessionExport.value.sandboxPlans)
     localStorage.setItem(SANDBOX_PLAN_STORAGE_KEY, JSON.stringify(sandboxPlans.value))
     persistSessionExport(t('sandboxSavedBackend', { workspace: plan.sceneId || t('fieldWorkspace') }))
   } catch (error) {
-    const fallbackPlan = normalizeSandboxPlan({
-      ...plan,
-      id: `sandbox-${Date.now()}`,
-      sessionId: sessionId.value,
-      createdAt: new Date().toISOString()
-    })
+    const fallbackPlan = createLocalSandboxPlan(plan)
     sandboxPlans.value = [fallbackPlan, ...sandboxPlans.value]
     persistSandboxPlans(t('sandboxSavedLocal', { workspace: fallbackPlan.sceneId || t('fieldWorkspace') }))
-    sessionError.value = error instanceof Error
-      ? t('sandboxSyncFailed', { message: error.message })
-      : t('sandboxSyncFailedGeneric')
+    sessionError.value = formatRequestError(error, 'sandboxSyncFailed', 'sandboxSyncFailedGeneric')
   }
 }
 
@@ -876,7 +886,11 @@ function isLoopbackBackendUrl(value: string) {
 }
 
 function loadSessionExportPage(offset: number) {
-  return loadSessionExport(sessionExport.value?.sessionId || sessionId.value, Math.max(0, offset), sessionExportLimit.value || SESSION_PAGE_LIMIT)
+  return loadSessionExport(
+    sessionExport.value?.sessionId || sessionId.value,
+    clampSessionPageOffset(offset),
+    normalizeSessionPageLimit(sessionExportLimit.value)
+  )
 }
 
 async function sendTurn(choice = '') {
@@ -921,7 +935,7 @@ async function sendTurn(choice = '') {
     currentOrchestration.value = normalizeOrchestration(response.orchestration)
     playerInput.value = ''
   } catch (error) {
-    errorMessage.value = error instanceof Error ? t('requestFailed', { message: error.message }) : t('requestFailedGeneric')
+    errorMessage.value = formatRequestError(error, 'requestFailed', 'requestFailedGeneric')
   } finally {
     isSending.value = false
   }
