@@ -51,7 +51,7 @@ public class OpenAICompatibleClient {
 
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
         if (response.statusCode() < 200 || response.statusCode() >= 300) {
-            throw new IOException("Provider returned HTTP " + response.statusCode() + ": " + response.body());
+            throw new IOException("Provider returned HTTP " + response.statusCode() + ".");
         }
 
         JsonNode root = objectMapper.readTree(response.body());

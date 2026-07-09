@@ -26,23 +26,29 @@ Windows 下可在项目根目录双击或运行：
 .\start.bat
 ```
 
-脚本会自动启动后端 `127.0.0.1:8080` 和前端 `127.0.0.1:3000`，日志写入 `logs/`，进程号写入 `.run/`。如果前端还没有安装依赖，会先执行 `npm install`。为降低本机资源占用，一键启动默认关闭 Nuxt DevTools。
+脚本默认启动后端 `127.0.0.1:8080` 和前端 `127.0.0.1:3000`，日志写入 `logs/`，进程号写入 `.run/`。如果前端还没有安装依赖，会先执行 `npm install`。为降低本机资源占用，一键启动默认关闭 Nuxt DevTools。
+
+默认安全行为：
+
+- 启动后端时会自动生成本机访问令牌，并写入 `.run/local-token`。
+- 前端设置页的“本机访问令牌”只在当前浏览器会话保存，不写入长期 localStorage。
+- 如果目标端口已经被其他进程占用，启动脚本会直接失败，不会把已有监听进程当成启动成功。
+- 停止脚本默认只停止 `.run/` 中记录的本项目进程，不会按端口杀掉不明进程。
 
 常用参数：
 
 ```powershell
-.\start.ps1 -SkipInstall       # 跳过前端依赖安装检查
-.\start.ps1 -BackendOnly       # 只启动后端
-.\start.ps1 -FrontendOnly      # 只启动前端
-.\start.ps1 -NoBrowser         # 启动后不打开浏览器
-.\start.ps1 -CleanLogs         # 启动前清理旧日志
-.\start.ps1 -BackendPort 18080 # 自定义后端端口
-.\start.ps1 -FrontendPort 13000 # 自定义前端端口
-.\start.ps1 -LocalToken "..."  # 启用本机访问令牌
-.\start.ps1 -EnableDevtools   # 需要调试时才开启 Nuxt DevTools
+.\start.ps1 -SkipInstall          # 跳过前端依赖安装检查
+.\start.ps1 -BackendOnly          # 只启动后端
+.\start.ps1 -FrontendOnly         # 只启动前端
+.\start.ps1 -NoBrowser            # 启动后不打开浏览器
+.\start.ps1 -CleanLogs            # 启动前清理旧日志
+.\start.ps1 -BackendPort 18080    # 自定义后端端口
+.\start.ps1 -FrontendPort 13000   # 自定义前端端口
+.\start.ps1 -LocalToken "..."     # 使用指定本机访问令牌
+.\start.ps1 -NoLocalToken         # 不生成本机访问令牌，仅用于明确的本地调试
+.\start.ps1 -EnableDevtools       # 需要调试时才开启 Nuxt DevTools
 ```
-
-如启用 `-LocalToken` 或环境变量 `KINIU_LOCAL_TOKEN`，前端设置页里的“本机访问令牌”需要填写同一个值。
 
 停止服务：
 
@@ -51,6 +57,7 @@ Windows 下可在项目根目录双击或运行：
 .\stop.ps1 -BackendOnly
 .\stop.ps1 -FrontendOnly
 .\stop.ps1 -BackendPort 18080 -FrontendPort 13000  # 自定义端口时同步传入
+.\stop.ps1 -ForcePortKill                           # 显式按端口结束监听进程
 ```
 
 ## 前端开发

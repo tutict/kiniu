@@ -2,6 +2,7 @@ param(
     [switch]$BackendOnly,
     [switch]$FrontendOnly,
     [switch]$CleanRunFiles,
+    [switch]$ForcePortKill,
     [int]$BackendPort = 8080,
     [int]$FrontendPort = 3000
 )
@@ -72,8 +73,10 @@ if (Test-Path -LiteralPath $RunDir) {
     Write-Step "No .run directory found"
 }
 
-if (-not $FrontendOnly) { Stop-PortOwner -Port $BackendPort -Name "backend" }
-if (-not $BackendOnly) { Stop-PortOwner -Port $FrontendPort -Name "frontend" }
+if ($ForcePortKill) {
+    if (-not $FrontendOnly) { Stop-PortOwner -Port $BackendPort -Name "backend" }
+    if (-not $BackendOnly) { Stop-PortOwner -Port $FrontendPort -Name "frontend" }
+}
 
 if ($CleanRunFiles -and (Test-Path -LiteralPath $RunDir)) {
     Get-ChildItem -LiteralPath $RunDir -File -ErrorAction SilentlyContinue | Remove-Item -Force

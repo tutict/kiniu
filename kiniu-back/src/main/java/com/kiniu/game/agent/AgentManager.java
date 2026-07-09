@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -76,6 +77,27 @@ public class AgentManager {
     }
 
     public synchronized AgentCatalogResponse saveAgentCatalog(AgentCatalogResponse catalog) {
+        this.agents = toAgentMap(catalog);
+        persistCatalog(getAgentCatalog());
+        return getAgentCatalog();
+    }
+
+    private void loadPersistedAgents() {
+        try {
+            if (Files.exists(catalogPath)) {
+                AgentCatalogResponse response = objectMapper.readValue(catalogPath.toFile(), AgentCatalogResponse.class);
+                this.agents = toAgentMap(response);
+                return;
+            }
+
+            createCatalogDirectories();
+            persistCatalog(getAgentCatalog());
+        } catch (IOException exception) {
+            throw new IllegalStateException("Failed to initialize agent catalog from " + catalogPath, exception);
+        }
+    }
+
+    private Map<String, Agent> toAgentMap(AgentCatalogResponse catalog) {
         if (catalog == null || catalog.agents() == null || catalog.agents().isEmpty()) {
             throw new IllegalArgumentException("Agent catalog must contain at least one agent.");
         }
@@ -90,25 +112,7 @@ public class AgentManager {
         if (!nextAgents.containsKey("narrator")) {
             nextAgents.put("narrator", defaultAgents().get("narrator"));
         }
-
-        this.agents = Map.copyOf(nextAgents);
-        persistCatalog(getAgentCatalog());
-        return getAgentCatalog();
-    }
-
-    private void loadPersistedAgents() {
-        try {
-            if (Files.exists(catalogPath)) {
-                AgentCatalogResponse response = objectMapper.readValue(catalogPath.toFile(), AgentCatalogResponse.class);
-                saveAgentCatalog(response);
-                return;
-            }
-
-            createCatalogDirectories();
-            persistCatalog(getAgentCatalog());
-        } catch (IOException exception) {
-            throw new IllegalStateException("Failed to initialize agent catalog from " + catalogPath, exception);
-        }
+        return Collections.unmodifiableMap(new LinkedHashMap<>(nextAgents));
     }
 
     private void persistCatalog(AgentCatalogResponse response) {

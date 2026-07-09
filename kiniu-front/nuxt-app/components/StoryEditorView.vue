@@ -37,6 +37,8 @@ const props = defineProps<{
   agentError: string
   sessionStatus: string
   sessionError: string
+  pageOffset: number
+  pageLimit: number
   generatorStatus: string
   generatorError: string
   validationStatus: string
@@ -57,6 +59,7 @@ const emit = defineEmits<{
   validateStory: []
   generateStory: [request: StoryGenerationRequest]
   loadSession: [sessionId: string]
+  loadSessionPage: [offset: number]
   exportSession: []
   resetSession: []
   exportSandboxPlans: []
@@ -598,7 +601,10 @@ function importSandboxPlan(planId: string) {
       :is-loading-session="isLoadingSession"
       :session-status="sessionStatus"
       :session-error="sessionError"
+      :page-offset="pageOffset"
+      :page-limit="pageLimit"
       @load-session="emit('loadSession', $event)"
+      @load-session-page="emit('loadSessionPage', $event)"
       @export-session="emit('exportSession')"
       @reset-session="emit('resetSession')"
       @export-sandbox-plans="emit('exportSandboxPlans')"

@@ -23,10 +23,13 @@ const props = defineProps<{
   isLoadingSession: boolean
   sessionStatus: string
   sessionError: string
+  pageOffset: number
+  pageLimit: number
 }>()
 
 const emit = defineEmits<{
   loadSession: [sessionId: string]
+  loadSessionPage: [offset: number]
   exportSession: []
   resetSession: []
   exportSandboxPlans: []
@@ -38,6 +41,26 @@ const { t } = useUiI18n()
 const requestedSessionId = ref('')
 const selectedTurnId = ref('')
 const selectedSandboxPlanId = ref('')
+
+const canLoadPreviousPage = computed(() => (props.exportData?.offset ?? props.pageOffset) > 0)
+const canLoadNextPage = computed(() => {
+  const totalTurns = props.exportData?.totalTurns ?? 0
+  const offset = props.exportData?.offset ?? props.pageOffset
+  const limit = props.exportData?.limit ?? props.pageLimit
+  return offset + limit < totalTurns
+})
+
+function loadPreviousPage() {
+  const offset = props.exportData?.offset ?? props.pageOffset
+  const limit = props.exportData?.limit ?? props.pageLimit
+  emit('loadSessionPage', Math.max(0, offset - limit))
+}
+
+function loadNextPage() {
+  const offset = props.exportData?.offset ?? props.pageOffset
+  const limit = props.exportData?.limit ?? props.pageLimit
+  emit('loadSessionPage', offset + limit)
+}
 
 watch(
   () => props.currentSessionId,
@@ -233,6 +256,12 @@ function displayCode(value: string) {
         <input v-model="requestedSessionId" class="search-input" type="text" placeholder="session-123456">
         <button class="secondary-button" type="button" :disabled="isLoadingSession" @click="triggerLoad">
           {{ isLoadingSession ? t('actionReading') : t('actionReadExport') }}
+        </button>
+        <button class="secondary-button" type="button" :disabled="isLoadingSession || !canLoadPreviousPage" @click="loadPreviousPage">
+          {{ t('actionPreviousPage') }}
+        </button>
+        <button class="secondary-button" type="button" :disabled="isLoadingSession || !canLoadNextPage" @click="loadNextPage">
+          {{ t('actionNextPage') }}
         </button>
       </div>
     </div>

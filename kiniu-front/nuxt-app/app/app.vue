@@ -31,6 +31,9 @@ const STORY_DRAFT_STORAGE_KEY = 'kiniu.agent.flowDraft'
 const AGENT_DRAFT_STORAGE_KEY = 'kiniu.agent.agentDraft'
 const SESSION_EXPORT_STORAGE_KEY = 'kiniu.agent.sessionExport'
 const SANDBOX_PLAN_STORAGE_KEY = 'kiniu.agent.sandboxPlans'
+const API_KEY_STORAGE_KEY = 'kiniu.agent.apiKey'
+const LOCAL_TOKEN_STORAGE_KEY = 'kiniu.agent.localToken'
+const SESSION_PAGE_LIMIT = 50
 
 const defaultSettings: ApiSettings = {
   backendUrl: 'http://localhost:8080',
@@ -74,6 +77,8 @@ const { t } = provideUiI18n(currentLocale)
 const storyDraft = ref<StoryCatalogResponse | null>(null)
 const agentDraft = ref<AgentCatalogResponse | null>(null)
 const sessionExport = ref<SessionExportResponse | null>(null)
+const sessionExportOffset = ref(0)
+const sessionExportLimit = ref(SESSION_PAGE_LIMIT)
 const sandboxPlans = ref<SavedSandboxPlan[]>([])
 const storyAnalysis = ref<StoryAnalysisResponse | null>(null)
 const currentOrchestration = ref<OrchestrationTraceView | null>(null)
@@ -183,17 +188,22 @@ onMounted(() => {
   isHydrated.value = true
 
   try {
-  const savedSettings = localStorage.getItem(SETTINGS_STORAGE_KEY)
-  if (savedSettings) {
-    const parsedSettings = JSON.parse(savedSettings) as Partial<ApiSettings>
-    Object.assign(settings, defaultSettings, parsedSettings, {
-      locale: normalizeLocale(parsedSettings.locale),
-      theme: normalizeTheme(parsedSettings.theme)
-    })
-  } else {
-    settings.locale = normalizeLocale(settings.locale)
-    settings.theme = normalizeTheme(settings.theme)
-  }
+    const savedSettings = localStorage.getItem(SETTINGS_STORAGE_KEY)
+    if (savedSettings) {
+      const parsedSettings = JSON.parse(savedSettings) as Partial<ApiSettings>
+      Object.assign(settings, defaultSettings, parsedSettings, {
+        apiKey: '',
+        localToken: '',
+        locale: normalizeLocale(parsedSettings.locale),
+        theme: normalizeTheme(parsedSettings.theme)
+      })
+    } else {
+      settings.locale = normalizeLocale(settings.locale)
+      settings.theme = normalizeTheme(settings.theme)
+    }
+
+    settings.apiKey = sessionStorage.getItem(API_KEY_STORAGE_KEY) || ''
+    settings.localToken = sessionStorage.getItem(LOCAL_TOKEN_STORAGE_KEY) || ''
 
   const savedSessionId = localStorage.getItem(SESSION_STORAGE_KEY)
   sessionId.value = savedSessionId || `session-${Date.now()}`
@@ -245,13 +255,34 @@ watch([() => activeView.value, () => activeStudioView.value], async ([view, stud
   }
 })
 
+function persistedSettingsSnapshot(): ApiSettings {
+  return {
+    ...settings,
+    apiKey: '',
+    localToken: ''
+  }
+}
+
+function persistSessionSecret(key: string, value: string) {
+  const trimmed = value.trim()
+  if (trimmed) {
+    sessionStorage.setItem(key, trimmed)
+  } else {
+    sessionStorage.removeItem(key)
+  }
+}
+
 function persistSettings() {
-  localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings))
+  persistSessionSecret(API_KEY_STORAGE_KEY, settings.apiKey)
+  persistSessionSecret(LOCAL_TOKEN_STORAGE_KEY, settings.localToken)
+  localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(persistedSettingsSnapshot()))
   saveStatus.value = t('settingsSaved')
 }
 
 function resetSettings() {
   Object.assign(settings, defaultSettings)
+  sessionStorage.removeItem(API_KEY_STORAGE_KEY)
+  sessionStorage.removeItem(LOCAL_TOKEN_STORAGE_KEY)
   persistSettings()
 }
 
@@ -531,7 +562,7 @@ async function loadAgentCatalog() {
   }
 }
 
-async function loadSessionExport(targetSessionId = sessionId.value) {
+async function loadSessionExport(targetSessionId = sessionId.value, offset = sessionExportOffset.value, limit = sessionExportLimit.value) {
   const normalizedSessionId = targetSessionId.trim()
   if (!normalizedSessionId) {
     sessionError.value = t('sessionIdRequired')
@@ -551,9 +582,11 @@ async function loadSessionExport(targetSessionId = sessionId.value) {
     const response = await $fetch<SessionExportResponse>(`/agent/export/${encodeURIComponent(normalizedSessionId)}`, {
       baseURL: settings.backendUrl.trim(),
       headers: buildHeaders(),
-      query: { offset: 0, limit: 50 }
+      query: { offset: Math.max(0, offset), limit: Math.max(1, limit) }
     })
     sessionExport.value = normalizeSessionExport(JSON.parse(JSON.stringify(response)) as SessionExportResponse)
+    sessionExportOffset.value = sessionExport.value.offset
+    sessionExportLimit.value = sessionExport.value.limit || SESSION_PAGE_LIMIT
     replaceSessionSandboxPlans(sessionExport.value.sessionId, sessionExport.value.sandboxPlans)
     localStorage.setItem(SANDBOX_PLAN_STORAGE_KEY, JSON.stringify(sandboxPlans.value))
     persistSessionExport(t('sessionExportLoaded'))
@@ -777,6 +810,8 @@ async function saveSandboxPlan(plan: SandboxPlanDraft) {
       headers: buildHeaders()
     })
     sessionExport.value = normalizeSessionExport(JSON.parse(JSON.stringify(response)) as SessionExportResponse)
+    sessionExportOffset.value = sessionExport.value.offset
+    sessionExportLimit.value = sessionExport.value.limit || SESSION_PAGE_LIMIT
     replaceSessionSandboxPlans(sessionExport.value.sessionId, sessionExport.value.sandboxPlans)
     localStorage.setItem(SANDBOX_PLAN_STORAGE_KEY, JSON.stringify(sandboxPlans.value))
     persistSessionExport(t('sandboxSavedBackend', { workspace: plan.sceneId || t('fieldWorkspace') }))
@@ -802,22 +837,46 @@ function resetSandboxPlans() {
   sessionError.value = ''
 }
 
-function buildHeaders() {
+function buildHeaders(options: { includeProvider?: boolean } = {}) {
+  assertSafeSecretTarget()
   const headers: Record<string, string> = {}
-  if (settings.apiKey.trim()) {
-    headers.Authorization = `Bearer ${settings.apiKey.trim()}`
-    headers['X-API-Key'] = settings.apiKey.trim()
-  }
   if (settings.localToken.trim()) {
     headers['X-Local-Token'] = settings.localToken.trim()
   }
-  if (settings.providerUrl.trim()) {
-    headers['X-Provider-Url'] = settings.providerUrl.trim()
-  }
-  if (settings.model.trim()) {
-    headers['X-Model'] = settings.model.trim()
+  if (options.includeProvider) {
+    if (settings.apiKey.trim()) {
+      headers.Authorization = `Bearer ${settings.apiKey.trim()}`
+      headers['X-API-Key'] = settings.apiKey.trim()
+    }
+    if (settings.providerUrl.trim()) {
+      headers['X-Provider-Url'] = settings.providerUrl.trim()
+    }
+    if (settings.model.trim()) {
+      headers['X-Model'] = settings.model.trim()
+    }
   }
   return headers
+}
+
+function assertSafeSecretTarget() {
+  const hasSecrets = !!settings.localToken.trim() || !!settings.apiKey.trim()
+  if (hasSecrets && !isLoopbackBackendUrl(settings.backendUrl.trim())) {
+    throw new Error(t('backendMustBeLocal'))
+  }
+}
+
+function isLoopbackBackendUrl(value: string) {
+  try {
+    const url = new URL(value)
+    const hostname = url.hostname.toLowerCase()
+    return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1' || hostname === '[::1]'
+  } catch {
+    return false
+  }
+}
+
+function loadSessionExportPage(offset: number) {
+  return loadSessionExport(sessionExport.value?.sessionId || sessionId.value, Math.max(0, offset), sessionExportLimit.value || SESSION_PAGE_LIMIT)
 }
 
 async function sendTurn(choice = '') {
@@ -849,7 +908,7 @@ async function sendTurn(choice = '') {
       baseURL: settings.backendUrl.trim(),
       method: 'POST',
       body: { sessionId: sessionId.value, input: trimmedInput, choice: trimmedChoice },
-      headers: buildHeaders()
+      headers: buildHeaders({ includeProvider: true })
     })
     messages.value.push({
       id: `assistant-${Date.now()}`,
@@ -972,6 +1031,8 @@ async function sendTurn(choice = '') {
             :agent-error="agentError"
             :session-status="sessionStatus"
             :session-error="sessionError"
+            :page-offset="sessionExportOffset"
+            :page-limit="sessionExportLimit"
             :generator-status="generatorStatus"
             :generator-error="generatorError"
             :validation-status="validationStatus"
@@ -989,6 +1050,7 @@ async function sendTurn(choice = '') {
             @validate-story="validateStoryDraft"
             @generate-story="generateStoryDraft"
             @load-session="loadSessionExport"
+            @load-session-page="loadSessionExportPage"
             @export-session="exportSessionJson"
             @reset-session="resetSessionExport"
             @export-sandbox-plans="exportSandboxPlans"
