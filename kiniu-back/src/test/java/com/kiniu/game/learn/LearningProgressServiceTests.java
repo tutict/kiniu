@@ -59,6 +59,21 @@ class LearningProgressServiceTests {
         assertEquals("third", repeated.currentTaskId());
     }
 
+    @Test
+    void shouldRecommendTheFirstUnlockedBranchAfterAnAttempt() throws Exception {
+        LearningCatalogService catalogService = branchCatalogService();
+        LearningProgressService service = new LearningProgressService(
+                objectMapper,
+                catalogService,
+                tempDir.resolve("branch-progress.json"));
+
+        LearningProgress updated = service.recordAttempt("foundation", 100, List.of("requirements"));
+
+        assertEquals("data", updated.currentTaskId());
+        assertTrue(catalogService.isUnlocked("tools", updated));
+        assertTrue(catalogService.isUnlocked("data", updated));
+    }
+
     private LearningCatalogService catalogService() throws Exception {
         LearningTaskDefinition first = task("first");
         LearningTaskDefinition second = task("second");
@@ -76,7 +91,28 @@ class LearningProgressServiceTests {
         return new LearningCatalogService(objectMapper, path.toString());
     }
 
+    private LearningCatalogService branchCatalogService() throws Exception {
+        LearningTaskDefinition foundation = task("foundation");
+        LearningTaskDefinition data = task("data", List.of("foundation"));
+        LearningTaskDefinition tools = task("tools", List.of("foundation"));
+        LearningCatalogDefinition catalog = new LearningCatalogDefinition(
+                1,
+                List.of(new LearningModuleDefinition(
+                        "module",
+                        "Module",
+                        "Summary",
+                        "beginner",
+                        List.of(foundation, data, tools))));
+        Path path = tempDir.resolve("branch-catalog.json");
+        objectMapper.writeValue(path.toFile(), catalog);
+        return new LearningCatalogService(objectMapper, path.toString());
+    }
+
     private LearningTaskDefinition task(String id) {
+        return task(id, List.of());
+    }
+
+    private LearningTaskDefinition task(String id, List<String> prerequisites) {
         return new LearningTaskDefinition(
                 id,
                 id,
@@ -89,6 +125,11 @@ class LearningProgressServiceTests {
                 "Scenario",
                 "project-agent",
                 List.of(new LearningFileView("artifact.md", "starter text")),
-                List.of(new TaskCheckDefinition("content", "min-length", "artifact.md", "3", true, 100, "Content")));
+                List.of(new TaskCheckDefinition("content", "min-length", "artifact.md", "3", true, 100, "Content")),
+                "Lesson",
+                List.of("Artifact"),
+                prerequisites,
+                "document",
+                List.of());
     }
 }

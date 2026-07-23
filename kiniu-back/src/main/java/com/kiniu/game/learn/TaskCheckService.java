@@ -2,6 +2,8 @@ package com.kiniu.game.learn;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.util.HashSet;
@@ -19,6 +21,8 @@ public class TaskCheckService {
     static final int MAX_PATH_CHARS = 200;
     static final int MAX_FILE_CHARS = 100_000;
     static final int MAX_TOTAL_CHARS = 500_000;
+    static final int MAX_FILE_BYTES = 100_000;
+    static final int MAX_TOTAL_BYTES = 500_000;
 
     private final ObjectMapper objectMapper;
 
@@ -56,6 +60,9 @@ public class TaskCheckService {
                 case "regex" -> Pattern.compile(definition.rule(), Pattern.MULTILINE).matcher(content).find();
                 case "json-field" -> jsonField(content, definition.rule());
                 case "json-array-min" -> jsonArrayMin(content, definition.rule());
+                case "json-pointer-present" -> jsonPointerPresent(content, definition.rule());
+                case "json-array-shape" -> jsonArrayShape(content, definition.rule());
+                case "json-number-range" -> jsonNumberRange(content, definition.rule());
                 case "min-length" -> content.trim().length() >= Integer.parseInt(definition.rule());
                 default -> false;
             };
@@ -108,6 +115,47 @@ public class TaskCheckService {
         return required > 0 && meaningfulItems >= required;
     }
 
+    private boolean jsonPointerPresent(String content, String pointer) throws Exception {
+        JsonNode root = objectMapper.readTree(content);
+        return root != null && isMeaningful(root.at(pointer));
+    }
+
+    private boolean jsonArrayShape(String content, String rule) throws Exception {
+        String[] parts = rule.split(":", 3);
+        if (parts.length != 3) {
+            return false;
+        }
+        int minimum = Integer.parseInt(parts[1]);
+        List<String> requiredFields = Pattern.compile(",")
+                .splitAsStream(parts[2])
+                .map(String::trim)
+                .filter(field -> !field.isBlank())
+                .toList();
+        JsonNode root = objectMapper.readTree(content);
+        JsonNode array = root == null ? null : root.at(parts[0]);
+        if (array == null || !array.isArray() || array.size() < minimum || requiredFields.isEmpty()) {
+            return false;
+        }
+        return array.valueStream().allMatch(item -> item.isObject()
+                && requiredFields.stream().allMatch(field -> isMeaningful(item.get(field))));
+    }
+
+    private boolean jsonNumberRange(String content, String rule) throws Exception {
+        String[] parts = rule.split(":", 3);
+        if (parts.length != 3) {
+            return false;
+        }
+        JsonNode root = objectMapper.readTree(content);
+        JsonNode value = root == null ? null : root.at(parts[0]);
+        if (value == null || !value.isNumber()) {
+            return false;
+        }
+        BigDecimal minimum = new BigDecimal(parts[1]);
+        BigDecimal maximum = new BigDecimal(parts[2]);
+        BigDecimal actual = value.decimalValue();
+        return actual.compareTo(minimum) >= 0 && actual.compareTo(maximum) <= 0;
+    }
+
     private boolean isMeaningful(JsonNode node) {
         if (node == null || node.isNull() || node.isMissingNode()) {
             return false;
@@ -133,6 +181,7 @@ public class TaskCheckService {
         task.checks().forEach(check -> allowedPaths.add(check.path()));
 
         int totalChars = 0;
+        int totalBytes = 0;
         for (Map.Entry<String, String> entry : files.entrySet()) {
             String path = entry.getKey();
             String content = entry.getValue();
@@ -143,11 +192,13 @@ public class TaskCheckService {
                 throw new IllegalArgumentException("Submission file content must not be null: " + path);
             }
             int length = content.length();
-            if (length > MAX_FILE_CHARS) {
+            int byteLength = content.getBytes(StandardCharsets.UTF_8).length;
+            if (length > MAX_FILE_CHARS || byteLength > MAX_FILE_BYTES) {
                 throw new IllegalArgumentException("Submission file is too large: " + path);
             }
             totalChars += length;
-            if (totalChars > MAX_TOTAL_CHARS) {
+            totalBytes += byteLength;
+            if (totalChars > MAX_TOTAL_CHARS || totalBytes > MAX_TOTAL_BYTES) {
                 throw new IllegalArgumentException("Submission is too large.");
             }
         }

@@ -52,7 +52,7 @@ class LearningControllerTests {
                         .content(request))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.passed").value(true))
-                .andExpect(jsonPath("$.progress.currentTaskId").value("data-lifecycle"))
+                .andExpect(jsonPath("$.progress.currentTaskId").value("http-json-basics"))
                 .andExpect(jsonPath("$.attemptId").isString())
                 .andReturn()
                 .getResponse()

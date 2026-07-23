@@ -47,11 +47,8 @@ public class LearningProgressService {
     }
 
     public synchronized LearningProgress recordAttempt(String taskId, int score, List<String> skills) {
-        String nextTaskId = catalogService.nextTaskId(taskId);
-        if (!progress.currentTaskId().isBlank() && progress.completedTaskIds().contains(nextTaskId)) {
-            nextTaskId = progress.currentTaskId();
-        }
-        progress = progress.record(taskId, score, skills, nextTaskId);
+        LearningProgress recorded = progress.record(taskId, score, skills, taskId);
+        progress = recorded.withCurrentTaskId(catalogService.nextTaskId(taskId, recorded));
         persist();
         return progress;
     }
@@ -69,7 +66,7 @@ public class LearningProgressService {
         try {
             LearningProgress loaded = objectMapper.readValue(progressPath.toFile(), LearningProgress.class);
             validateLoadedProgress(loaded);
-            return loaded;
+            return normalizeCurrentTask(loaded);
         } catch (IOException | RuntimeException exception) {
             log.error("Learning progress at {} is invalid and will be quarantined.", progressPath, exception);
             quarantineCorruptFile();
@@ -95,6 +92,19 @@ public class LearningProgressService {
                 || !catalogTaskIds.containsAll(loaded.bestScores().keySet())) {
             throw new IllegalStateException("Learning progress references unknown completed tasks.");
         }
+    }
+
+    private LearningProgress normalizeCurrentTask(LearningProgress loaded) {
+        boolean currentIsUsable = !loaded.currentTaskId().isBlank()
+                && !loaded.completedTaskIds().contains(loaded.currentTaskId())
+                && catalogService.isUnlocked(loaded.currentTaskId(), loaded);
+        if (currentIsUsable) {
+            return loaded;
+        }
+        String fallback = loaded.completedTaskIds().isEmpty()
+                ? catalogService.firstTaskId()
+                : loaded.completedTaskIds().get(loaded.completedTaskIds().size() - 1);
+        return loaded.withCurrentTaskId(catalogService.nextTaskId(fallback, loaded));
     }
 
     private void persist() {

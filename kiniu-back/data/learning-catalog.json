@@ -1,27 +1,53 @@
 {
-  "version": 2,
+  "version": 3,
   "modules": [
     {
       "id": "foundations",
-      "title": "AI 项目基本功",
-      "summary": "从真实用户和业务目标出发，写出可验证的 AI 功能契约。",
+      "title": "基础与模型契约",
+      "summary": "从需求、HTTP/JSON 到可验证的模型输出，建立所有 AI 工程工作的共同语言。",
       "level": "初级",
       "tasks": [
         {
+          "level": "初级",
+          "mentorAgentId": "project-agent",
           "id": "requirements-contract",
           "title": "把模糊需求变成验收契约",
-          "summary": "为一个 AI 助手定义用户、目标、边界和验收标准。",
-          "level": "初级",
+          "summary": "明确用户、业务结果、非目标与可检查的完成标准。",
           "kind": "requirements",
-          "estimatedMinutes": 25,
-          "skills": ["需求拆解", "业务逻辑", "验收标准"],
-          "objective": "让 AI 功能在写 Prompt 之前就拥有清晰的用户目标、边界和可验证结果。",
-          "scenario": "产品希望做一个能把用户模糊想法转成下一步行动的陪伴 Agent。",
-          "mentorAgentId": "project-agent",
+          "estimatedMinutes": 35,
+          "skills": [
+            "需求拆解",
+            "验收标准",
+            "风险边界"
+          ],
+          "objective": "在编写 Prompt 或选择模型前，把 AI 功能定义成可以讨论、测试和拒绝的工程契约。",
+          "scenario": "团队准备交付一个把用户想法转成下一步行动的陪伴 Agent，但产品描述仍停留在“更聪明、更懂我”。",
+          "lesson": "## 核心概念\n需求契约不是功能愿望清单，而是对使用者、业务结果、输入输出边界和失败责任的共同承诺。AI 输出具有概率性，因此必须把“体验好”改写成可观察的行为，把高风险动作、未知情况和人工接管写进非目标或限制。 将概念写成显式契约，并用证据判断结果。\n\n## 完成步骤\n先描述一个具体用户及其场景，再写可度量的业务目标；列出本次明确不做的能力；最后用 Given/When/Then 或可检查条目写出正常、边界和失败条件。 留下可复现记录，提交前移除密钥和个人信息。\n\n## 常见误区\n不要把模型名称、Prompt 长度当成用户价值，也不要只写正常路径。避免使用“准确、友好、智能”等无法直接判定的形容词。 示例和一次成功运行不能替代边界、失败与对抗场景。\n\n## 完成标准\n文档四个章节均有实质内容，验收标准至少包含一条可执行检查，并能说明系统何时拒绝、降级或交给人工。 必需检查全部通过，关键选择可追溯。",
+          "deliverables": [
+            "requirements.md：需求契约与验收清单"
+          ],
+          "prerequisiteTaskIds": [],
+          "evidenceMode": "document",
+          "references": [
+            {
+              "title": "AI RMF Generative AI Profile",
+              "url": "https://www.nist.gov/publications/artificial-intelligence-risk-management-framework-generative-artificial-intelligence",
+              "publisher": "NIST",
+              "version": "AI 600-1",
+              "accessedAt": "2026-07-23"
+            },
+            {
+              "title": "Evaluation best practices",
+              "url": "https://developers.openai.com/api/docs/guides/evaluation-best-practices",
+              "publisher": "OpenAI",
+              "version": "2026-07",
+              "accessedAt": "2026-07-23"
+            }
+          ],
           "starterFiles": [
             {
               "path": "requirements.md",
-              "content": "# 需求契约\n\n## 用户\n\n## 业务目标\n\n## 非目标\n\n## 验收标准\n"
+              "content": "# 需求契约\n\n## 用户\n\n## 业务目标\n\n## 非目标\n\n## 验收标准\n\n- "
             }
           ],
           "checks": [
@@ -32,7 +58,7 @@
               "rule": "## 用户",
               "required": true,
               "points": 20,
-              "message": "明确真正使用这个功能的人及其场景。"
+              "message": "明确实际使用者和具体场景。"
             },
             {
               "id": "goal",
@@ -41,7 +67,7 @@
               "rule": "## 业务目标",
               "required": true,
               "points": 20,
-              "message": "把功能目标写成可观察的业务结果。"
+              "message": "把目标写成可观察的业务结果。"
             },
             {
               "id": "boundary",
@@ -50,7 +76,7 @@
               "rule": "## 非目标",
               "required": true,
               "points": 20,
-              "message": "写出不在本次交付范围内的事情。"
+              "message": "写出本次不交付或必须拒绝的能力。"
             },
             {
               "id": "acceptance",
@@ -59,29 +85,406 @@
               "rule": "(?ms)^## 验收标准\\s*\\n(?:.*\\n)*?[-*] \\S.+",
               "required": true,
               "points": 40,
-              "message": "验收标准需要包含至少一个可检查条目。"
+              "message": "验收标准至少包含一个非空检查条目."
+            }
+          ]
+        },
+        {
+          "level": "初级",
+          "mentorAgentId": "project-agent",
+          "id": "http-json-basics",
+          "title": "读懂一次 HTTP/JSON 模型调用",
+          "summary": "记录请求、响应、错误与幂等语义，理解客户端和服务端的责任边界。",
+          "kind": "api-basics",
+          "estimatedMinutes": 45,
+          "skills": [
+            "HTTP",
+            "JSON",
+            "错误处理",
+            "幂等性"
+          ],
+          "objective": "用结构化工件完整表达一次 API 交换，使请求方法、路径、状态码和失败行为可以被复现。",
+          "scenario": "前端调用模型网关时偶尔超时和重复提交，团队需要先统一如何描述一次网络交互。",
+          "lesson": "## 核心概念\nHTTP 描述资源上的请求与响应，JSON 只是常用的数据表示。方法、路径、请求头、状态码和响应体共同组成协议契约；网络超时不等于服务端没有执行，因此写操作还需要幂等键和重试边界。客户端应区分参数错误、鉴权失败、限流、服务错误与超时。 将概念写成显式契约，并用证据判断结果。\n\n## 完成步骤\n选择一个模型或 Agent 接口，记录 method、path、request 和 response；为响应写出 statusCode；列出至少两个不同错误案例；说明相同幂等键的重复请求应得到什么结果。 留下可复现记录，提交前移除密钥和个人信息。\n\n## 常见误区\n不要把所有失败都表示为 200，也不要只保存自然语言错误。避免在日志或示例中放真实 API key；重试必须结合超时、退避和幂等设计。 示例和一次成功运行不能替代边界、失败与对抗场景。\n\n## 完成标准\nJSON 可解析，包含完整请求和响应，状态码在合法区间，错误案例结构一致，并明确幂等策略。 必需检查全部通过，关键选择可追溯。",
+          "deliverables": [
+            "api-exchange.json：一次完整 API 交换记录"
+          ],
+          "prerequisiteTaskIds": [
+            "requirements-contract"
+          ],
+          "evidenceMode": "document",
+          "references": [
+            {
+              "title": "HTTP Semantics",
+              "url": "https://www.rfc-editor.org/rfc/rfc9110",
+              "publisher": "IETF",
+              "version": "RFC 9110",
+              "accessedAt": "2026-07-23"
+            },
+            {
+              "title": "JSON Data Interchange Syntax",
+              "url": "https://www.rfc-editor.org/rfc/rfc8259",
+              "publisher": "IETF",
+              "version": "RFC 8259",
+              "accessedAt": "2026-07-23"
+            }
+          ],
+          "starterFiles": [
+            {
+              "path": "api-exchange.json",
+              "content": "{\n  \"method\": \"\",\n  \"path\": \"\",\n  \"request\": {\n    \"headers\": {},\n    \"body\": {}\n  },\n  \"response\": {\n    \"statusCode\": 0,\n    \"body\": {}\n  },\n  \"errorCases\": [],\n  \"idempotency\": \"\"\n}"
+            }
+          ],
+          "checks": [
+            {
+              "id": "method",
+              "type": "json-pointer-present",
+              "path": "api-exchange.json",
+              "rule": "/method",
+              "required": true,
+              "points": 15,
+              "message": "填写 HTTP 方法。"
+            },
+            {
+              "id": "path",
+              "type": "json-pointer-present",
+              "path": "api-exchange.json",
+              "rule": "/path",
+              "required": true,
+              "points": 15,
+              "message": "填写请求路径。"
+            },
+            {
+              "id": "status",
+              "type": "json-number-range",
+              "path": "api-exchange.json",
+              "rule": "/response/statusCode:100:599",
+              "required": true,
+              "points": 20,
+              "message": "状态码必须位于 HTTP 合法区间。"
+            },
+            {
+              "id": "errors",
+              "type": "json-array-shape",
+              "path": "api-exchange.json",
+              "rule": "/errorCases:2:statusCode,code,handling",
+              "required": true,
+              "points": 30,
+              "message": "至少记录两个带处理策略的错误案例。"
+            },
+            {
+              "id": "idempotency",
+              "type": "json-pointer-present",
+              "path": "api-exchange.json",
+              "rule": "/idempotency",
+              "required": true,
+              "points": 20,
+              "message": "说明重复请求的幂等行为。"
+            }
+          ]
+        },
+        {
+          "level": "初级",
+          "mentorAgentId": "project-agent",
+          "id": "model-response-contract",
+          "title": "建立模型结构化响应契约",
+          "summary": "用 JSON Schema 和运行证据约束模型正常输出与拒绝分支。",
+          "kind": "model-contract",
+          "estimatedMinutes": 55,
+          "skills": [
+            "JSON Schema",
+            "Structured Outputs",
+            "Token",
+            "可追踪性"
+          ],
+          "objective": "把模型输出从脆弱文本解析升级为显式 Schema，并保存足够的运行元数据定位问题。",
+          "scenario": "模型有时返回缺字段 JSON，有时因安全策略拒绝；调用方需要稳定地区分解析成功、拒绝和传输失败。",
+          "lesson": "## 核心概念\n结构化输出的价值是让调用方和模型共享同一份机器可读契约。Schema 应声明 type、properties 和 required，并为无法完成请求时保留显式拒绝分支。运行记录需要把模型版本、requestId、延迟、输入与输出 token、原始状态和解析结果关联起来。 将概念写成显式契约，并用证据判断结果。\n\n## 完成步骤\n在 output-schema.json 中定义对象结构和必填字段，再加入 refusal 分支；从外部模型工具导出或手工整理一次 model-run.json，填写来源、采集时间、请求标识、模型、token、延迟和解析结果。 留下可复现记录，提交前移除密钥和个人信息。\n\n## 常见误区\nSchema 校验通过不代表内容真实；不要把自由文本 JSON 当成严格结构化输出。不要记录密钥或完整敏感 Prompt，token 与延迟必须是数值而非带单位字符串。 示例和一次成功运行不能替代边界、失败与对抗场景。\n\n## 完成标准\n两个 JSON 均可解析，Schema 字段齐全，运行证据可追踪，数值在合理范围，并且能区分成功解析和拒绝。 必需检查全部通过，关键选择可追溯。",
+          "deliverables": [
+            "output-schema.json：结构化输出 Schema",
+            "model-run.json：一次脱敏模型运行证据"
+          ],
+          "prerequisiteTaskIds": [
+            "http-json-basics"
+          ],
+          "evidenceMode": "import",
+          "references": [
+            {
+              "title": "Structured Outputs",
+              "url": "https://developers.openai.com/api/docs/guides/structured-outputs",
+              "publisher": "OpenAI",
+              "version": "2026-07",
+              "accessedAt": "2026-07-23"
+            },
+            {
+              "title": "JSON Data Interchange Syntax",
+              "url": "https://www.rfc-editor.org/rfc/rfc8259",
+              "publisher": "IETF",
+              "version": "RFC 8259",
+              "accessedAt": "2026-07-23"
+            }
+          ],
+          "starterFiles": [
+            {
+              "path": "output-schema.json",
+              "content": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"answer\": {\n      \"type\": \"string\"\n    },\n    \"refusal\": {\n      \"type\": [\n        \"string\",\n        \"null\"\n      ]\n    }\n  },\n  \"required\": []\n}"
+            },
+            {
+              "path": "model-run.json",
+              "content": "{\n  \"source\": \"\",\n  \"capturedAt\": \"\",\n  \"requestId\": \"\",\n  \"model\": \"\",\n  \"latencyMs\": 0,\n  \"inputTokens\": 0,\n  \"outputTokens\": 0,\n  \"parsedResult\": {}\n}"
+            }
+          ],
+          "checks": [
+            {
+              "id": "schema-type",
+              "type": "json-pointer-present",
+              "path": "output-schema.json",
+              "rule": "/type",
+              "required": true,
+              "points": 5,
+              "message": "Schema 必须声明根类型。"
+            },
+            {
+              "id": "schema-properties",
+              "type": "json-pointer-present",
+              "path": "output-schema.json",
+              "rule": "/properties",
+              "required": true,
+              "points": 5,
+              "message": "Schema 必须声明属性。"
+            },
+            {
+              "id": "schema-required",
+              "type": "json-array-min",
+              "path": "output-schema.json",
+              "rule": "required:1",
+              "required": true,
+              "points": 15,
+              "message": "至少声明一个必填字段。"
+            },
+            {
+              "id": "refusal",
+              "type": "json-pointer-present",
+              "path": "output-schema.json",
+              "rule": "/properties/refusal",
+              "required": true,
+              "points": 10,
+              "message": "提供显式拒绝分支。"
+            },
+            {
+              "id": "source",
+              "type": "json-pointer-present",
+              "path": "model-run.json",
+              "rule": "/source",
+              "required": true,
+              "points": 10,
+              "message": "填写证据来源。"
+            },
+            {
+              "id": "request",
+              "type": "json-pointer-present",
+              "path": "model-run.json",
+              "rule": "/requestId",
+              "required": true,
+              "points": 10,
+              "message": "填写请求标识。"
+            },
+            {
+              "id": "latency",
+              "type": "json-number-range",
+              "path": "model-run.json",
+              "rule": "/latencyMs:1:600000",
+              "required": true,
+              "points": 10,
+              "message": "填写毫秒延迟。"
+            },
+            {
+              "id": "tokens-in",
+              "type": "json-number-range",
+              "path": "model-run.json",
+              "rule": "/inputTokens:1:10000000",
+              "required": true,
+              "points": 10,
+              "message": "填写输入 token。"
+            },
+            {
+              "id": "tokens-out",
+              "type": "json-number-range",
+              "path": "model-run.json",
+              "rule": "/outputTokens:1:10000000",
+              "required": true,
+              "points": 10,
+              "message": "填写输出 token."
+            },
+            {
+              "id": "parsed",
+              "type": "json-pointer-present",
+              "path": "model-run.json",
+              "rule": "/parsedResult",
+              "required": true,
+              "points": 5,
+              "message": "保存解析结果。"
+            },
+            {
+              "id": "captured-at",
+              "type": "json-pointer-present",
+              "path": "model-run.json",
+              "rule": "/capturedAt",
+              "required": true,
+              "points": 5,
+              "message": "填写证据采集时间。"
+            },
+            {
+              "id": "model",
+              "type": "json-pointer-present",
+              "path": "model-run.json",
+              "rule": "/model",
+              "required": true,
+              "points": 5,
+              "message": "填写实际模型标识。"
             }
           ]
         }
       ]
     },
     {
-      "id": "data-engineering",
-      "title": "数据与版本",
-      "summary": "设计数据边界、隐私、保留周期与兼容迁移。",
+      "id": "context-data",
+      "title": "Prompt、Context 与数据",
+      "summary": "管理模型看到的信息、长期记忆和数据生命周期，兼顾相关性、成本与隐私。",
       "level": "初级 / 中级",
       "tasks": [
         {
+          "level": "初级",
+          "mentorAgentId": "project-agent",
+          "id": "prompt-context-design",
+          "title": "设计 Prompt 与上下文层级",
+          "summary": "区分 system、user、tool 指令，定义冲突解决与注入边界。",
+          "kind": "context-design",
+          "estimatedMinutes": 45,
+          "skills": [
+            "Prompt",
+            "上下文工程",
+            "指令层级"
+          ],
+          "objective": "让模型在多来源上下文中遵循稳定优先级，并对不可信内容保持数据与指令分离。",
+          "scenario": "知识文档和工具结果可能包含命令式文本，Agent 必须知道哪些内容只能作为数据。",
+          "lesson": "## 核心概念\nPrompt 工程解决单次指令表达，上下文工程则决定模型在有限窗口里看到什么、按什么优先级解释。system 定义持久规则，user 表达当前意图，tool 返回外部事实；较低层内容不能改写较高层约束。所有检索文档和工具输出都应先被视作不可信数据。 将概念写成显式契约，并用证据判断结果。\n\n## 完成步骤\n画出 system、user、tool 三层来源；为相互冲突的指令写明确决策；定义外部内容的分隔和引用方式；为 token 预算分配固定、检索、历史和输出空间；写出超限时的裁剪顺序。 留下可复现记录，提交前移除密钥和个人信息。\n\n## 常见误区\n不要把全部历史无筛选塞入窗口，也不要依靠一句“忽略恶意指令”解决注入。上下文越长不一定越好，重复和陈旧内容会稀释关键证据。 示例和一次成功运行不能替代边界、失败与对抗场景。\n\n## 完成标准\n计划覆盖指令层级、来源、冲突、注入边界和 token 预算，并能说明超限与证据不足时如何处理。 必需检查全部通过，关键选择可追溯。",
+          "deliverables": [
+            "context-plan.md：上下文装配与冲突处理方案"
+          ],
+          "prerequisiteTaskIds": [
+            "model-response-contract"
+          ],
+          "evidenceMode": "document",
+          "references": [
+            {
+              "title": "Context engineering for AI agents",
+              "url": "https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents",
+              "publisher": "Anthropic",
+              "version": "2025",
+              "accessedAt": "2026-07-23"
+            },
+            {
+              "title": "Structured Outputs",
+              "url": "https://developers.openai.com/api/docs/guides/structured-outputs",
+              "publisher": "OpenAI",
+              "version": "2026-07",
+              "accessedAt": "2026-07-23"
+            }
+          ],
+          "starterFiles": [
+            {
+              "path": "context-plan.md",
+              "content": "# Context 计划\n\n## 指令层级\n\n## 上下文来源\n\n## 冲突处理\n\n## 注入边界\n\n## Token 预算\n"
+            }
+          ],
+          "checks": [
+            {
+              "id": "hierarchy",
+              "type": "markdown-section",
+              "path": "context-plan.md",
+              "rule": "## 指令层级",
+              "required": true,
+              "points": 20,
+              "message": "描述 system、user、tool 层级。"
+            },
+            {
+              "id": "sources",
+              "type": "markdown-section",
+              "path": "context-plan.md",
+              "rule": "## 上下文来源",
+              "required": true,
+              "points": 20,
+              "message": "列出上下文来源与可信度。"
+            },
+            {
+              "id": "conflicts",
+              "type": "markdown-section",
+              "path": "context-plan.md",
+              "rule": "## 冲突处理",
+              "required": true,
+              "points": 20,
+              "message": "说明冲突处理规则。"
+            },
+            {
+              "id": "injection",
+              "type": "markdown-section",
+              "path": "context-plan.md",
+              "rule": "## 注入边界",
+              "required": true,
+              "points": 20,
+              "message": "说明不可信内容边界。"
+            },
+            {
+              "id": "budget",
+              "type": "markdown-section",
+              "path": "context-plan.md",
+              "rule": "## Token 预算",
+              "required": true,
+              "points": 20,
+              "message": "定义预算与裁剪顺序。"
+            }
+          ]
+        },
+        {
+          "level": "初级 / 中级",
+          "mentorAgentId": "project-agent",
           "id": "data-lifecycle",
           "title": "设计可演进的数据契约",
-          "summary": "为 AI 功能定义实体、敏感字段、保留策略和迁移方案。",
-          "level": "初级 / 中级",
+          "summary": "定义实体、敏感字段、保留周期与版本迁移策略。",
           "kind": "data-contract",
-          "estimatedMinutes": 35,
-          "skills": ["数据建模", "隐私", "版本演进", "迁移"],
-          "objective": "让业务数据可以被解释、最小化收集，并能在版本升级时安全迁移。",
-          "scenario": "陪伴 Agent 需要保存用户偏好和会话摘要，但团队必须控制敏感数据、删除请求与旧版本兼容。",
-          "mentorAgentId": "knowledge-curator",
+          "estimatedMinutes": 45,
+          "skills": [
+            "数据建模",
+            "隐私",
+            "版本迁移"
+          ],
+          "objective": "让 Agent 数据最小化收集、可删除、可迁移，并能在接口升级后保持兼容。",
+          "scenario": "陪伴 Agent 需要保存偏好和摘要，但团队必须处理 PII、撤回请求和旧版本数据。",
+          "lesson": "## 核心概念\n数据生命周期覆盖采集、使用、共享、保留、删除和迁移。契约不仅描述字段，还要标记用途、敏感级别、所有者和保存期限。AI 系统中的 Prompt、Embedding、评测样本与日志都可能包含个人信息，删除策略必须考虑派生数据和备份。 将概念写成显式契约，并用证据判断结果。\n\n## 完成步骤\n定义至少两个业务实体及关键字段；列出 PII 字段和处理方式；为每类数据写保留与删除规则；给契约设置版本；设计旧版本读取、迁移失败和回滚方案。 留下可复现记录，提交前移除密钥和个人信息。\n\n## 常见误区\n不要假设向量不可逆就不敏感，也不要无限期保留所有对话以便未来使用。字段改名不是完整迁移，读写兼容窗口和失败恢复同样重要。 示例和一次成功运行不能替代边界、失败与对抗场景。\n\n## 完成标准\n数据契约可以解析，包含版本、实体、PII、保留和迁移信息，且能回答用户删除请求如何传播到缓存、索引和日志。 必需检查全部通过，关键选择可追溯。",
+          "deliverables": [
+            "data-contract.json：数据生命周期契约"
+          ],
+          "prerequisiteTaskIds": [
+            "http-json-basics"
+          ],
+          "evidenceMode": "document",
+          "references": [
+            {
+              "title": "AI RMF Generative AI Profile",
+              "url": "https://www.nist.gov/publications/artificial-intelligence-risk-management-framework-generative-artificial-intelligence",
+              "publisher": "NIST",
+              "version": "AI 600-1",
+              "accessedAt": "2026-07-23"
+            },
+            {
+              "title": "Evaluation best practices",
+              "url": "https://developers.openai.com/api/docs/guides/evaluation-best-practices",
+              "publisher": "OpenAI",
+              "version": "2026-07",
+              "accessedAt": "2026-07-23"
+            }
+          ],
           "starterFiles": [
             {
               "path": "data-contract.json",
@@ -93,10 +496,10 @@
               "id": "version",
               "type": "regex",
               "path": "data-contract.json",
-              "rule": "\\\"schemaVersion\\\"\\s*:\\s*\\\"v[0-9]+",
+              "rule": "\"schemaVersion\"\\s*:\\s*\"v[0-9]+",
               "required": true,
               "points": 15,
-              "message": "数据契约必须有可追踪的版本。"
+              "message": "数据契约必须有可追踪版本。"
             },
             {
               "id": "entities",
@@ -105,7 +508,7 @@
               "rule": "entities:2",
               "required": true,
               "points": 20,
-              "message": "至少定义两个有实际字段的业务实体。"
+              "message": "至少定义两个业务实体。"
             },
             {
               "id": "pii",
@@ -114,47 +517,658 @@
               "rule": "piiFields:1",
               "required": true,
               "points": 20,
-              "message": "明确至少一个敏感字段及其处理方式。"
+              "message": "至少标记一个敏感字段。"
             },
             {
               "id": "retention",
-              "type": "json-field",
+              "type": "json-pointer-present",
               "path": "data-contract.json",
-              "rule": "retentionPolicy",
+              "rule": "/retentionPolicy",
               "required": true,
               "points": 20,
-              "message": "定义保留、删除与用户撤回策略。"
+              "message": "定义保留与删除策略。"
             },
             {
               "id": "migration",
-              "type": "json-field",
+              "type": "json-pointer-present",
               "path": "data-contract.json",
-              "rule": "migration",
+              "rule": "/migration",
               "required": true,
               "points": 25,
-              "message": "定义旧版本读取、迁移和失败回滚方式。"
+              "message": "定义迁移和回滚。"
+            }
+          ]
+        },
+        {
+          "level": "中级",
+          "mentorAgentId": "project-agent",
+          "id": "context-memory-budget",
+          "title": "管理上下文与记忆预算",
+          "summary": "为短期上下文、长期记忆、压缩和遗忘建立可执行策略。",
+          "kind": "memory-design",
+          "estimatedMinutes": 55,
+          "skills": [
+            "记忆系统",
+            "Token 预算",
+            "PII 边界"
+          ],
+          "objective": "在相关性、成本和隐私之间建立明确的读取、写入、压缩与删除规则。",
+          "scenario": "长期使用的 Agent 上下文持续增长，旧偏好与新指令冲突，敏感信息也可能被错误写入记忆。",
+          "lesson": "## 核心概念\n工作记忆服务当前任务，长期记忆保存跨会话稳定信息，两者不应自动互相复制。写入需要价值、授权和敏感性判断；读取需要相关性和新鲜度；压缩必须保留来源与不确定性。上下文预算是一种资源分配，不只是最大 token 数。 将概念写成显式契约，并用证据判断结果。\n\n## 完成步骤\n分别定义 workingMemory 与 longTermMemory；写出读取、写入和删除策略；设计摘要或分层压缩；分配系统规则、历史、检索、工具结果和输出预算；明确 PII 禁止写入、加密或需同意的范围。 留下可复现记录，提交前移除密钥和个人信息。\n\n## 常见误区\n不要把所有对话永久记忆，也不要让摘要覆盖原始事实来源。仅靠最近 N 轮会丢失关键约束，单纯语义相似也会召回过时信息。 示例和一次成功运行不能替代边界、失败与对抗场景。\n\n## 完成标准\nJSON 包含两类记忆、读写删策略、压缩、上下文预算和 PII 边界，预算数值可被工程实现采用。 必需检查全部通过，关键选择可追溯。",
+          "deliverables": [
+            "memory-plan.json：上下文与记忆预算"
+          ],
+          "prerequisiteTaskIds": [
+            "prompt-context-design",
+            "data-lifecycle"
+          ],
+          "evidenceMode": "document",
+          "references": [
+            {
+              "title": "Context engineering for AI agents",
+              "url": "https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents",
+              "publisher": "Anthropic",
+              "version": "2025",
+              "accessedAt": "2026-07-23"
+            },
+            {
+              "title": "AI RMF Generative AI Profile",
+              "url": "https://www.nist.gov/publications/artificial-intelligence-risk-management-framework-generative-artificial-intelligence",
+              "publisher": "NIST",
+              "version": "AI 600-1",
+              "accessedAt": "2026-07-23"
+            }
+          ],
+          "starterFiles": [
+            {
+              "path": "memory-plan.json",
+              "content": "{\n  \"workingMemory\": {\n    \"seed\": \"define\"\n  },\n  \"longTermMemory\": {\n    \"seed\": \"define\"\n  },\n  \"writePolicy\": \"\",\n  \"readPolicy\": \"\",\n  \"deletePolicy\": \"\",\n  \"compaction\": \"\",\n  \"contextBudget\": {\n    \"totalTokens\": 0\n  },\n  \"piiBoundaries\": []\n}"
+            }
+          ],
+          "checks": [
+            {
+              "id": "working",
+              "type": "json-pointer-present",
+              "path": "memory-plan.json",
+              "rule": "/workingMemory",
+              "required": true,
+              "points": 10,
+              "message": "定义工作记忆。"
+            },
+            {
+              "id": "long-term",
+              "type": "json-pointer-present",
+              "path": "memory-plan.json",
+              "rule": "/longTermMemory",
+              "required": true,
+              "points": 10,
+              "message": "定义长期记忆。"
+            },
+            {
+              "id": "write",
+              "type": "json-pointer-present",
+              "path": "memory-plan.json",
+              "rule": "/writePolicy",
+              "required": true,
+              "points": 15,
+              "message": "定义写入策略。"
+            },
+            {
+              "id": "read",
+              "type": "json-pointer-present",
+              "path": "memory-plan.json",
+              "rule": "/readPolicy",
+              "required": true,
+              "points": 15,
+              "message": "定义读取策略。"
+            },
+            {
+              "id": "delete",
+              "type": "json-pointer-present",
+              "path": "memory-plan.json",
+              "rule": "/deletePolicy",
+              "required": true,
+              "points": 15,
+              "message": "定义删除策略。"
+            },
+            {
+              "id": "compact",
+              "type": "json-pointer-present",
+              "path": "memory-plan.json",
+              "rule": "/compaction",
+              "required": true,
+              "points": 10,
+              "message": "定义压缩策略。"
+            },
+            {
+              "id": "budget",
+              "type": "json-number-range",
+              "path": "memory-plan.json",
+              "rule": "/contextBudget/totalTokens:512:10000000",
+              "required": true,
+              "points": 15,
+              "message": "填写上下文总预算。"
+            },
+            {
+              "id": "pii",
+              "type": "json-array-min",
+              "path": "memory-plan.json",
+              "rule": "piiBoundaries:1",
+              "required": true,
+              "points": 10,
+              "message": "至少定义一条 PII 边界。"
             }
           ]
         }
       ]
     },
     {
-      "id": "agent-practice",
-      "title": "Agent 实战项目",
-      "summary": "把官方陪伴角色改造成属于你的、可测试并可直接使用的个人 Agent。",
-      "level": "初级 / 中级",
+      "id": "agent-systems",
+      "title": "Workflow、工具与 Agent",
+      "summary": "从架构选型到工具循环、轨迹恢复，构建可控的 Agent 系统。",
+      "level": "中级",
       "tasks": [
         {
+          "level": "中级",
+          "mentorAgentId": "project-agent",
+          "id": "workflow-agent-decision",
+          "title": "选择 Workflow 还是 Agent",
+          "summary": "根据任务确定性、反馈循环和风险选择最小可行架构。",
+          "kind": "architecture-decision",
+          "estimatedMinutes": 45,
+          "skills": [
+            "Workflow",
+            "Agent",
+            "架构决策"
+          ],
+          "objective": "在可预测流程和自主决策之间做有证据的选择，避免不必要的自治。",
+          "scenario": "团队想把所有步骤都交给 Agent，但部分步骤规则固定、风险高且适合普通工作流。",
+          "lesson": "## 核心概念\nWorkflow 由代码预先确定控制流，Agent 则让模型动态决定步骤与工具。任务越稳定、规则越明确，工作流越容易测试和运营；只有当步骤数量和路径无法预先穷举、且模型能从环境反馈中改进时，自治循环才有价值。二者可以组合而非二选一。 将概念写成显式契约，并用证据判断结果。\n\n## 完成步骤\n描述任务特征和不确定来源；比较单次调用、顺序工作流、路由、并行与 Agent；选择方案并说明成本与风险；画出主要步骤、停止条件和人工接管点。 留下可复现记录，提交前移除密钥和个人信息。\n\n## 常见误区\n不要把多轮调用自动称为 Agent，也不要为了展示技术而增加自治。没有停止条件、预算和人工接管的循环无法安全上线。 示例和一次成功运行不能替代边界、失败与对抗场景。\n\n## 完成标准\n架构决策记录包含任务特征、候选方案、明确选择、执行步骤和停止/接管规则。 必需检查全部通过，关键选择可追溯。",
+          "deliverables": [
+            "architecture-decision.md：Workflow/Agent 选型记录"
+          ],
+          "prerequisiteTaskIds": [
+            "model-response-contract"
+          ],
+          "evidenceMode": "document",
+          "references": [
+            {
+              "title": "Building effective agents",
+              "url": "https://www.anthropic.com/engineering/building-effective-agents",
+              "publisher": "Anthropic",
+              "version": "2024",
+              "accessedAt": "2026-07-23"
+            },
+            {
+              "title": "Function calling",
+              "url": "https://developers.openai.com/api/docs/guides/function-calling",
+              "publisher": "OpenAI",
+              "version": "2026-07",
+              "accessedAt": "2026-07-23"
+            }
+          ],
+          "starterFiles": [
+            {
+              "path": "architecture-decision.md",
+              "content": "# 架构选型\n\n## 任务特征\n\n## 方案比较\n\n## 选择与理由\n\n## 工作流步骤\n\n## 停止与人工接管\n"
+            }
+          ],
+          "checks": [
+            {
+              "id": "traits",
+              "type": "markdown-section",
+              "path": "architecture-decision.md",
+              "rule": "## 任务特征",
+              "required": true,
+              "points": 20,
+              "message": "说明确定性和不确定来源。"
+            },
+            {
+              "id": "compare",
+              "type": "markdown-section",
+              "path": "architecture-decision.md",
+              "rule": "## 方案比较",
+              "required": true,
+              "points": 20,
+              "message": "比较 Workflow 与 Agent。"
+            },
+            {
+              "id": "choice",
+              "type": "markdown-section",
+              "path": "architecture-decision.md",
+              "rule": "## 选择与理由",
+              "required": true,
+              "points": 20,
+              "message": "做出有依据的选择。"
+            },
+            {
+              "id": "steps",
+              "type": "markdown-section",
+              "path": "architecture-decision.md",
+              "rule": "## 工作流步骤",
+              "required": true,
+              "points": 20,
+              "message": "列出执行步骤。"
+            },
+            {
+              "id": "stop",
+              "type": "markdown-section",
+              "path": "architecture-decision.md",
+              "rule": "## 停止与人工接管",
+              "required": true,
+              "points": 20,
+              "message": "定义停止与接管。"
+            }
+          ]
+        },
+        {
+          "level": "中级",
+          "mentorAgentId": "project-agent",
+          "id": "tool-contract",
+          "title": "设计安全可靠的工具契约",
+          "summary": "用输入输出 Schema、授权、超时和幂等规则约束工具调用。",
+          "kind": "tool-design",
+          "estimatedMinutes": 60,
+          "skills": [
+            "Function Calling",
+            "Schema",
+            "权限",
+            "故障恢复"
+          ],
+          "objective": "让 Agent 只能以可验证参数调用最小权限工具，并在失败和敏感操作时进入受控路径。",
+          "scenario": "Agent 可以查询日历和创建会议，读取与写入操作需要不同权限、确认和重试策略。",
+          "lesson": "## 核心概念\n工具契约是模型与真实系统之间的安全边界。每个工具需要清晰名称、用途、输入与结构化输出 Schema；执行层必须再次校验参数、权限和业务状态。超时、幂等性、错误恢复、用户确认与审计属于契约，而不是调用之后再补的实现细节。 将概念写成显式契约，并用证据判断结果。\n\n## 完成步骤\n定义命名空间和至少两个工具；为每个工具写 inputSchema 与 outputSchema；标注所需授权和最小 scope；设置超时；区分可重试与不可重试错误；为写入或高风险操作定义确认；说明幂等键。 留下可复现记录，提交前移除密钥和个人信息。\n\n## 常见误区\n不要相信模型已经校验参数，也不要向模型暴露万能管理工具。工具描述过于宽泛会导致误选，自动重试非幂等写操作会造成重复副作用。 示例和一次成功运行不能替代边界、失败与对抗场景。\n\n## 完成标准\n工具数组结构一致，所有工具都有权限、超时、幂等、错误恢复和确认策略，数值超时位于合理范围。 必需检查全部通过，关键选择可追溯。",
+          "deliverables": [
+            "tool-contract.json：工具接口与安全契约"
+          ],
+          "prerequisiteTaskIds": [
+            "workflow-agent-decision"
+          ],
+          "evidenceMode": "document",
+          "references": [
+            {
+              "title": "Function calling",
+              "url": "https://developers.openai.com/api/docs/guides/function-calling",
+              "publisher": "OpenAI",
+              "version": "2026-07",
+              "accessedAt": "2026-07-23"
+            },
+            {
+              "title": "MCP Tools",
+              "url": "https://modelcontextprotocol.io/specification/2025-11-25/server/tools",
+              "publisher": "Model Context Protocol",
+              "version": "2025-11-25",
+              "accessedAt": "2026-07-23"
+            }
+          ],
+          "starterFiles": [
+            {
+              "path": "tool-contract.json",
+              "content": "{\n  \"namespace\": \"\",\n  \"tools\": []\n}"
+            }
+          ],
+          "checks": [
+            {
+              "id": "namespace",
+              "type": "json-pointer-present",
+              "path": "tool-contract.json",
+              "rule": "/namespace",
+              "required": true,
+              "points": 10,
+              "message": "定义稳定命名空间。"
+            },
+            {
+              "id": "tools",
+              "type": "json-array-shape",
+              "path": "tool-contract.json",
+              "rule": "/tools:2:name,inputSchema,outputSchema,authorization,timeoutMs,idempotency,errorRecovery,confirmation",
+              "required": true,
+              "points": 70,
+              "message": "至少定义两个完整工具契约。"
+            },
+            {
+              "id": "timeout",
+              "type": "regex",
+              "path": "tool-contract.json",
+              "rule": "\"timeoutMs\"\\s*:\\s*[1-9][0-9]{1,5}",
+              "required": true,
+              "points": 20,
+              "message": "设置正数毫秒超时。"
+            }
+          ]
+        },
+        {
+          "level": "中级",
+          "mentorAgentId": "project-agent",
+          "id": "agent-trace-recovery",
+          "title": "记录 Agent 轨迹并设计恢复",
+          "summary": "导入工具调用轨迹，定义错误恢复、预算和停止条件。",
+          "kind": "agent-trace",
+          "estimatedMinutes": 65,
+          "skills": [
+            "Agent Loop",
+            "轨迹",
+            "恢复",
+            "停止条件"
+          ],
+          "objective": "用脱敏轨迹解释 Agent 如何观察、决定、调用工具和停止，并能从部分失败中恢复。",
+          "scenario": "Agent 连续调用工具后陷入重试，团队需要从轨迹判断是哪一步、哪个参数或哪个停止规则失效。",
+          "lesson": "## 核心概念\nAgent 轨迹是状态转换和外部副作用的记录，不等同于公开完整思维过程。工程上应保存输入摘要、决策类型、工具参数摘要、结果状态、错误、预算消耗和停止原因，同时隐藏密钥和敏感推理。恢复策略要区分瞬时失败、永久失败、权限不足和不确定副作用。 将概念写成显式契约，并用证据判断结果。\n\n## 完成步骤\n从外部实验导入 trace.json；填写 source、capturedAt 和 requestId；记录至少三个步骤和一次工具调用；标记错误与恢复；在 recovery.md 中定义超时、重试、补偿、人工接管及最大步数/成本停止条件。 留下可复现记录，提交前移除密钥和个人信息。\n\n## 常见误区\n不要把全部原始 Prompt 和隐私写入日志，也不要无限重试。调用超时后不能假设写操作未发生，恢复前应查询状态或使用幂等键。 示例和一次成功运行不能替代边界、失败与对抗场景。\n\n## 完成标准\n轨迹来源可追踪、步骤结构完整、包含工具与恢复证据，并明确 stopReason 和预算；恢复文档覆盖失败分类和人工接管。 必需检查全部通过，关键选择可追溯。",
+          "deliverables": [
+            "trace.json：脱敏 Agent 轨迹",
+            "recovery.md：错误恢复与停止策略"
+          ],
+          "prerequisiteTaskIds": [
+            "tool-contract",
+            "prompt-context-design"
+          ],
+          "evidenceMode": "import",
+          "references": [
+            {
+              "title": "Building effective agents",
+              "url": "https://www.anthropic.com/engineering/building-effective-agents",
+              "publisher": "Anthropic",
+              "version": "2024",
+              "accessedAt": "2026-07-23"
+            },
+            {
+              "title": "Demystifying evals for AI agents",
+              "url": "https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents",
+              "publisher": "Anthropic",
+              "version": "2026",
+              "accessedAt": "2026-07-23"
+            }
+          ],
+          "starterFiles": [
+            {
+              "path": "trace.json",
+              "content": "{\n  \"source\": \"\",\n  \"capturedAt\": \"\",\n  \"requestId\": \"\",\n  \"steps\": [],\n  \"toolCalls\": [],\n  \"error\": {},\n  \"recovery\": \"\",\n  \"stopReason\": \"\",\n  \"budget\": {\n    \"maxSteps\": 0,\n    \"maxTokens\": 0\n  }\n}"
+            },
+            {
+              "path": "recovery.md",
+              "content": "# 恢复策略\n\n## 失败分类\n\n## 重试与补偿\n\n## 用户确认\n\n## 停止条件\n\n## 人工接管\n"
+            }
+          ],
+          "checks": [
+            {
+              "id": "source",
+              "type": "json-pointer-present",
+              "path": "trace.json",
+              "rule": "/source",
+              "required": true,
+              "points": 10,
+              "message": "填写轨迹来源。"
+            },
+            {
+              "id": "request",
+              "type": "json-pointer-present",
+              "path": "trace.json",
+              "rule": "/requestId",
+              "required": true,
+              "points": 10,
+              "message": "填写请求标识。"
+            },
+            {
+              "id": "steps",
+              "type": "json-array-shape",
+              "path": "trace.json",
+              "rule": "/steps:3:step,kind,status",
+              "required": true,
+              "points": 20,
+              "message": "至少三个结构化步骤。"
+            },
+            {
+              "id": "tools",
+              "type": "json-array-shape",
+              "path": "trace.json",
+              "rule": "/toolCalls:1:name,result",
+              "required": true,
+              "points": 15,
+              "message": "至少一条工具调用。"
+            },
+            {
+              "id": "stop",
+              "type": "json-pointer-present",
+              "path": "trace.json",
+              "rule": "/stopReason",
+              "required": true,
+              "points": 10,
+              "message": "记录停止原因。"
+            },
+            {
+              "id": "budget",
+              "type": "json-number-range",
+              "path": "trace.json",
+              "rule": "/budget/maxSteps:1:100",
+              "required": true,
+              "points": 10,
+              "message": "设置最大步骤预算。"
+            },
+            {
+              "id": "recovery",
+              "type": "markdown-section",
+              "path": "recovery.md",
+              "rule": "## 重试与补偿",
+              "required": true,
+              "points": 10,
+              "message": "定义重试与补偿。"
+            },
+            {
+              "id": "handoff",
+              "type": "markdown-section",
+              "path": "recovery.md",
+              "rule": "## 人工接管",
+              "required": true,
+              "points": 10,
+              "message": "定义人工接管。"
+            },
+            {
+              "id": "captured-at",
+              "type": "json-pointer-present",
+              "path": "trace.json",
+              "rule": "/capturedAt",
+              "required": true,
+              "points": 5,
+              "message": "填写证据采集时间。"
+            }
+          ]
+        },
+        {
+          "level": "中级",
+          "mentorAgentId": "project-agent",
+          "id": "evaluation-suite",
+          "title": "构建可重复的 Agent 评测集",
+          "summary": "准备正常、边界和对抗样例，组合代码、模型与人工 grader。",
+          "kind": "evaluation",
+          "estimatedMinutes": 65,
+          "skills": [
+            "Evals",
+            "Grader",
+            "数据切分",
+            "Trial"
+          ],
+          "objective": "把“Agent 变好了”转成可重复、可比较、能阻止回归的评测门禁。",
+          "scenario": "Prompt 更新后开发集变好但线上投诉增加，团队需要保留集、多次 trial 和多种评分器。",
+          "lesson": "## 核心概念\n评测是产品迭代的反馈系统，不是一次发布前考试。样例应覆盖正常、边界、拒绝和对抗输入；代码 grader 适合结构与硬约束，模型 grader 适合语义比较，人工 grader 用于高风险和校准。训练集与保留集必须隔离。 将概念写成显式契约，并用证据判断结果。\n\n## 完成步骤\n准备至少十个带 id、category、input、expected 的案例；定义代码、模型和人工三类 grader 及标准；划分 train 与 holdout；设置至少三次 trial；导入一次脱敏 eval-run，记录来源、请求标识和每个 grader 结果。 留下可复现记录，提交前移除密钥和个人信息。\n\n## 常见误区\n不要只测黄金路径，也不要让模型给自己打分而没有校准。单次 trial 的波动不能代表质量，保留集不能在调参时反复查看。 示例和一次成功运行不能替代边界、失败与对抗场景。\n\n## 完成标准\n评测集达到十例，三类 grader、切分和 trial 齐全，运行证据能定位失败案例和门禁结果。 必需检查全部通过，关键选择可追溯。",
+          "deliverables": [
+            "eval-suite.json：评测集与 grader 定义",
+            "eval-run.json：一次多 trial 运行记录"
+          ],
+          "prerequisiteTaskIds": [
+            "model-response-contract"
+          ],
+          "evidenceMode": "import",
+          "references": [
+            {
+              "title": "Evaluation best practices",
+              "url": "https://developers.openai.com/api/docs/guides/evaluation-best-practices",
+              "publisher": "OpenAI",
+              "version": "2026-07",
+              "accessedAt": "2026-07-23"
+            },
+            {
+              "title": "Demystifying evals for AI agents",
+              "url": "https://www.anthropic.com/engineering/demystifying-evals-for-ai-agents",
+              "publisher": "Anthropic",
+              "version": "2026",
+              "accessedAt": "2026-07-23"
+            }
+          ],
+          "starterFiles": [
+            {
+              "path": "eval-suite.json",
+              "content": "{\n  \"cases\": [],\n  \"graders\": [],\n  \"split\": {\n    \"train\": [],\n    \"holdout\": []\n  },\n  \"trials\": 0\n}"
+            },
+            {
+              "path": "eval-run.json",
+              "content": "{\n  \"source\": \"\",\n  \"capturedAt\": \"\",\n  \"requestId\": \"\",\n  \"trials\": 0,\n  \"taskId\": \"\",\n  \"status\": \"\",\n  \"graderResults\": []\n}"
+            }
+          ],
+          "checks": [
+            {
+              "id": "cases",
+              "type": "json-array-shape",
+              "path": "eval-suite.json",
+              "rule": "/cases:10:id,category,input,expected",
+              "required": true,
+              "points": 20,
+              "message": "至少十个覆盖不同类别的样例。"
+            },
+            {
+              "id": "graders",
+              "type": "json-array-shape",
+              "path": "eval-suite.json",
+              "rule": "/graders:3:type,criterion",
+              "required": true,
+              "points": 15,
+              "message": "定义代码、模型、人工三类 grader。"
+            },
+            {
+              "id": "holdout",
+              "type": "json-pointer-present",
+              "path": "eval-suite.json",
+              "rule": "/split/holdout",
+              "required": true,
+              "points": 5,
+              "message": "定义保留集。"
+            },
+            {
+              "id": "trials",
+              "type": "json-number-range",
+              "path": "eval-suite.json",
+              "rule": "/trials:3:100",
+              "required": true,
+              "points": 10,
+              "message": "设置至少三次 trial。"
+            },
+            {
+              "id": "run-source",
+              "type": "json-pointer-present",
+              "path": "eval-run.json",
+              "rule": "/source",
+              "required": true,
+              "points": 5,
+              "message": "填写运行来源。"
+            },
+            {
+              "id": "run-request",
+              "type": "json-pointer-present",
+              "path": "eval-run.json",
+              "rule": "/requestId",
+              "required": true,
+              "points": 5,
+              "message": "填写请求标识。"
+            },
+            {
+              "id": "run-trials",
+              "type": "json-number-range",
+              "path": "eval-run.json",
+              "rule": "/trials:3:100",
+              "required": true,
+              "points": 10,
+              "message": "运行记录包含多次 trial。"
+            },
+            {
+              "id": "captured-at",
+              "type": "json-pointer-present",
+              "path": "eval-run.json",
+              "rule": "/capturedAt",
+              "required": true,
+              "points": 5,
+              "message": "填写证据采集时间。"
+            },
+            {
+              "id": "train",
+              "type": "json-pointer-present",
+              "path": "eval-suite.json",
+              "rule": "/split/train",
+              "required": true,
+              "points": 5,
+              "message": "训练集不能为空。"
+            },
+            {
+              "id": "case-categories",
+              "type": "regex",
+              "path": "eval-suite.json",
+              "rule": "(?s)(?=.*\"category\"\\s*:\\s*\"normal\")(?=.*\"category\"\\s*:\\s*\"boundary\")(?=.*\"category\"\\s*:\\s*\"adversarial\")",
+              "required": true,
+              "points": 10,
+              "message": "案例必须覆盖正常、边界和对抗类别。"
+            },
+            {
+              "id": "grader-types",
+              "type": "regex",
+              "path": "eval-suite.json",
+              "rule": "(?s)(?=.*\"type\"\\s*:\\s*\"code\")(?=.*\"type\"\\s*:\\s*\"model\")(?=.*\"type\"\\s*:\\s*\"human\")",
+              "required": true,
+              "points": 10,
+              "message": "必须同时定义代码、模型和人工 grader。"
+            }
+          ]
+        },
+        {
+          "level": "中级",
+          "mentorAgentId": "project-agent",
           "id": "companion-agent",
           "title": "打造自己的陪伴 Agent",
-          "summary": "定义目标、记忆、边界和评测集，通过后发布到现有 Agent 目录。",
-          "level": "初级 / 中级",
+          "summary": "将前置的需求、记忆、轨迹和评测汇总为可发布 Agent。",
           "kind": "agent-project",
-          "estimatedMinutes": 50,
-          "skills": ["Agent 设计", "记忆策略", "安全边界", "评测"],
-          "objective": "把 companion 模板改造成一个可控、可测、可持续改进并能在自由实验室使用的个人 Agent。",
-          "scenario": "你要交付一个每天都能使用的 AI 陪伴 Agent，但它不能越权记忆、编造事实或替用户做高风险决定。",
-          "mentorAgentId": "companion",
+          "estimatedMinutes": 75,
+          "skills": [
+            "Agent 设计",
+            "记忆",
+            "安全边界",
+            "评测"
+          ],
+          "objective": "交付一个有身份、目标、边界、记忆和评测证据的个人 Agent，并可发布到现有目录。",
+          "scenario": "你要交付一个每天可用的 AI 陪伴 Agent，但它不能越权记忆、编造事实或替用户做高风险决定。",
+          "lesson": "## 核心概念\nAgent 项目是前置契约的集成练习：身份和目标决定行为方向，边界与失败策略限制风险，记忆策略控制长期影响，评测场景验证稳定性。发布不是把 JSON 存进目录，而是确认所有字段和安全检查都能被后续运营理解。 将概念写成显式契约，并用证据判断结果。\n\n## 完成步骤\n填写 agent.json 的名称、人格、目标、边界、记忆和失败策略；在 evaluation.json 中准备至少八个正常、边界或对抗场景；把当前 Agent 与需求、上下文预算、工具轨迹和评测结果对齐，再运行发布检查。 留下可复现记录，提交前移除密钥和个人信息。\n\n## 常见误区\n不要用人格描述替代权限控制，也不要把“永远帮助用户”作为无条件目标。评测样例不能全是自选的成功案例，敏感信息和高风险动作必须有拒绝路径。 示例和一次成功运行不能替代边界、失败与对抗场景。\n\n## 完成标准\nAgent 身份和策略结构完整，场景数量达到要求，且通过检查后能够由已有发布接口安全发布。 必需检查全部通过，关键选择可追溯。",
+          "deliverables": [
+            "agent.json：Agent 身份与行为策略",
+            "evaluation.json：Agent 场景集"
+          ],
+          "prerequisiteTaskIds": [
+            "context-memory-budget",
+            "agent-trace-recovery",
+            "evaluation-suite"
+          ],
+          "evidenceMode": "document",
+          "references": [
+            {
+              "title": "Building effective agents",
+              "url": "https://www.anthropic.com/engineering/building-effective-agents",
+              "publisher": "Anthropic",
+              "version": "2024",
+              "accessedAt": "2026-07-23"
+            },
+            {
+              "title": "Evaluation best practices",
+              "url": "https://developers.openai.com/api/docs/guides/evaluation-best-practices",
+              "publisher": "OpenAI",
+              "version": "2026-07",
+              "accessedAt": "2026-07-23"
+            }
+          ],
           "starterFiles": [
             {
               "path": "agent.json",
@@ -173,7 +1187,7 @@
               "rule": "name",
               "required": true,
               "points": 10,
-              "message": "Agent 要有清晰的个人身份。"
+              "message": "Agent 必须有清晰身份。"
             },
             {
               "id": "goals",
@@ -182,7 +1196,7 @@
               "rule": "coreGoals:2",
               "required": true,
               "points": 20,
-              "message": "至少定义两个非空核心目标。"
+              "message": "至少定义两个核心目标。"
             },
             {
               "id": "boundaries",
@@ -191,7 +1205,7 @@
               "rule": "boundaries:2",
               "required": true,
               "points": 20,
-              "message": "至少定义两条非空行为边界。"
+              "message": "至少定义两条行为边界。"
             },
             {
               "id": "memory",
@@ -200,7 +1214,7 @@
               "rule": "memoryPolicy",
               "required": true,
               "points": 15,
-              "message": "明确哪些信息可以记忆以及如何遗忘。"
+              "message": "说明记忆与遗忘。"
             },
             {
               "id": "failure",
@@ -209,42 +1223,498 @@
               "rule": "failurePolicy",
               "required": true,
               "points": 15,
-              "message": "明确失败、未知和人工接管策略。"
+              "message": "说明失败、未知和人工接管。"
             },
             {
               "id": "scenarios",
-              "type": "json-array-min",
+              "type": "json-array-shape",
               "path": "evaluation.json",
-              "rule": "scenarios:5",
+              "rule": "/scenarios:8:category,input,expected",
               "required": true,
               "points": 20,
-              "message": "至少准备五个有内容的正常、异常或边界评测场景。"
+              "message": "至少准备八个评测场景。"
             }
           ]
         }
       ]
     },
     {
-      "id": "service-engineering",
-      "title": "服务工程",
-      "summary": "处理并发、权限、安全、幂等与生产观测。",
+      "id": "rag-engineering",
+      "title": "RAG 检索增强",
+      "summary": "从来源、切分和租户隔离到混合检索、重排、引用和 groundedness 评测。",
       "level": "中级",
       "tasks": [
         {
-          "id": "access-concurrency",
-          "title": "设计并发与权限边界",
-          "summary": "为多人使用的 AI 服务定义角色权限、幂等、并发冲突和滥用控制。",
           "level": "中级",
-          "kind": "service-safety",
-          "estimatedMinutes": 40,
-          "skills": ["并发", "权限", "安全", "幂等", "限流"],
-          "objective": "让同一业务动作在并发、重试和越权访问下仍然可预测且可审计。",
-          "scenario": "Agent 发布接口将开放给团队成员，多人可能同时更新同一版本，客户端也会自动重试。",
           "mentorAgentId": "project-agent",
+          "id": "rag-pipeline",
+          "title": "设计可追溯的 RAG 管道",
+          "summary": "建立来源可信度、切分、元数据隔离、检索、重排与引用策略。",
+          "kind": "rag-design",
+          "estimatedMinutes": 70,
+          "skills": [
+            "RAG",
+            "检索",
+            "引用",
+            "多租户"
+          ],
+          "objective": "让回答只依赖可追踪、可过滤、可引用的证据，并在召回不足时明确降级。",
+          "scenario": "知识库同时服务多个租户，文档质量不一；回答必须展示来源，不能把相邻租户内容混在一起。",
+          "lesson": "## 核心概念\nRAG 质量由数据和检索共同决定。来源可信度、切分粒度、元数据和租户过滤先于向量相似度；混合检索可以结合关键词与语义，重排用于精细排序，引用让用户验证证据。检索为空或证据冲突时应拒答、追问或转人工。 将概念写成显式契约，并用证据判断结果。\n\n## 完成步骤\n登记来源和可信度；定义 chunk 大小、重叠和版本；为每段附租户、权限、时间等元数据；设计混合检索和 rerank；规定引用格式、去重、证据不足和索引失败的 fallback；导入一次 retrieval-run。 留下可复现记录，提交前移除密钥和个人信息。\n\n## 常见误区\n不要把 top-k 当作准确率，也不要只看向量分数。切分会破坏表格和上下文，缺少租户过滤会造成越权泄露，引用链接也必须指向实际证据。 示例和一次成功运行不能替代边界、失败与对抗场景。\n\n## 完成标准\n设计文件覆盖来源、切分、元数据、隔离、检索、重排、引用和 fallback；运行记录有来源标识、至少三条结果、分数和引用。 必需检查全部通过，关键选择可追溯。",
+          "deliverables": [
+            "rag-design.json：RAG 管道设计",
+            "retrieval-run.json：一次脱敏检索运行"
+          ],
+          "prerequisiteTaskIds": [
+            "data-lifecycle",
+            "prompt-context-design"
+          ],
+          "evidenceMode": "import",
+          "references": [
+            {
+              "title": "Retrieval",
+              "url": "https://developers.openai.com/api/docs/guides/retrieval",
+              "publisher": "OpenAI",
+              "version": "2026-07",
+              "accessedAt": "2026-07-23"
+            },
+            {
+              "title": "Context engineering for AI agents",
+              "url": "https://www.anthropic.com/engineering/effective-context-engineering-for-ai-agents",
+              "publisher": "Anthropic",
+              "version": "2025",
+              "accessedAt": "2026-07-23"
+            }
+          ],
+          "starterFiles": [
+            {
+              "path": "rag-design.json",
+              "content": "{\n  \"sources\": [],\n  \"chunking\": {},\n  \"metadata\": [],\n  \"tenantIsolation\": \"\",\n  \"retrieval\": {},\n  \"reranking\": {},\n  \"citations\": {},\n  \"fallback\": \"\"\n}"
+            },
+            {
+              "path": "retrieval-run.json",
+              "content": "{\n  \"source\": \"\",\n  \"capturedAt\": \"\",\n  \"requestId\": \"\",\n  \"query\": \"\",\n  \"results\": []\n}"
+            }
+          ],
+          "checks": [
+            {
+              "id": "sources",
+              "type": "json-array-min",
+              "path": "rag-design.json",
+              "rule": "sources:1",
+              "required": true,
+              "points": 10,
+              "message": "登记可信来源。"
+            },
+            {
+              "id": "chunking",
+              "type": "json-pointer-present",
+              "path": "rag-design.json",
+              "rule": "/chunking",
+              "required": true,
+              "points": 10,
+              "message": "定义切分策略。"
+            },
+            {
+              "id": "metadata",
+              "type": "json-array-min",
+              "path": "rag-design.json",
+              "rule": "metadata:2",
+              "required": true,
+              "points": 10,
+              "message": "定义元数据字段。"
+            },
+            {
+              "id": "tenant",
+              "type": "json-pointer-present",
+              "path": "rag-design.json",
+              "rule": "/tenantIsolation",
+              "required": true,
+              "points": 10,
+              "message": "定义租户隔离。"
+            },
+            {
+              "id": "retrieval",
+              "type": "json-pointer-present",
+              "path": "rag-design.json",
+              "rule": "/retrieval",
+              "required": true,
+              "points": 10,
+              "message": "定义检索策略。"
+            },
+            {
+              "id": "rerank",
+              "type": "json-pointer-present",
+              "path": "rag-design.json",
+              "rule": "/reranking",
+              "required": true,
+              "points": 10,
+              "message": "定义重排。"
+            },
+            {
+              "id": "citations",
+              "type": "json-pointer-present",
+              "path": "rag-design.json",
+              "rule": "/citations",
+              "required": true,
+              "points": 10,
+              "message": "定义引用。"
+            },
+            {
+              "id": "fallback",
+              "type": "json-pointer-present",
+              "path": "rag-design.json",
+              "rule": "/fallback",
+              "required": true,
+              "points": 10,
+              "message": "定义证据不足时的 fallback。"
+            },
+            {
+              "id": "run-source",
+              "type": "json-pointer-present",
+              "path": "retrieval-run.json",
+              "rule": "/source",
+              "required": true,
+              "points": 5,
+              "message": "填写检索来源。"
+            },
+            {
+              "id": "run-request",
+              "type": "json-pointer-present",
+              "path": "retrieval-run.json",
+              "rule": "/requestId",
+              "required": true,
+              "points": 5,
+              "message": "填写请求标识。"
+            },
+            {
+              "id": "run-results",
+              "type": "json-array-shape",
+              "path": "retrieval-run.json",
+              "rule": "/results:3:documentId,score,citation",
+              "required": true,
+              "points": 5,
+              "message": "至少三条带分数和引用的结果。"
+            },
+            {
+              "id": "captured-at",
+              "type": "json-pointer-present",
+              "path": "retrieval-run.json",
+              "rule": "/capturedAt",
+              "required": true,
+              "points": 5,
+              "message": "填写证据采集时间。"
+            }
+          ]
+        },
+        {
+          "level": "中级",
+          "mentorAgentId": "project-agent",
+          "id": "rag-evaluation",
+          "title": "评测召回与 groundedness",
+          "summary": "用查询集分别衡量召回、答案依据、引用和租户边界。",
+          "kind": "rag-evaluation",
+          "estimatedMinutes": 65,
+          "skills": [
+            "Recall",
+            "Groundedness",
+            "引用评测",
+            "数据集"
+          ],
+          "objective": "把 RAG 的检索命中和回答有据可依拆成可观察指标，并设置上线门槛。",
+          "scenario": "RAG 回答看似流畅却漏掉关键条款，团队需要知道是没召回、没使用证据还是引用错误。",
+          "lesson": "## 核心概念\nRAG 评测至少区分 retrieval hit、答案 groundedness 和 citation correctness。查询应覆盖常规、边界、跨文档、无答案和权限隔离；相关文档列表可用于代码评分，答案与证据关系可用模型或人工评分，并要保留失败样例。 将概念写成显式契约，并用证据判断结果。\n\n## 完成步骤\n准备至少十个 query、相关文档和期望答案；定义 recall@k、groundedness、citation 和隔离指标及阈值；导入一次包含十条结果的运行记录；比较不同切分、检索或重排版本的变化。 留下可复现记录，提交前移除密钥和个人信息。\n\n## 常见误区\n不要把语言流畅度当 groundedness，也不要用生成答案反推相关文档。无答案查询必须允许拒答，跨租户命中应视为严重失败而不是平均分中的小扣分。 示例和一次成功运行不能替代边界、失败与对抗场景。\n\n## 完成标准\n评测查询达到十例，指标和阈值齐全，运行结果逐 query 标记命中、依据和引用，并注明来源。 必需检查全部通过，关键选择可追溯。",
+          "deliverables": [
+            "rag-eval.json：RAG 评测集与阈值",
+            "rag-eval-run.json：一次 RAG 评测运行"
+          ],
+          "prerequisiteTaskIds": [
+            "rag-pipeline",
+            "evaluation-suite"
+          ],
+          "evidenceMode": "import",
+          "references": [
+            {
+              "title": "Retrieval",
+              "url": "https://developers.openai.com/api/docs/guides/retrieval",
+              "publisher": "OpenAI",
+              "version": "2026-07",
+              "accessedAt": "2026-07-23"
+            },
+            {
+              "title": "Evaluation best practices",
+              "url": "https://developers.openai.com/api/docs/guides/evaluation-best-practices",
+              "publisher": "OpenAI",
+              "version": "2026-07",
+              "accessedAt": "2026-07-23"
+            }
+          ],
+          "starterFiles": [
+            {
+              "path": "rag-eval.json",
+              "content": "{\n  \"queries\": [],\n  \"metrics\": [],\n  \"thresholds\": {}\n}"
+            },
+            {
+              "path": "rag-eval-run.json",
+              "content": "{\n  \"source\": \"\",\n  \"capturedAt\": \"\",\n  \"requestId\": \"\",\n  \"results\": []\n}"
+            }
+          ],
+          "checks": [
+            {
+              "id": "queries",
+              "type": "json-array-shape",
+              "path": "rag-eval.json",
+              "rule": "/queries:10:id,query,relevantIds,expectedAnswer",
+              "required": true,
+              "points": 30,
+              "message": "至少十个带相关文档的查询。"
+            },
+            {
+              "id": "metrics",
+              "type": "json-array-min",
+              "path": "rag-eval.json",
+              "rule": "metrics:3",
+              "required": true,
+              "points": 15,
+              "message": "定义至少三类指标。"
+            },
+            {
+              "id": "thresholds",
+              "type": "json-pointer-present",
+              "path": "rag-eval.json",
+              "rule": "/thresholds",
+              "required": true,
+              "points": 15,
+              "message": "定义上线阈值。"
+            },
+            {
+              "id": "source",
+              "type": "json-pointer-present",
+              "path": "rag-eval-run.json",
+              "rule": "/source",
+              "required": true,
+              "points": 5,
+              "message": "填写运行来源。"
+            },
+            {
+              "id": "request",
+              "type": "json-pointer-present",
+              "path": "rag-eval-run.json",
+              "rule": "/requestId",
+              "required": true,
+              "points": 5,
+              "message": "填写请求标识。"
+            },
+            {
+              "id": "results",
+              "type": "json-array-shape",
+              "path": "rag-eval-run.json",
+              "rule": "/results:10:queryId,retrievalHit,grounded,cited",
+              "required": true,
+              "points": 25,
+              "message": "逐查询记录命中、依据和引用。"
+            },
+            {
+              "id": "captured-at",
+              "type": "json-pointer-present",
+              "path": "rag-eval-run.json",
+              "rule": "/capturedAt",
+              "required": true,
+              "points": 5,
+              "message": "填写证据采集时间。"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "genai-safety",
+      "title": "GenAI 安全与服务边界",
+      "summary": "通过威胁建模、红队证据、最小权限和并发控制降低真实系统风险。",
+      "level": "中级 / 高级",
+      "tasks": [
+        {
+          "level": "中级",
+          "mentorAgentId": "project-agent",
+          "id": "genai-red-team",
+          "title": "执行 GenAI 威胁建模与红队测试",
+          "summary": "覆盖 Prompt Injection、泄露、输出注入、过度权限、投毒和无限消耗。",
+          "kind": "security-evaluation",
+          "estimatedMinutes": 75,
+          "skills": [
+            "Prompt Injection",
+            "红队",
+            "威胁建模",
+            "残余风险"
+          ],
+          "objective": "用可复现攻击案例验证系统控制，并把仍无法消除的风险交给明确所有者。",
+          "scenario": "Agent 会读取网页、调用工具和检索知识库，攻击者可能把恶意指令藏在内容或索引中。",
+          "lesson": "## 核心概念\nGenAI 安全不能只靠 system prompt。直接和间接 Prompt Injection 会借不可信输入影响决策；敏感信息泄露、输出注入、过度权限、向量投毒和无限消耗分别跨越数据、工具、显示层与资源边界。威胁模型要连接资产、攻击面、控制和残余风险。 将概念写成显式契约，并用证据判断结果。\n\n## 完成步骤\n在 threat-model.md 中画出资产与信任边界、攻击面、控制和残余风险；设计至少八个红队案例，覆盖直接/间接注入、泄露、输出处理、过度权限、向量投毒和无限消耗；从外部实验导入 attack-results.json，记录来源、时间、请求和控制效果。 留下可复现记录，提交前移除密钥和个人信息。\n\n## 常见误区\n不要把模型拒绝一次当成永久防护，也不要直接渲染模型生成的 HTML、命令或链接。过滤输入不能替代最小权限、输出编码、预算限制、隔离和用户确认。 示例和一次成功运行不能替代边界、失败与对抗场景。\n\n## 完成标准\n威胁模型章节完整，攻击结果达到八例且类别充分，结果能区分被阻断、产生影响和残余风险。 必需检查全部通过，关键选择可追溯。",
+          "deliverables": [
+            "threat-model.md：GenAI 威胁模型",
+            "attack-results.json：脱敏红队运行结果"
+          ],
+          "prerequisiteTaskIds": [
+            "tool-contract",
+            "rag-pipeline",
+            "evaluation-suite"
+          ],
+          "evidenceMode": "import",
+          "references": [
+            {
+              "title": "OWASP Top 10 for LLM Applications",
+              "url": "https://genai.owasp.org/llm-top-10/",
+              "publisher": "OWASP",
+              "version": "2025",
+              "accessedAt": "2026-07-23"
+            },
+            {
+              "title": "AI RMF Generative AI Profile",
+              "url": "https://www.nist.gov/publications/artificial-intelligence-risk-management-framework-generative-artificial-intelligence",
+              "publisher": "NIST",
+              "version": "AI 600-1",
+              "accessedAt": "2026-07-23"
+            }
+          ],
+          "starterFiles": [
+            {
+              "path": "threat-model.md",
+              "content": "# GenAI 威胁模型\n\n## 资产与信任边界\n\n## 攻击面\n\n## 控制措施\n\n## 残余风险\n"
+            },
+            {
+              "path": "attack-results.json",
+              "content": "{\n  \"source\": \"\",\n  \"capturedAt\": \"\",\n  \"requestId\": \"\",\n  \"cases\": []\n}"
+            }
+          ],
+          "checks": [
+            {
+              "id": "assets",
+              "type": "markdown-section",
+              "path": "threat-model.md",
+              "rule": "## 资产与信任边界",
+              "required": true,
+              "points": 15,
+              "message": "定义资产和边界。"
+            },
+            {
+              "id": "surface",
+              "type": "markdown-section",
+              "path": "threat-model.md",
+              "rule": "## 攻击面",
+              "required": true,
+              "points": 15,
+              "message": "列出输入、RAG、工具和输出攻击面。"
+            },
+            {
+              "id": "controls",
+              "type": "markdown-section",
+              "path": "threat-model.md",
+              "rule": "## 控制措施",
+              "required": true,
+              "points": 15,
+              "message": "将控制映射到攻击。"
+            },
+            {
+              "id": "residual",
+              "type": "markdown-section",
+              "path": "threat-model.md",
+              "rule": "## 残余风险",
+              "required": true,
+              "points": 15,
+              "message": "记录残余风险和所有者。"
+            },
+            {
+              "id": "source",
+              "type": "json-pointer-present",
+              "path": "attack-results.json",
+              "rule": "/source",
+              "required": true,
+              "points": 5,
+              "message": "填写攻击证据来源。"
+            },
+            {
+              "id": "request",
+              "type": "json-pointer-present",
+              "path": "attack-results.json",
+              "rule": "/requestId",
+              "required": true,
+              "points": 5,
+              "message": "填写请求标识。"
+            },
+            {
+              "id": "cases",
+              "type": "json-array-shape",
+              "path": "attack-results.json",
+              "rule": "/cases:8:id,category,input,outcome,control",
+              "required": true,
+              "points": 10,
+              "message": "至少八个结构化攻击案例。"
+            },
+            {
+              "id": "captured-at",
+              "type": "json-pointer-present",
+              "path": "attack-results.json",
+              "rule": "/capturedAt",
+              "required": true,
+              "points": 5,
+              "message": "填写证据采集时间。"
+            },
+            {
+              "id": "attack-categories",
+              "type": "regex",
+              "path": "attack-results.json",
+              "rule": "(?s)(?=.*direct-injection)(?=.*indirect-injection)(?=.*sensitive-disclosure)(?=.*output-injection)(?=.*excessive-agency)(?=.*vector-poisoning)(?=.*unbounded-consumption)",
+              "required": true,
+              "points": 15,
+              "message": "攻击结果必须覆盖七类核心 GenAI 风险。"
+            }
+          ]
+        },
+        {
+          "level": "中级",
+          "mentorAgentId": "project-agent",
+          "id": "access-concurrency",
+          "title": "设计权限、并发与滥用边界",
+          "summary": "定义角色、权限、幂等、并发冲突、下游授权和敏感操作确认。",
+          "kind": "service-safety",
+          "estimatedMinutes": 55,
+          "skills": [
+            "授权",
+            "并发",
+            "幂等",
+            "限流",
+            "审计"
+          ],
+          "objective": "让多用户和自动重试场景下的业务动作保持可预测、最小权限且可审计。",
+          "scenario": "Agent 发布接口开放给团队成员，多人可能同时更新同一版本，客户端和模型也会自动重试。",
+          "lesson": "## 核心概念\n认证确认是谁，授权决定能做什么；Agent 自己不能扩大调用者权限。并发更新需要版本或锁语义，重复写入需要幂等键和结果缓存。速率、并发、token 与工具步数预算共同防止无限消耗；高风险动作要在执行前向用户展示具体影响。 将概念写成显式契约，并用证据判断结果。\n\n## 完成步骤\n定义至少两个角色和三条权限；说明幂等键、重复响应和过期；选择乐观锁、租约或串行化策略；配置速率、并发与成本限制；定义确认流程和下游按用户身份授权；记录审计字段。 留下可复现记录，提交前移除密钥和个人信息。\n\n## 常见误区\n不要把 API key 当作细粒度权限，也不要让后台服务用管理员身份代替所有用户。锁不能解决重复请求，限流也不能替代总成本和超时预算。 示例和一次成功运行不能替代边界、失败与对抗场景。\n\n## 完成标准\n服务安全契约包含角色、权限、幂等、并发、滥用控制、确认和下游授权，且结构可由服务实现直接采用。 必需检查全部通过，关键选择可追溯。",
+          "deliverables": [
+            "service-safety.json：服务安全与并发契约"
+          ],
+          "prerequisiteTaskIds": [
+            "genai-red-team"
+          ],
+          "evidenceMode": "document",
+          "references": [
+            {
+              "title": "MCP Authorization",
+              "url": "https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization",
+              "publisher": "Model Context Protocol",
+              "version": "2025-11-25",
+              "accessedAt": "2026-07-23"
+            },
+            {
+              "title": "OWASP Top 10 for LLM Applications",
+              "url": "https://genai.owasp.org/llm-top-10/",
+              "publisher": "OWASP",
+              "version": "2025",
+              "accessedAt": "2026-07-23"
+            }
+          ],
           "starterFiles": [
             {
               "path": "service-safety.json",
-              "content": "{\n  \"roles\": [],\n  \"permissions\": [],\n  \"idempotency\": {},\n  \"concurrencyControl\": {},\n  \"abuseControls\": []\n}"
+              "content": "{\n  \"roles\": [],\n  \"permissions\": [],\n  \"idempotency\": {},\n  \"concurrencyControl\": {},\n  \"abuseControls\": [],\n  \"confirmation\": \"\",\n  \"downstreamAuthorization\": \"\"\n}"
             }
           ],
           "checks": [
@@ -255,7 +1725,7 @@
               "rule": "roles:2",
               "required": true,
               "points": 15,
-              "message": "至少定义两个职责不同的角色。"
+              "message": "至少定义两个角色。"
             },
             {
               "id": "permissions",
@@ -264,25 +1734,25 @@
               "rule": "permissions:3",
               "required": true,
               "points": 20,
-              "message": "定义读取、修改、发布等权限规则。"
+              "message": "至少定义三条权限。"
             },
             {
               "id": "idempotency",
-              "type": "json-field",
+              "type": "json-pointer-present",
               "path": "service-safety.json",
-              "rule": "idempotency",
+              "rule": "/idempotency",
               "required": true,
-              "points": 25,
-              "message": "说明幂等键、重复请求响应和过期策略。"
+              "points": 15,
+              "message": "定义幂等策略。"
             },
             {
               "id": "concurrency",
-              "type": "json-field",
+              "type": "json-pointer-present",
               "path": "service-safety.json",
-              "rule": "concurrencyControl",
+              "rule": "/concurrencyControl",
               "required": true,
-              "points": 25,
-              "message": "说明版本冲突检测和并发更新处理。"
+              "points": 15,
+              "message": "定义并发冲突处理。"
             },
             {
               "id": "abuse",
@@ -291,63 +1761,296 @@
               "rule": "abuseControls:2",
               "required": true,
               "points": 15,
-              "message": "至少定义限流和审计两类滥用控制。"
+              "message": "至少两类滥用控制。"
+            },
+            {
+              "id": "confirmation",
+              "type": "json-pointer-present",
+              "path": "service-safety.json",
+              "rule": "/confirmation",
+              "required": true,
+              "points": 10,
+              "message": "定义敏感操作确认。"
+            },
+            {
+              "id": "downstream",
+              "type": "json-pointer-present",
+              "path": "service-safety.json",
+              "rule": "/downstreamAuthorization",
+              "required": true,
+              "points": 10,
+              "message": "定义下游授权传播。"
             }
           ]
-        },
+        }
+      ]
+    },
+    {
+      "id": "protocol-interop",
+      "title": "协议互操作",
+      "summary": "用 MCP 和 A2A 连接工具、资源与 Agent，同时保留授权、确认和幂等边界。",
+      "level": "高级",
+      "tasks": [
         {
-          "id": "observability-runbook",
-          "title": "建立日志、监控与故障手册",
-          "summary": "定义结构化日志、核心指标、告警和可执行的故障处理步骤。",
           "level": "中级",
-          "kind": "observability",
-          "estimatedMinutes": 40,
-          "skills": ["日志", "指标", "监控", "告警", "运维"],
-          "objective": "让团队在用户报告问题之前发现异常，并能从日志和指标定位到具体版本与请求。",
-          "scenario": "Agent 回复延迟偶发升高，部分模型调用失败，但当前系统只能看到用户说“卡了”。",
           "mentorAgentId": "project-agent",
+          "id": "mcp-integration",
+          "title": "接入安全的 MCP Server",
+          "summary": "区分 tools、resources、prompts，落实 OAuth 2.1、PKCE、scope、audience 和审计。",
+          "kind": "mcp-integration",
+          "estimatedMinutes": 70,
+          "skills": [
+            "MCP",
+            "OAuth 2.1",
+            "工具协议",
+            "审计"
+          ],
+          "objective": "设计一个客户端可发现、输入可校验、敏感操作可确认且不会转发令牌的 MCP 服务。",
+          "scenario": "Agent 需要访问企业知识和日历，服务必须让宿主发现能力，同时隔离资源读取和写入工具。",
+          "lesson": "## 核心概念\nMCP 将 tools、resources 和 prompts 分成不同能力：工具执行动作，资源提供上下文，提示模板帮助交互。服务端仍须验证输入、输出结构、权限和副作用；授权需要 OAuth 2.1、PKCE、scope 与 audience，访问令牌不能被原样转发给下游。敏感工具要确认并审计。 将概念写成显式契约，并用证据判断结果。\n\n## 完成步骤\n在 mcp-server.json 中定义至少两个工具、一个资源和一个 prompt；为工具写输入输出 Schema 与确认；记录授权、scope、audience、审计；在 mcp-security.md 中说明 OAuth/PKCE、令牌处理、限流、超时和拒绝路径。 留下可复现记录，提交前移除密钥和个人信息。\n\n## 常见误区\n不要把 resource 当作可执行工具，也不要用 prompt 文本授予权限。禁止 token passthrough；客户端身份和下游 API 受众必须分离，输入 Schema 不能只在模型侧校验。 示例和一次成功运行不能替代边界、失败与对抗场景。\n\n## 完成标准\nJSON 同时覆盖三类 MCP 能力和安全元数据，安全文档四节齐全，能解释敏感操作从请求到审计的完整链路。 必需检查全部通过，关键选择可追溯。",
+          "deliverables": [
+            "mcp-server.json：MCP 能力清单",
+            "mcp-security.md：MCP 安全边界"
+          ],
+          "prerequisiteTaskIds": [
+            "tool-contract",
+            "access-concurrency"
+          ],
+          "evidenceMode": "document",
+          "references": [
+            {
+              "title": "MCP Tools",
+              "url": "https://modelcontextprotocol.io/specification/2025-11-25/server/tools",
+              "publisher": "Model Context Protocol",
+              "version": "2025-11-25",
+              "accessedAt": "2026-07-23"
+            },
+            {
+              "title": "MCP Authorization",
+              "url": "https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization",
+              "publisher": "Model Context Protocol",
+              "version": "2025-11-25",
+              "accessedAt": "2026-07-23"
+            }
+          ],
           "starterFiles": [
             {
-              "path": "observability.json",
-              "content": "{\n  \"structuredLogs\": [],\n  \"metrics\": [],\n  \"alerts\": [],\n  \"runbook\": \"\"\n}"
+              "path": "mcp-server.json",
+              "content": "{\n  \"tools\": [],\n  \"resources\": [],\n  \"prompts\": [],\n  \"authorization\": {},\n  \"audit\": {},\n  \"limits\": {\n    \"rateLimitPerMinute\": 0,\n    \"timeoutMs\": 0\n  }\n}"
+            },
+            {
+              "path": "mcp-security.md",
+              "content": "# MCP 安全\n\n## OAuth 与 PKCE\n\n## Scope 与 Audience\n\n## Token 处理\n\n## 确认与审计\n"
             }
           ],
           "checks": [
             {
-              "id": "logs",
-              "type": "json-array-min",
-              "path": "observability.json",
-              "rule": "structuredLogs:4",
-              "required": true,
-              "points": 25,
-              "message": "日志至少包含请求、用户、版本和结果关联字段。"
-            },
-            {
-              "id": "metrics",
-              "type": "json-array-min",
-              "path": "observability.json",
-              "rule": "metrics:4",
-              "required": true,
-              "points": 25,
-              "message": "至少覆盖成功率、延迟、模型错误率和成本。"
-            },
-            {
-              "id": "alerts",
-              "type": "json-array-min",
-              "path": "observability.json",
-              "rule": "alerts:2",
+              "id": "tools",
+              "type": "json-array-shape",
+              "path": "mcp-server.json",
+              "rule": "/tools:2:name,inputSchema,outputSchema,confirmation",
               "required": true,
               "points": 20,
-              "message": "定义至少两个带阈值和持续时间的告警。"
+              "message": "定义至少两个结构化工具。"
             },
             {
-              "id": "runbook",
-              "type": "json-field",
-              "path": "observability.json",
-              "rule": "runbook",
+              "id": "resources",
+              "type": "json-array-shape",
+              "path": "mcp-server.json",
+              "rule": "/resources:1:uri,mimeType",
+              "required": true,
+              "points": 15,
+              "message": "定义至少一个资源。"
+            },
+            {
+              "id": "prompts",
+              "type": "json-array-shape",
+              "path": "mcp-server.json",
+              "rule": "/prompts:1:name,arguments",
+              "required": true,
+              "points": 15,
+              "message": "定义至少一个提示模板。"
+            },
+            {
+              "id": "auth",
+              "type": "json-pointer-present",
+              "path": "mcp-server.json",
+              "rule": "/authorization",
+              "required": true,
+              "points": 10,
+              "message": "声明授权配置。"
+            },
+            {
+              "id": "audit",
+              "type": "json-pointer-present",
+              "path": "mcp-server.json",
+              "rule": "/audit",
+              "required": true,
+              "points": 10,
+              "message": "声明审计配置。"
+            },
+            {
+              "id": "oauth",
+              "type": "markdown-section",
+              "path": "mcp-security.md",
+              "rule": "## OAuth 与 PKCE",
+              "required": true,
+              "points": 10,
+              "message": "说明 OAuth 与 PKCE。"
+            },
+            {
+              "id": "scope",
+              "type": "markdown-section",
+              "path": "mcp-security.md",
+              "rule": "## Scope 与 Audience",
+              "required": true,
+              "points": 5,
+              "message": "说明 scope 与 audience。"
+            },
+            {
+              "id": "tokens",
+              "type": "markdown-section",
+              "path": "mcp-security.md",
+              "rule": "## Token 处理",
+              "required": true,
+              "points": 5,
+              "message": "禁止 token passthrough 并说明交换。"
+            },
+            {
+              "id": "rate-limit",
+              "type": "json-number-range",
+              "path": "mcp-server.json",
+              "rule": "/limits/rateLimitPerMinute:1:100000",
+              "required": true,
+              "points": 5,
+              "message": "设置 MCP 限流。"
+            },
+            {
+              "id": "timeout",
+              "type": "json-number-range",
+              "path": "mcp-server.json",
+              "rule": "/limits/timeoutMs:1:600000",
+              "required": true,
+              "points": 5,
+              "message": "设置 MCP 超时。"
+            }
+          ]
+        },
+        {
+          "level": "中级",
+          "mentorAgentId": "project-agent",
+          "id": "a2a-collaboration",
+          "title": "设计 A2A Agent 协作",
+          "summary": "定义 Agent Card、消息 parts、任务状态、委派、重试、取消和身份。",
+          "kind": "a2a-collaboration",
+          "estimatedMinutes": 70,
+          "skills": [
+            "A2A",
+            "委派",
+            "幂等",
+            "流式任务"
+          ],
+          "objective": "让多个 Agent 可以发现能力、委派任务、报告状态并在失败时安全重试或取消。",
+          "scenario": "主 Agent 将检索、日程和总结分别委派给专长 Agent，调用方需要知道任务进度、身份和最终结果。",
+          "lesson": "## 核心概念\nA2A 用 Agent Card 描述能力、输入输出模式和认证；消息由可组合 parts 承载文本或结构化数据；任务具有可观察状态，支持委派、取消、重试、流式或回调。跨 Agent 的每个动作都要有身份、受众、幂等键和错误边界，不能把远端 Agent 当作可信黑盒。 将概念写成显式契约，并用证据判断结果。\n\n## 完成步骤\n定义 Agent Card 的 skills、输入输出和 authentication；记录一次含至少三个任务的 delegation-trace；为每个任务写 from/to、messageParts、status、幂等和错误处理；说明取消、重试、流式/回调的兼容策略。 留下可复现记录，提交前移除密钥和个人信息。\n\n## 常见误区\n不要把一次消息发送当作任务完成，也不要在重试时生成新的业务副作用。回调地址和远端结果都需验证身份、签名或受众；取消是状态转换，不等于已经撤销下游副作用。 示例和一次成功运行不能替代边界、失败与对抗场景。\n\n## 完成标准\nAgent Card 能被发现，轨迹覆盖委派、状态、消息、取消/重试和身份，且每个任务有幂等与错误处理记录。 必需检查全部通过，关键选择可追溯。",
+          "deliverables": [
+            "agent-card.json：A2A Agent Card",
+            "delegation-trace.json：委派轨迹"
+          ],
+          "prerequisiteTaskIds": [
+            "mcp-integration",
+            "agent-trace-recovery"
+          ],
+          "evidenceMode": "import",
+          "references": [
+            {
+              "title": "A2A Specification",
+              "url": "https://a2a-protocol.org/latest/specification/",
+              "publisher": "A2A Project",
+              "version": "1.0",
+              "accessedAt": "2026-07-23"
+            },
+            {
+              "title": "MCP Authorization",
+              "url": "https://modelcontextprotocol.io/specification/2025-11-25/basic/authorization",
+              "publisher": "Model Context Protocol",
+              "version": "2025-11-25",
+              "accessedAt": "2026-07-23"
+            }
+          ],
+          "starterFiles": [
+            {
+              "path": "agent-card.json",
+              "content": "{\n  \"name\": \"\",\n  \"description\": \"\",\n  \"skills\": [],\n  \"capabilities\": {},\n  \"inputModes\": [],\n  \"outputModes\": [],\n  \"authentication\": {}\n}"
+            },
+            {
+              "path": "delegation-trace.json",
+              "content": "{\n  \"source\": \"\",\n  \"capturedAt\": \"\",\n  \"requestId\": \"\",\n  \"tasks\": []\n}"
+            }
+          ],
+          "checks": [
+            {
+              "id": "skills",
+              "type": "json-array-shape",
+              "path": "agent-card.json",
+              "rule": "/skills:2:id,name,inputModes,outputModes",
               "required": true,
               "points": 30,
-              "message": "写出诊断、止损、恢复和复盘步骤。"
+              "message": "定义至少两个可发现技能。"
+            },
+            {
+              "id": "capabilities",
+              "type": "json-pointer-present",
+              "path": "agent-card.json",
+              "rule": "/capabilities",
+              "required": true,
+              "points": 10,
+              "message": "声明能力。"
+            },
+            {
+              "id": "auth",
+              "type": "json-pointer-present",
+              "path": "agent-card.json",
+              "rule": "/authentication",
+              "required": true,
+              "points": 10,
+              "message": "声明身份与认证。"
+            },
+            {
+              "id": "source",
+              "type": "json-pointer-present",
+              "path": "delegation-trace.json",
+              "rule": "/source",
+              "required": true,
+              "points": 5,
+              "message": "填写轨迹来源。"
+            },
+            {
+              "id": "request",
+              "type": "json-pointer-present",
+              "path": "delegation-trace.json",
+              "rule": "/requestId",
+              "required": true,
+              "points": 5,
+              "message": "填写请求标识。"
+            },
+            {
+              "id": "tasks",
+              "type": "json-array-shape",
+              "path": "delegation-trace.json",
+              "rule": "/tasks:3:taskId,status,from,to,messageParts,idempotency,errorHandling",
+              "required": true,
+              "points": 35,
+              "message": "至少三个带状态和错误处理的委派任务。"
+            },
+            {
+              "id": "captured-at",
+              "type": "json-pointer-present",
+              "path": "delegation-trace.json",
+              "rule": "/capturedAt",
+              "required": true,
+              "points": 5,
+              "message": "填写证据采集时间。"
             }
           ]
         }
@@ -355,63 +2058,274 @@
     },
     {
       "id": "production-engineering",
-      "title": "上线与演进",
-      "summary": "通过灰度、监控、回滚和版本契约控制生产风险。",
-      "level": "中级",
+      "title": "可观测与发布",
+      "summary": "用统一 trace、脱敏遥测、评测门禁、灰度指标和回滚控制生产风险。",
+      "level": "高级",
       "tasks": [
         {
-          "id": "release-safety",
-          "title": "为 AI 功能设计上线与回滚",
-          "summary": "为一次 Agent 版本发布定义灰度、监控、告警和回滚条件。",
           "level": "中级",
-          "kind": "operations",
-          "estimatedMinutes": 35,
-          "skills": ["监控", "灰度发布", "回滚", "版本演进"],
-          "objective": "让 AI 功能在指标恶化或模型行为变化时可以被发现、控制和恢复。",
-          "scenario": "新 Prompt 版本即将发布，团队需要在不影响全部用户的情况下验证它。",
           "mentorAgentId": "project-agent",
+          "id": "observability-runbook",
+          "title": "建立 GenAI 可观测与故障手册",
+          "summary": "关联模型、工具、MCP、A2A、token、延迟和错误，形成可执行 runbook。",
+          "kind": "observability",
+          "estimatedMinutes": 65,
+          "skills": [
+            "OpenTelemetry",
+            "Trace",
+            "指标",
+            "脱敏",
+            "Runbook"
+          ],
+          "objective": "让团队能从一个 trace_id 追踪模型和跨协议调用，同时控制日志敏感数据。",
+          "scenario": "Agent 延迟偶发升高，部分 MCP 与 A2A 调用失败，当前日志无法关联到模型版本、工具或请求。",
+          "lesson": "## 核心概念\n可观测性需要日志、指标和 trace 共同回答发生了什么、影响多大和原因在哪。GenAI span 应关联 trace_id、span_id、provider/model、token、延迟和状态，并把工具、MCP、A2A 子调用挂到同一上下文。Prompt、输出和工具参数默认应脱敏或摘要化。 将概念写成显式契约，并用证据判断结果。\n\n## 完成步骤\n定义至少四类结构化日志字段和四项指标；设计两个带阈值与持续时间的告警；编写诊断、止损、恢复和复盘 runbook；导入 trace-sample，填写来源、请求、traceId 和至少四个 span，记录 spanId、kind、durationMs 与 status。 留下可复现记录，提交前移除密钥和个人信息。\n\n## 常见误区\n不要把完整 Prompt 当调试捷径，也不要用平均延迟掩盖尾延迟。trace 没有关联传播就无法定位跨服务问题，告警只有阈值没有持续时间会造成噪声。 示例和一次成功运行不能替代边界、失败与对抗场景。\n\n## 完成标准\n日志、指标、告警和 runbook 结构完整，trace 样本可追踪并覆盖模型与外部调用，敏感字段有明确脱敏规则。 必需检查全部通过，关键选择可追溯。",
+          "deliverables": [
+            "observability.json：观测契约与 runbook",
+            "trace-sample.json：脱敏 trace 样本"
+          ],
+          "prerequisiteTaskIds": [
+            "agent-trace-recovery",
+            "evaluation-suite"
+          ],
+          "evidenceMode": "import",
+          "references": [
+            {
+              "title": "OpenTelemetry GenAI semantic conventions",
+              "url": "https://github.com/open-telemetry/semantic-conventions-genai",
+              "publisher": "OpenTelemetry",
+              "version": "2026-07",
+              "accessedAt": "2026-07-23"
+            },
+            {
+              "title": "Evaluation best practices",
+              "url": "https://developers.openai.com/api/docs/guides/evaluation-best-practices",
+              "publisher": "OpenAI",
+              "version": "2026-07",
+              "accessedAt": "2026-07-23"
+            }
+          ],
           "starterFiles": [
             {
-              "path": "release.json",
-              "content": "{\n  \"version\": \"\",\n  \"rollout\": {},\n  \"metrics\": [],\n  \"rollback\": {}\n}"
+              "path": "observability.json",
+              "content": "{\n  \"structuredLogs\": [],\n  \"metrics\": [],\n  \"alerts\": [],\n  \"redaction\": {},\n  \"runbook\": \"\",\n  \"requiredCorrelationFields\": [\n    \"trace_id\",\n    \"span_id\",\n    \"provider\",\n    \"model\",\n    \"input_tokens\",\n    \"output_tokens\",\n    \"latency_ms\",\n    \"tool_call_id\",\n    \"mcp_request_id\",\n    \"a2a_task_id\"\n  ]\n}"
+            },
+            {
+              "path": "trace-sample.json",
+              "content": "{\n  \"source\": \"\",\n  \"capturedAt\": \"\",\n  \"requestId\": \"\",\n  \"traceId\": \"\",\n  \"spans\": []\n}"
             }
           ],
           "checks": [
             {
-              "id": "rollout",
-              "type": "json-field",
-              "path": "release.json",
-              "rule": "rollout",
+              "id": "logs",
+              "type": "json-array-shape",
+              "path": "observability.json",
+              "rule": "/structuredLogs:4:name,fields,redacted",
               "required": true,
-              "points": 25,
-              "message": "定义灰度比例、观察窗口和放量步骤。"
+              "points": 10,
+              "message": "至少四类带脱敏说明的日志。"
             },
             {
               "id": "metrics",
-              "type": "json-array-min",
-              "path": "release.json",
-              "rule": "metrics:3",
+              "type": "json-array-shape",
+              "path": "observability.json",
+              "rule": "/metrics:4:name,unit,threshold",
               "required": true,
-              "points": 25,
-              "message": "至少监控三项带阈值的业务或技术指标。"
+              "points": 15,
+              "message": "至少四项带单位和阈值的指标。"
             },
             {
-              "id": "rollback",
-              "type": "json-field",
-              "path": "release.json",
-              "rule": "rollback",
+              "id": "alerts",
+              "type": "json-array-shape",
+              "path": "observability.json",
+              "rule": "/alerts:2:name,threshold,duration",
               "required": true,
-              "points": 25,
-              "message": "写出触发条件、回滚动作和数据兼容处理。"
+              "points": 15,
+              "message": "至少两个可执行告警。"
             },
+            {
+              "id": "runbook",
+              "type": "json-pointer-present",
+              "path": "observability.json",
+              "rule": "/runbook",
+              "required": true,
+              "points": 15,
+              "message": "写出诊断、止损、恢复和复盘。"
+            },
+            {
+              "id": "source",
+              "type": "json-pointer-present",
+              "path": "trace-sample.json",
+              "rule": "/source",
+              "required": true,
+              "points": 5,
+              "message": "填写 trace 来源。"
+            },
+            {
+              "id": "trace",
+              "type": "json-pointer-present",
+              "path": "trace-sample.json",
+              "rule": "/traceId",
+              "required": true,
+              "points": 5,
+              "message": "填写 trace_id。"
+            },
+            {
+              "id": "spans",
+              "type": "json-array-shape",
+              "path": "trace-sample.json",
+              "rule": "/spans:4:spanId,kind,durationMs,status",
+              "required": true,
+              "points": 10,
+              "message": "至少四个结构化 span。"
+            },
+            {
+              "id": "captured-at",
+              "type": "json-pointer-present",
+              "path": "trace-sample.json",
+              "rule": "/capturedAt",
+              "required": true,
+              "points": 5,
+              "message": "填写证据采集时间。"
+            },
+            {
+              "id": "request",
+              "type": "json-pointer-present",
+              "path": "trace-sample.json",
+              "rule": "/requestId",
+              "required": true,
+              "points": 5,
+              "message": "填写请求标识。"
+            },
+            {
+              "id": "correlations",
+              "type": "regex",
+              "path": "observability.json",
+              "rule": "(?s)(?=.*trace_id)(?=.*span_id)(?=.*provider)(?=.*model)(?=.*token)(?=.*latency)(?=.*tool)(?=.*mcp)(?=.*a2a)",
+              "required": true,
+              "points": 10,
+              "message": "覆盖模型、token、延迟和工具/MCP/A2A 关联字段。"
+            },
+            {
+              "id": "redaction",
+              "type": "json-pointer-present",
+              "path": "observability.json",
+              "rule": "/redaction",
+              "required": true,
+              "points": 5,
+              "message": "定义遥测脱敏规则。"
+            }
+          ]
+        },
+        {
+          "level": "中级",
+          "mentorAgentId": "project-agent",
+          "id": "release-safety",
+          "title": "设计评测门禁、灰度与回滚",
+          "summary": "把离线评测、线上指标、兼容性和回滚组合成发布契约。",
+          "kind": "operations",
+          "estimatedMinutes": 55,
+          "skills": [
+            "灰度发布",
+            "评测门禁",
+            "回滚",
+            "版本兼容"
+          ],
+          "objective": "在模型、Prompt、索引或工具变化时逐步放量，并能根据业务和安全指标快速恢复。",
+          "scenario": "新 Prompt 与索引即将发布，团队需要在不影响全部用户的情况下验证质量、成本和安全。",
+          "lesson": "## 核心概念\nAI 发布物不仅是代码，还包括模型、Prompt、工具 Schema、索引和策略。发布契约要锁定版本和兼容关系，用离线 eval gate 阻止已知回归，再以小流量观察质量、延迟、成本和安全指标；任何关键阈值越界都应触发暂停或回滚。 将概念写成显式契约，并用证据判断结果。\n\n## 完成步骤\n填写可追踪 version；定义分阶段 rollout、观察窗口和负责人；至少设置三项指标与阈值；声明 evaluationGate 和数据集版本；写出触发条件、回滚动作、索引或数据兼容处理；演练恢复路径。 留下可复现记录，提交前移除密钥和个人信息。\n\n## 常见误区\n不要只回滚应用而保留不兼容索引，也不要在灰度期间同时修改多个不可区分变量。平均指标正常不能覆盖高风险安全失败，人工批准也不能替代自动门禁。 示例和一次成功运行不能替代边界、失败与对抗场景。\n\n## 完成标准\n发布契约包含版本、灰度、指标、评测门禁、兼容性与回滚，任何值班人员都能按文档执行。 必需检查全部通过，关键选择可追溯。",
+          "deliverables": [
+            "release.json：生产发布与回滚契约"
+          ],
+          "prerequisiteTaskIds": [
+            "observability-runbook",
+            "rag-evaluation",
+            "genai-red-team"
+          ],
+          "evidenceMode": "document",
+          "references": [
+            {
+              "title": "Evaluation best practices",
+              "url": "https://developers.openai.com/api/docs/guides/evaluation-best-practices",
+              "publisher": "OpenAI",
+              "version": "2026-07",
+              "accessedAt": "2026-07-23"
+            },
+            {
+              "title": "AI RMF Generative AI Profile",
+              "url": "https://www.nist.gov/publications/artificial-intelligence-risk-management-framework-generative-artificial-intelligence",
+              "publisher": "NIST",
+              "version": "AI 600-1",
+              "accessedAt": "2026-07-23"
+            },
+            {
+              "title": "OpenTelemetry GenAI semantic conventions",
+              "url": "https://github.com/open-telemetry/semantic-conventions-genai",
+              "publisher": "OpenTelemetry",
+              "version": "2026-07",
+              "accessedAt": "2026-07-23"
+            }
+          ],
+          "starterFiles": [
+            {
+              "path": "release.json",
+              "content": "{\n  \"version\": \"\",\n  \"rollout\": {},\n  \"metrics\": [],\n  \"evaluationGate\": {},\n  \"rollback\": {},\n  \"compatibility\": {}\n}"
+            }
+          ],
+          "checks": [
             {
               "id": "version",
               "type": "regex",
               "path": "release.json",
-              "rule": "\\\"version\\\"\\s*:\\s*\\\"v[0-9]+",
+              "rule": "\"version\"\\s*:\\s*\"v[0-9]+",
               "required": true,
-              "points": 25,
+              "points": 15,
               "message": "版本必须可追踪。"
+            },
+            {
+              "id": "rollout",
+              "type": "json-pointer-present",
+              "path": "release.json",
+              "rule": "/rollout",
+              "required": true,
+              "points": 20,
+              "message": "定义分阶段灰度。"
+            },
+            {
+              "id": "metrics",
+              "type": "json-array-shape",
+              "path": "release.json",
+              "rule": "/metrics:3:name,threshold",
+              "required": true,
+              "points": 20,
+              "message": "至少三项带阈值指标。"
+            },
+            {
+              "id": "eval",
+              "type": "json-pointer-present",
+              "path": "release.json",
+              "rule": "/evaluationGate",
+              "required": true,
+              "points": 15,
+              "message": "定义评测门禁。"
+            },
+            {
+              "id": "rollback",
+              "type": "json-pointer-present",
+              "path": "release.json",
+              "rule": "/rollback",
+              "required": true,
+              "points": 20,
+              "message": "定义触发和回滚动作。"
+            },
+            {
+              "id": "compatibility",
+              "type": "json-pointer-present",
+              "path": "release.json",
+              "rule": "/compatibility",
+              "required": true,
+              "points": 10,
+              "message": "定义模型、Schema、索引兼容性。"
             }
           ]
         }
@@ -419,36 +2333,79 @@
     },
     {
       "id": "architecture-teamwork",
-      "title": "架构与团队交付",
-      "summary": "用边界、业务规则、所有权和决策记录组织多人协作。",
-      "level": "中级",
+      "title": "综合架构与团队交付",
+      "summary": "汇总 Agent、RAG、安全、协议和生产证据，形成团队可执行的最终架构决策。",
+      "level": "高级",
       "tasks": [
         {
-          "id": "architecture-collaboration",
-          "title": "写出团队可执行的架构决策",
-          "summary": "把业务逻辑、模块边界、所有权、评审和回滚责任写进同一份交付契约。",
           "level": "中级",
-          "kind": "architecture",
-          "estimatedMinutes": 45,
-          "skills": ["架构", "团队协作", "业务逻辑", "需求拆解", "决策记录"],
-          "objective": "让多人能并行工作，同时知道接口、责任、风险和变更决策由谁维护。",
-          "scenario": "团队要把学习系统拆成课程、沙箱、评测、Agent 发布和观测模块，并持续演进。",
           "mentorAgentId": "project-agent",
+          "id": "architecture-collaboration",
+          "title": "交付生产级 Agent 综合架构",
+          "summary": "用边界、接口、所有权、风险证据和发布计划组织最终项目。",
+          "kind": "architecture",
+          "estimatedMinutes": 85,
+          "skills": [
+            "系统架构",
+            "团队协作",
+            "风险治理",
+            "决策记录"
+          ],
+          "objective": "把课程中的契约串成一套可审查、可分工、可发布和可演进的 Agent 系统方案。",
+          "scenario": "团队要将课程、沙箱、评测、Agent 发布、RAG、MCP/A2A 和观测模块并行交付并持续演进。",
+          "lesson": "## 核心概念\n最终架构的价值不在组件数量，而在边界和证据是否连贯。业务规则决定模块，数据和接口定义协作，所有权明确变更责任，风险登记把控制连接到测试与监控，决策记录保留替代方案和回滚条件。Agent、协议和生产发布必须共享身份、追踪和幂等语义。 将概念写成显式契约，并用证据判断结果。\n\n## 完成步骤\n在 architecture.md 描述业务规则、模块边界、数据接口、所有权、决策与回滚；在 capstone-evidence.json 列出至少六个模块及 owner/interface、四项风险及 control/evidence，并连接 evalGate 与 releasePlan；检查依赖和责任是否闭环。 留下可复现记录，提交前移除密钥和个人信息。\n\n## 常见误区\n不要用架构图替代契约，也不要让“平台团队”成为所有风险的模糊所有者。最终方案不能只描述理想路径，协议失败、权限撤回、索引回滚和评测不通过都要有处置。 示例和一次成功运行不能替代边界、失败与对抗场景。\n\n## 完成标准\n两份工件覆盖全部核心模块，接口、风险、证据、门禁和发布计划相互引用，团队成员能据此独立实施和审查。 必需检查全部通过，关键选择可追溯。",
+          "deliverables": [
+            "architecture.md：最终架构决策",
+            "capstone-evidence.json：模块、风险与发布证据索引"
+          ],
+          "prerequisiteTaskIds": [
+            "companion-agent",
+            "a2a-collaboration",
+            "release-safety"
+          ],
+          "evidenceMode": "document",
+          "references": [
+            {
+              "title": "AI RMF Generative AI Profile",
+              "url": "https://www.nist.gov/publications/artificial-intelligence-risk-management-framework-generative-artificial-intelligence",
+              "publisher": "NIST",
+              "version": "AI 600-1",
+              "accessedAt": "2026-07-23"
+            },
+            {
+              "title": "A2A Specification",
+              "url": "https://a2a-protocol.org/latest/specification/",
+              "publisher": "A2A Project",
+              "version": "1.0",
+              "accessedAt": "2026-07-23"
+            },
+            {
+              "title": "OpenTelemetry GenAI semantic conventions",
+              "url": "https://github.com/open-telemetry/semantic-conventions-genai",
+              "publisher": "OpenTelemetry",
+              "version": "2026-07",
+              "accessedAt": "2026-07-23"
+            }
+          ],
           "starterFiles": [
             {
               "path": "architecture.md",
-              "content": "# 架构决策\n\n## 业务规则\n\n## 模块边界\n\n## 数据与接口\n\n## 所有权与协作\n\n## 决策记录与回滚\n"
+              "content": "# 最终架构决策\n\n## 业务规则\n\n## 模块边界\n\n## 数据与接口\n\n## 所有权与协作\n\n## 决策记录与回滚\n"
+            },
+            {
+              "path": "capstone-evidence.json",
+              "content": "{\n  \"modules\": [],\n  \"risks\": [],\n  \"evalGate\": {},\n  \"releasePlan\": {}\n}"
             }
           ],
           "checks": [
             {
-              "id": "business",
+              "id": "rules",
               "type": "markdown-section",
               "path": "architecture.md",
               "rule": "## 业务规则",
               "required": true,
-              "points": 20,
-              "message": "列出必须由系统保证的核心业务规则。"
+              "points": 10,
+              "message": "描述业务不变量。"
             },
             {
               "id": "boundaries",
@@ -456,35 +2413,71 @@
               "path": "architecture.md",
               "rule": "## 模块边界",
               "required": true,
-              "points": 20,
-              "message": "说明模块职责和禁止跨越的边界。"
+              "points": 10,
+              "message": "描述模块边界。"
             },
             {
-              "id": "contracts",
+              "id": "interfaces",
               "type": "markdown-section",
               "path": "architecture.md",
               "rule": "## 数据与接口",
               "required": true,
-              "points": 20,
-              "message": "定义数据所有权和跨模块接口。"
+              "points": 10,
+              "message": "描述数据与接口。"
             },
             {
-              "id": "ownership",
+              "id": "owners",
               "type": "markdown-section",
               "path": "architecture.md",
               "rule": "## 所有权与协作",
               "required": true,
-              "points": 20,
-              "message": "明确负责人、评审者和协作流程。"
+              "points": 10,
+              "message": "明确所有权。"
             },
             {
-              "id": "decision",
+              "id": "decisions",
               "type": "markdown-section",
               "path": "architecture.md",
               "rule": "## 决策记录与回滚",
               "required": true,
+              "points": 10,
+              "message": "记录决策和回滚。"
+            },
+            {
+              "id": "modules",
+              "type": "json-array-shape",
+              "path": "capstone-evidence.json",
+              "rule": "/modules:6:id,owner,interface",
+              "required": true,
               "points": 20,
-              "message": "记录方案取舍、版本影响和撤销路径。"
+              "message": "至少六个模块及所有者接口。"
+            },
+            {
+              "id": "risks",
+              "type": "json-array-shape",
+              "path": "capstone-evidence.json",
+              "rule": "/risks:4:id,control,evidence",
+              "required": true,
+              "points": 15,
+              "message": "至少四项风险控制证据。"
+            },
+            {
+              "id": "gate",
+              "type": "json-pointer-present",
+              "path": "capstone-evidence.json",
+              "rule": "/evalGate",
+              "required": true,
+              "points": 10,
+              "message": "连接评测门禁。"
+            },
+            {
+              "id": "release",
+              "type": "json-pointer-present",
+              "path": "capstone-evidence.json",
+              "rule": "/releasePlan",
+              "required": true,
+              "points": 5,
+              "message": "连接发布计划。"
             }
           ]
         }

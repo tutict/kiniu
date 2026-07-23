@@ -68,6 +68,39 @@ class TaskCheckServiceTests {
     }
 
     @Test
+    void shouldValidateJsonPointersArrayShapesAndNumberRanges() {
+        LearningTaskDefinition task = task(List.of(
+                new TaskCheckDefinition("model", "json-pointer-present", "run.json", "/request/model", true, 25, "Model"),
+                new TaskCheckDefinition("trials", "json-array-shape", "run.json", "/trials:2:id,status,grader", true, 35, "Trials"),
+                new TaskCheckDefinition("latency", "json-number-range", "run.json", "/latencyMs:1:5000", true, 40, "Latency")));
+
+        List<TaskCheckResult> results = service.check(task, Map.of("run.json", """
+                {
+                  "request": {"model": "model-x"},
+                  "trials": [{"id":"a","status":"pass","grader":"code"},{"id":"b","status":"pass","grader":"human"}],
+                  "latencyMs": 240
+                }
+                """));
+
+        assertEquals(100, service.score(results));
+        assertTrue(service.passed(results));
+    }
+
+    @Test
+    void shouldRejectInvalidJsonShapesAndOutOfRangeNumbers() {
+        LearningTaskDefinition task = task(List.of(
+                new TaskCheckDefinition("trials", "json-array-shape", "run.json", "/trials:2:id,status,grader", true, 50, "Trials"),
+                new TaskCheckDefinition("latency", "json-number-range", "run.json", "/latencyMs:1:5000", true, 50, "Latency")));
+
+        List<TaskCheckResult> results = service.check(task, Map.of("run.json", """
+                {"trials":[{"id":"only","status":"pass"}],"latencyMs":9000}
+                """));
+
+        assertEquals(0, service.score(results));
+        assertFalse(service.passed(results));
+    }
+
+    @Test
     void shouldNotPassWhenTaskHasNoRequiredChecks() {
         LearningTaskDefinition task = task(List.of(
                 new TaskCheckDefinition("optional", "min-length", "notes.md", "5", false, 10, "Notes")));
@@ -84,6 +117,18 @@ class TaskCheckServiceTests {
         assertThrows(IllegalArgumentException.class, () -> service.check(task, Map.of("notes.md", oversized)));
     }
 
+    @Test
+    void shouldEnforceUtf8ByteLimitsForMultibyteContent() {
+        LearningTaskDefinition task = task(List.of(
+                new TaskCheckDefinition("content", "min-length", "notes.md", "5", true, 10, "Notes")));
+
+        String oversizedInBytes = "学".repeat((TaskCheckService.MAX_FILE_BYTES / 3) + 1);
+        assertTrue(oversizedInBytes.length() < TaskCheckService.MAX_FILE_CHARS);
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> service.check(task, Map.of("notes.md", oversizedInBytes)));
+    }
+
     private LearningTaskDefinition task(List<TaskCheckDefinition> checks) {
         return new LearningTaskDefinition(
                 "task",
@@ -97,6 +142,11 @@ class TaskCheckServiceTests {
                 "Scenario",
                 "project-agent",
                 List.of(),
-                checks);
+                checks,
+                "Lesson",
+                List.of("Artifact"),
+                List.of(),
+                "document",
+                List.of());
     }
 }

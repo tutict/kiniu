@@ -50,4 +50,8 @@ public record LearningProgress(
         }
         return new LearningProgress(schemaVersion, nextTaskId, completed, scores, weak);
     }
+
+    public LearningProgress withCurrentTaskId(String taskId) {
+        return new LearningProgress(schemaVersion, taskId, completedTaskIds, bestScores, weakSkills);
+    }
 }

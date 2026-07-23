@@ -1,13 +1,17 @@
 package com.kiniu.game.learn;
 
+import com.fasterxml.jackson.core.JsonPointer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
+import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,7 +27,11 @@ public class LearningCatalogService {
             "regex",
             "json-field",
             "json-array-min",
+            "json-pointer-present",
+            "json-array-shape",
+            "json-number-range",
             "min-length");
+    private static final Set<String> SUPPORTED_EVIDENCE_MODES = Set.of("document", "import");
 
     private final ObjectMapper objectMapper;
     private final Path catalogPath;
@@ -64,6 +72,10 @@ public class LearningCatalogService {
         if (progress != null && progress.completedTaskIds().contains(taskId)) {
             return true;
         }
+        LearningTaskDefinition task = tasks.get(index);
+        if (!task.prerequisiteTaskIds().isEmpty()) {
+            return progress != null && progress.completedTaskIds().containsAll(task.prerequisiteTaskIds());
+        }
         return index == 0 || progress != null && progress.completedTaskIds().contains(tasks.get(index - 1).id());
     }
 
@@ -71,6 +83,15 @@ public class LearningCatalogService {
         List<LearningTaskDefinition> tasks = flattenTasks();
         int index = indexOf(tasks, completedTaskId);
         return index >= 0 && index + 1 < tasks.size() ? tasks.get(index + 1).id() : completedTaskId;
+    }
+
+    public String nextTaskId(String completedTaskId, LearningProgress progress) {
+        return flattenTasks().stream()
+                .filter(task -> !progress.completedTaskIds().contains(task.id()))
+                .filter(task -> isUnlocked(task.id(), progress))
+                .map(LearningTaskDefinition::id)
+                .findFirst()
+                .orElse(completedTaskId);
     }
 
     public List<String> unlockedTaskIds(LearningProgress progress) {
@@ -112,6 +133,7 @@ public class LearningCatalogService {
         }
         Set<String> moduleIds = new HashSet<>();
         Set<String> taskIds = new HashSet<>();
+        boolean modernCatalog = definition.version() >= 3;
         definition.modules().forEach(module -> {
             requireText(module.id(), "Learning module id");
             requireText(module.title(), "Learning module title");
@@ -120,11 +142,12 @@ public class LearningCatalogService {
             if (!moduleIds.add(module.id()) || module.tasks().isEmpty()) {
                 throw new IllegalStateException("Learning module ids must be unique and modules must contain tasks.");
             }
-            module.tasks().forEach(task -> validateTask(task, taskIds));
+            module.tasks().forEach(task -> validateTask(task, taskIds, modernCatalog));
         });
+        validatePrerequisites(taskIds, modernCatalog);
     }
 
-    private void validateTask(LearningTaskDefinition task, Set<String> taskIds) {
+    private void validateTask(LearningTaskDefinition task, Set<String> taskIds, boolean modernCatalog) {
         requireText(task.id(), "Learning task id");
         requireText(task.title(), "Learning task title");
         requireText(task.summary(), "Learning task summary");
@@ -136,6 +159,17 @@ public class LearningCatalogService {
         if (!taskIds.add(task.id()) || task.estimatedMinutes() <= 0 || task.starterFiles().isEmpty()
                 || task.skills().isEmpty() || task.skills().stream().anyMatch(skill -> skill == null || skill.isBlank())) {
             throw new IllegalStateException("Learning task ids must be unique and tasks need starter files.");
+        }
+        if (!SUPPORTED_EVIDENCE_MODES.contains(task.evidenceMode())) {
+            throw new IllegalStateException("Learning task evidence mode is unsupported: " + task.id());
+        }
+        if (modernCatalog) {
+            requireText(task.lesson(), "Learning task lesson");
+            if (task.deliverables().isEmpty()
+                    || task.deliverables().stream().anyMatch(item -> item == null || item.isBlank())) {
+                throw new IllegalStateException("Learning tasks need non-blank deliverables.");
+            }
+            validateReferences(task);
         }
 
         Set<String> starterPaths = new HashSet<>();
@@ -169,6 +203,67 @@ public class LearningCatalogService {
         }
     }
 
+    private void validateReferences(LearningTaskDefinition task) {
+        if (task.references().isEmpty()) {
+            throw new IllegalStateException("Learning tasks need official references.");
+        }
+        task.references().forEach(reference -> {
+            requireText(reference.title(), "Learning reference title");
+            requireText(reference.publisher(), "Learning reference publisher");
+            requireText(reference.version(), "Learning reference version");
+            requireText(reference.accessedAt(), "Learning reference accessedAt");
+            try {
+                URI uri = URI.create(reference.url());
+                if (!"https".equalsIgnoreCase(uri.getScheme()) || uri.getHost() == null || uri.getHost().isBlank()) {
+                    throw new IllegalArgumentException("Reference must use HTTPS");
+                }
+            } catch (RuntimeException exception) {
+                throw new IllegalStateException("Invalid learning reference URL for " + task.id(), exception);
+            }
+        });
+    }
+
+    private void validatePrerequisites(Set<String> taskIds, boolean modernCatalog) {
+        List<LearningTaskDefinition> tasks = flattenTasks();
+        Map<String, List<String>> dependencies = new HashMap<>();
+        for (int index = 0; index < tasks.size(); index++) {
+            LearningTaskDefinition task = tasks.get(index);
+            Set<String> unique = new LinkedHashSet<>(task.prerequisiteTaskIds());
+            if (unique.size() != task.prerequisiteTaskIds().size()
+                    || unique.contains(task.id())
+                    || !taskIds.containsAll(unique)) {
+                throw new IllegalStateException("Learning task prerequisites must be unique, known, and non-self references.");
+            }
+            if (modernCatalog && index > 0 && unique.isEmpty()) {
+                throw new IllegalStateException("Every version 3 task after the first needs prerequisites.");
+            }
+            dependencies.put(task.id(), List.copyOf(unique));
+        }
+
+        Set<String> visiting = new HashSet<>();
+        Set<String> visited = new HashSet<>();
+        for (String taskId : taskIds) {
+            visitDependency(taskId, dependencies, visiting, visited);
+        }
+    }
+
+    private void visitDependency(
+            String taskId,
+            Map<String, List<String>> dependencies,
+            Set<String> visiting,
+            Set<String> visited) {
+        if (visited.contains(taskId)) {
+            return;
+        }
+        if (!visiting.add(taskId)) {
+            throw new IllegalStateException("Learning task prerequisites must not contain cycles.");
+        }
+        dependencies.getOrDefault(taskId, List.of())
+                .forEach(dependency -> visitDependency(dependency, dependencies, visiting, visited));
+        visiting.remove(taskId);
+        visited.add(taskId);
+    }
+
     private void validateRule(TaskCheckDefinition check) {
         try {
             switch (check.type()) {
@@ -183,6 +278,24 @@ public class LearningCatalogService {
                     if (parts.length != 2 || Integer.parseInt(parts[1]) <= 0) {
                         throw new IllegalArgumentException("Invalid array minimum rule");
                     }
+                }
+                case "json-pointer-present" -> {
+                    JsonPointer.compile(check.rule());
+                }
+                case "json-array-shape" -> {
+                    String[] parts = check.rule().split(":", 3);
+                    if (parts.length != 3 || Integer.parseInt(parts[1]) <= 0 || parts[2].isBlank()) {
+                        throw new IllegalArgumentException("Invalid array shape rule");
+                    }
+                    JsonPointer.compile(parts[0]);
+                }
+                case "json-number-range" -> {
+                    String[] parts = check.rule().split(":", 3);
+                    if (parts.length != 3
+                            || new java.math.BigDecimal(parts[1]).compareTo(new java.math.BigDecimal(parts[2])) > 0) {
+                        throw new IllegalArgumentException("Invalid number range rule");
+                    }
+                    JsonPointer.compile(parts[0]);
                 }
                 case "min-length" -> {
                     if (Integer.parseInt(check.rule()) <= 0) {

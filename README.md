@@ -98,6 +98,27 @@ http://localhost:8080
 - `/agent/agents`
 - `/agent/export/{sessionId}`
 
+## AI 工程课程 3.0
+
+学习中心使用 `kiniu-back/data/learning-catalog.json` 中的静态版本 3 目录，包含 8 个模块、20 个任务。主线覆盖 HTTP/JSON、模型输出契约、Prompt 与 Context、Workflow/Agent、工具、RAG、评测、安全、MCP/A2A、可观测、灰度发布和综合架构。
+
+- 任务由 `prerequisiteTaskIds` 组成显式依赖图；完成全部前置任务后解锁。
+- 每项任务包含中文讲义、交付物、确定性检查和 1–3 个官方参考链接。
+- `document` 任务在工作区直接编辑，`import` 任务可导入声明的 JSON、Markdown 或文本文件。
+- 单文件上限 100 KB，一次提交总量上限 500 KB；导入实验要求保留 `source`、`capturedAt`、`requestId` 或等价来源字段。
+- 确定性检查只验证提交工件的结构和完整性，不证明外部 trace 或模型响应的真实性。
+- 目录、进度、检查和 Agent 发布只使用本机访问令牌；仅 Mentor Feedback 请求携带模型 provider 配置。
+
+完整验收：
+
+```powershell
+cd kiniu-back
+mvn test
+
+cd ..\kiniu-front\nuxt-app
+npm run build
+```
+
 ## 命名
 
 “灵枢”取“智能体中枢、路由枢纽、轻量调度核心”之意。完整中文名暂定为：
