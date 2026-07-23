@@ -65,7 +65,7 @@
     "memoryStyle" : "skill-gap"
   }, {
     "id" : "narrator",
-    "name" : "Container Conductor",
+    "name" : "Lab Coordinator",
     "role" : "orchestrator",
     "summary" : "Routes each conversation into the right Agent, task flow, and knowledge context.",
     "personality" : "calm, concise, systems-minded",

@@ -1,6 +1,6 @@
 spring:
   application:
-    name: kiniu-agent-container
+    name: kiniu-ai-engineering-lab
 
 server:
   port: 8080

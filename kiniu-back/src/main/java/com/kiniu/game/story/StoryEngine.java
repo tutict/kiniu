@@ -180,7 +180,7 @@ public class StoryEngine {
         StoryNode containerHome = StoryNode.builder(
                         "container.home",
                         "agent-hub",
-                        "Agent Container Hub",
+                        "AI Engineering Lab Hub",
                         "narrator")
                 .narrative("这里是通用 Agent 容器。你可以从陪伴、面试、知识库问答、项目助理或写作教练开始，也可以直接描述当前想解决的问题。")
                 .tag("entry")

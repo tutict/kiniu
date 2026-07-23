@@ -161,7 +161,7 @@ public class AgentManager {
         LinkedHashMap<String, Agent> defaults = new LinkedHashMap<>();
         defaults.put("narrator", new Agent(
                 "narrator",
-                "Container Conductor",
+                "Lab Coordinator",
                 "orchestrator",
                 "Routes each conversation into the right Agent, task flow, and knowledge context.",
                 "calm, concise, systems-minded",
