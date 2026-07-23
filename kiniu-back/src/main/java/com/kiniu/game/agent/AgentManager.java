@@ -72,12 +72,27 @@ public class AgentManager {
         return agents.getOrDefault(agentId, agents.get("narrator"));
     }
 
+    public boolean containsAgent(String agentId) {
+        return agentId != null && agents.containsKey(agentId);
+    }
+
     public AgentCatalogResponse getAgentCatalog() {
         return new AgentCatalogResponse(List.copyOf(agents.values()));
     }
 
     public synchronized AgentCatalogResponse saveAgentCatalog(AgentCatalogResponse catalog) {
         this.agents = toAgentMap(catalog);
+        persistCatalog(getAgentCatalog());
+        return getAgentCatalog();
+    }
+
+    public synchronized AgentCatalogResponse upsertAgent(Agent agent) {
+        if (agent == null || agent.id() == null || agent.id().isBlank()) {
+            throw new IllegalArgumentException("Published agent must have an id.");
+        }
+        LinkedHashMap<String, Agent> nextAgents = new LinkedHashMap<>(agents);
+        nextAgents.put(agent.id(), agent);
+        this.agents = toAgentMap(new AgentCatalogResponse(List.copyOf(nextAgents.values())));
         persistCatalog(getAgentCatalog());
         return getAgentCatalog();
     }

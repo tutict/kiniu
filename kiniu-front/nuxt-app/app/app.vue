@@ -2,6 +2,7 @@
 import AgentConsoleView from '../components/GameConsoleView.vue'
 import AgentStudioView from '../components/StoryEditorView.vue'
 import SettingsPanelView from '../components/SettingsPanelView.vue'
+import LearningCenterView from '../components/LearningCenterView.vue'
 import { normalizeLocale, provideUiI18n, type I18nKey } from '../i18n'
 import type {
   AgentCatalogResponse,
@@ -21,7 +22,7 @@ import type {
   WorldState
 } from '../types/game'
 
-type ViewMode = 'chat' | 'studio' | 'settings'
+type ViewMode = 'learning' | 'chat' | 'studio' | 'settings'
 type StudioMode = 'flow' | 'agents' | 'debug'
 type ThemeMode = ApiSettings['theme']
 
@@ -46,7 +47,7 @@ const defaultSettings: ApiSettings = {
   theme: 'light'
 }
 
-const activeView = ref<ViewMode>('chat')
+const activeView = ref<ViewMode>('learning')
 const activeStudioView = ref<StudioMode>('flow')
 const isHydrated = ref(false)
 const isSending = ref(false)
@@ -70,11 +71,13 @@ const generatorError = ref('')
 const validationStatus = ref('')
 const validationError = ref('')
 const playerInput = ref('')
+const preferredAgentId = ref('')
 const sessionId = ref('')
 const settings = reactive<ApiSettings>({ ...defaultSettings })
 const currentLocale = computed(() => normalizeLocale(settings.locale))
 const currentTheme = computed(() => normalizeTheme(settings.theme))
 const { t } = provideUiI18n(currentLocale)
+useHead(() => ({ title: `${t('appBrand')} · ${t('learningNav')}` }))
 const storyDraft = ref<StoryCatalogResponse | null>(null)
 const agentDraft = ref<AgentCatalogResponse | null>(null)
 const sessionExport = ref<SessionExportResponse | null>(null)
@@ -101,10 +104,12 @@ const messages = ref<ChatMessage[]>([
   ...createIntroMessages()
 ])
 
+
 const navigationItems = computed(() => [
-  { id: 'chat' as const, label: t('navChat'), meta: sceneLabel.value, key: '1' },
-  { id: 'studio' as const, label: t('navStudio'), meta: `${storyDraft.value?.nodes.length ?? 0} ${t('labelNodes')}`, key: '2' },
-  { id: 'settings' as const, label: t('navSettings'), meta: settings.backendUrl || t('fieldNotConfigured'), key: '3' }
+  { id: 'learning' as const, label: t('navLearning'), meta: t('navLearningMeta'), key: '1' },
+  { id: 'chat' as const, label: t('navChat'), meta: sceneLabel.value, key: '2' },
+  { id: 'studio' as const, label: t('navStudio'), meta: `${storyDraft.value?.nodes.length ?? 0} ${t('labelNodes')}`, key: '3' },
+  { id: 'settings' as const, label: t('navSettings'), meta: settings.backendUrl || t('fieldNotConfigured'), key: '4' }
 ])
 
 const studioItems = computed(() => [
@@ -893,6 +898,13 @@ function loadSessionExportPage(offset: number) {
   )
 }
 
+function useLearningAgent(agentId: string) {
+  preferredAgentId.value = agentId
+  activeView.value = 'chat'
+  playerInput.value = t('learningAgentStarter', { agentId })
+  errorMessage.value = ''
+}
+
 async function sendTurn(choice = '') {
   if (isSending.value) return
   const trimmedInput = playerInput.value.trim()
@@ -921,7 +933,7 @@ async function sendTurn(choice = '') {
     const response = await $fetch<GameResponse>('/agent/next', {
       baseURL: settings.backendUrl.trim(),
       method: 'POST',
-      body: { sessionId: sessionId.value, input: trimmedInput, choice: trimmedChoice },
+      body: { sessionId: sessionId.value, input: trimmedInput, choice: trimmedChoice, preferredAgentId: preferredAgentId.value },
       headers: buildHeaders({ includeProvider: true })
     })
     messages.value.push({
@@ -991,8 +1003,18 @@ async function sendTurn(choice = '') {
           </div>
         </div>
 
+        <LearningCenterView
+          :provider-url='settings.providerUrl'
+          :api-key='settings.apiKey'
+          :model='settings.model'
+          v-if="activeView === 'learning'"
+          :backend-url="settings.backendUrl"
+          :local-token="settings.localToken"
+          @use-agent="useLearningAgent"
+        />
+
         <AgentConsoleView
-          v-if="activeView === 'chat'"
+          v-else-if="activeView === 'chat'"
           v-model:player-input="playerInput"
           :settings="settings"
           :world-state="worldState"
@@ -1251,7 +1273,7 @@ h1{font-size:20px;line-height:1.1;letter-spacing:0;color:var(--color-heading);ov
 @media (max-width:1100px){
   .workbench{grid-template-columns:1fr;width:min(100vw - 20px,1640px)}
   .rail{position:static;height:auto;grid-template-rows:auto auto;gap:12px}
-  .nav{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .nav{grid-template-columns:repeat(4,minmax(0,1fr))}
   .nav-button{grid-template-columns:1fr;justify-items:center;min-height:62px;text-align:center}
   .nav-copy small{display:none}
   .rail-status{display:none}
@@ -1265,7 +1287,7 @@ h1{font-size:20px;line-height:1.1;letter-spacing:0;color:var(--color-heading);ov
   .brand-lockup{grid-template-columns:32px minmax(0,1fr)}
   .brand-mark{width:32px;height:32px}
   h1{font-size:18px}
-  .nav{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .nav{grid-template-columns:repeat(4,minmax(0,1fr))}
   .nav-button{min-height:54px}
   .nav-copy strong{font-size:12px}
   .top-strip{grid-template-columns:repeat(2,minmax(0,1fr))}

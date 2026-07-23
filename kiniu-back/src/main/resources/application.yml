@@ -20,6 +20,10 @@ game:
     catalog-path: data/story-catalog.json
   agents:
     catalog-path: data/agent-catalog.json
+  learning:
+    catalog-path: data/learning-catalog.json
+    progress-path: data/learning-progress.json
+    attempts-path: data/learning-attempts.json
   sessions:
     export-path: data/session-exports
     max-state-sessions: 3

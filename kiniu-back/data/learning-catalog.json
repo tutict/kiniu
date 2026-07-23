@@ -1,0 +1,494 @@
+{
+  "version": 2,
+  "modules": [
+    {
+      "id": "foundations",
+      "title": "AI 项目基本功",
+      "summary": "从真实用户和业务目标出发，写出可验证的 AI 功能契约。",
+      "level": "初级",
+      "tasks": [
+        {
+          "id": "requirements-contract",
+          "title": "把模糊需求变成验收契约",
+          "summary": "为一个 AI 助手定义用户、目标、边界和验收标准。",
+          "level": "初级",
+          "kind": "requirements",
+          "estimatedMinutes": 25,
+          "skills": ["需求拆解", "业务逻辑", "验收标准"],
+          "objective": "让 AI 功能在写 Prompt 之前就拥有清晰的用户目标、边界和可验证结果。",
+          "scenario": "产品希望做一个能把用户模糊想法转成下一步行动的陪伴 Agent。",
+          "mentorAgentId": "project-agent",
+          "starterFiles": [
+            {
+              "path": "requirements.md",
+              "content": "# 需求契约\n\n## 用户\n\n## 业务目标\n\n## 非目标\n\n## 验收标准\n"
+            }
+          ],
+          "checks": [
+            {
+              "id": "user",
+              "type": "markdown-section",
+              "path": "requirements.md",
+              "rule": "## 用户",
+              "required": true,
+              "points": 20,
+              "message": "明确真正使用这个功能的人及其场景。"
+            },
+            {
+              "id": "goal",
+              "type": "markdown-section",
+              "path": "requirements.md",
+              "rule": "## 业务目标",
+              "required": true,
+              "points": 20,
+              "message": "把功能目标写成可观察的业务结果。"
+            },
+            {
+              "id": "boundary",
+              "type": "markdown-section",
+              "path": "requirements.md",
+              "rule": "## 非目标",
+              "required": true,
+              "points": 20,
+              "message": "写出不在本次交付范围内的事情。"
+            },
+            {
+              "id": "acceptance",
+              "type": "regex",
+              "path": "requirements.md",
+              "rule": "(?ms)^## 验收标准\\s*\\n(?:.*\\n)*?[-*] \\S.+",
+              "required": true,
+              "points": 40,
+              "message": "验收标准需要包含至少一个可检查条目。"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "data-engineering",
+      "title": "数据与版本",
+      "summary": "设计数据边界、隐私、保留周期与兼容迁移。",
+      "level": "初级 / 中级",
+      "tasks": [
+        {
+          "id": "data-lifecycle",
+          "title": "设计可演进的数据契约",
+          "summary": "为 AI 功能定义实体、敏感字段、保留策略和迁移方案。",
+          "level": "初级 / 中级",
+          "kind": "data-contract",
+          "estimatedMinutes": 35,
+          "skills": ["数据建模", "隐私", "版本演进", "迁移"],
+          "objective": "让业务数据可以被解释、最小化收集，并能在版本升级时安全迁移。",
+          "scenario": "陪伴 Agent 需要保存用户偏好和会话摘要，但团队必须控制敏感数据、删除请求与旧版本兼容。",
+          "mentorAgentId": "knowledge-curator",
+          "starterFiles": [
+            {
+              "path": "data-contract.json",
+              "content": "{\n  \"schemaVersion\": \"\",\n  \"entities\": [],\n  \"piiFields\": [],\n  \"retentionPolicy\": \"\",\n  \"migration\": {}\n}"
+            }
+          ],
+          "checks": [
+            {
+              "id": "version",
+              "type": "regex",
+              "path": "data-contract.json",
+              "rule": "\\\"schemaVersion\\\"\\s*:\\s*\\\"v[0-9]+",
+              "required": true,
+              "points": 15,
+              "message": "数据契约必须有可追踪的版本。"
+            },
+            {
+              "id": "entities",
+              "type": "json-array-min",
+              "path": "data-contract.json",
+              "rule": "entities:2",
+              "required": true,
+              "points": 20,
+              "message": "至少定义两个有实际字段的业务实体。"
+            },
+            {
+              "id": "pii",
+              "type": "json-array-min",
+              "path": "data-contract.json",
+              "rule": "piiFields:1",
+              "required": true,
+              "points": 20,
+              "message": "明确至少一个敏感字段及其处理方式。"
+            },
+            {
+              "id": "retention",
+              "type": "json-field",
+              "path": "data-contract.json",
+              "rule": "retentionPolicy",
+              "required": true,
+              "points": 20,
+              "message": "定义保留、删除与用户撤回策略。"
+            },
+            {
+              "id": "migration",
+              "type": "json-field",
+              "path": "data-contract.json",
+              "rule": "migration",
+              "required": true,
+              "points": 25,
+              "message": "定义旧版本读取、迁移和失败回滚方式。"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "agent-practice",
+      "title": "Agent 实战项目",
+      "summary": "把官方陪伴角色改造成属于你的、可测试并可直接使用的个人 Agent。",
+      "level": "初级 / 中级",
+      "tasks": [
+        {
+          "id": "companion-agent",
+          "title": "打造自己的陪伴 Agent",
+          "summary": "定义目标、记忆、边界和评测集，通过后发布到现有 Agent 目录。",
+          "level": "初级 / 中级",
+          "kind": "agent-project",
+          "estimatedMinutes": 50,
+          "skills": ["Agent 设计", "记忆策略", "安全边界", "评测"],
+          "objective": "把 companion 模板改造成一个可控、可测、可持续改进并能在自由实验室使用的个人 Agent。",
+          "scenario": "你要交付一个每天都能使用的 AI 陪伴 Agent，但它不能越权记忆、编造事实或替用户做高风险决定。",
+          "mentorAgentId": "companion",
+          "starterFiles": [
+            {
+              "path": "agent.json",
+              "content": "{\n  \"id\": \"student-companion\",\n  \"name\": \"\",\n  \"personality\": \"\",\n  \"coreGoals\": [],\n  \"boundaries\": [],\n  \"memoryPolicy\": \"\",\n  \"failurePolicy\": \"\"\n}"
+            },
+            {
+              "path": "evaluation.json",
+              "content": "{\n  \"scenarios\": []\n}"
+            }
+          ],
+          "checks": [
+            {
+              "id": "name",
+              "type": "json-field",
+              "path": "agent.json",
+              "rule": "name",
+              "required": true,
+              "points": 10,
+              "message": "Agent 要有清晰的个人身份。"
+            },
+            {
+              "id": "goals",
+              "type": "json-array-min",
+              "path": "agent.json",
+              "rule": "coreGoals:2",
+              "required": true,
+              "points": 20,
+              "message": "至少定义两个非空核心目标。"
+            },
+            {
+              "id": "boundaries",
+              "type": "json-array-min",
+              "path": "agent.json",
+              "rule": "boundaries:2",
+              "required": true,
+              "points": 20,
+              "message": "至少定义两条非空行为边界。"
+            },
+            {
+              "id": "memory",
+              "type": "json-field",
+              "path": "agent.json",
+              "rule": "memoryPolicy",
+              "required": true,
+              "points": 15,
+              "message": "明确哪些信息可以记忆以及如何遗忘。"
+            },
+            {
+              "id": "failure",
+              "type": "json-field",
+              "path": "agent.json",
+              "rule": "failurePolicy",
+              "required": true,
+              "points": 15,
+              "message": "明确失败、未知和人工接管策略。"
+            },
+            {
+              "id": "scenarios",
+              "type": "json-array-min",
+              "path": "evaluation.json",
+              "rule": "scenarios:5",
+              "required": true,
+              "points": 20,
+              "message": "至少准备五个有内容的正常、异常或边界评测场景。"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "service-engineering",
+      "title": "服务工程",
+      "summary": "处理并发、权限、安全、幂等与生产观测。",
+      "level": "中级",
+      "tasks": [
+        {
+          "id": "access-concurrency",
+          "title": "设计并发与权限边界",
+          "summary": "为多人使用的 AI 服务定义角色权限、幂等、并发冲突和滥用控制。",
+          "level": "中级",
+          "kind": "service-safety",
+          "estimatedMinutes": 40,
+          "skills": ["并发", "权限", "安全", "幂等", "限流"],
+          "objective": "让同一业务动作在并发、重试和越权访问下仍然可预测且可审计。",
+          "scenario": "Agent 发布接口将开放给团队成员，多人可能同时更新同一版本，客户端也会自动重试。",
+          "mentorAgentId": "project-agent",
+          "starterFiles": [
+            {
+              "path": "service-safety.json",
+              "content": "{\n  \"roles\": [],\n  \"permissions\": [],\n  \"idempotency\": {},\n  \"concurrencyControl\": {},\n  \"abuseControls\": []\n}"
+            }
+          ],
+          "checks": [
+            {
+              "id": "roles",
+              "type": "json-array-min",
+              "path": "service-safety.json",
+              "rule": "roles:2",
+              "required": true,
+              "points": 15,
+              "message": "至少定义两个职责不同的角色。"
+            },
+            {
+              "id": "permissions",
+              "type": "json-array-min",
+              "path": "service-safety.json",
+              "rule": "permissions:3",
+              "required": true,
+              "points": 20,
+              "message": "定义读取、修改、发布等权限规则。"
+            },
+            {
+              "id": "idempotency",
+              "type": "json-field",
+              "path": "service-safety.json",
+              "rule": "idempotency",
+              "required": true,
+              "points": 25,
+              "message": "说明幂等键、重复请求响应和过期策略。"
+            },
+            {
+              "id": "concurrency",
+              "type": "json-field",
+              "path": "service-safety.json",
+              "rule": "concurrencyControl",
+              "required": true,
+              "points": 25,
+              "message": "说明版本冲突检测和并发更新处理。"
+            },
+            {
+              "id": "abuse",
+              "type": "json-array-min",
+              "path": "service-safety.json",
+              "rule": "abuseControls:2",
+              "required": true,
+              "points": 15,
+              "message": "至少定义限流和审计两类滥用控制。"
+            }
+          ]
+        },
+        {
+          "id": "observability-runbook",
+          "title": "建立日志、监控与故障手册",
+          "summary": "定义结构化日志、核心指标、告警和可执行的故障处理步骤。",
+          "level": "中级",
+          "kind": "observability",
+          "estimatedMinutes": 40,
+          "skills": ["日志", "指标", "监控", "告警", "运维"],
+          "objective": "让团队在用户报告问题之前发现异常，并能从日志和指标定位到具体版本与请求。",
+          "scenario": "Agent 回复延迟偶发升高，部分模型调用失败，但当前系统只能看到用户说“卡了”。",
+          "mentorAgentId": "project-agent",
+          "starterFiles": [
+            {
+              "path": "observability.json",
+              "content": "{\n  \"structuredLogs\": [],\n  \"metrics\": [],\n  \"alerts\": [],\n  \"runbook\": \"\"\n}"
+            }
+          ],
+          "checks": [
+            {
+              "id": "logs",
+              "type": "json-array-min",
+              "path": "observability.json",
+              "rule": "structuredLogs:4",
+              "required": true,
+              "points": 25,
+              "message": "日志至少包含请求、用户、版本和结果关联字段。"
+            },
+            {
+              "id": "metrics",
+              "type": "json-array-min",
+              "path": "observability.json",
+              "rule": "metrics:4",
+              "required": true,
+              "points": 25,
+              "message": "至少覆盖成功率、延迟、模型错误率和成本。"
+            },
+            {
+              "id": "alerts",
+              "type": "json-array-min",
+              "path": "observability.json",
+              "rule": "alerts:2",
+              "required": true,
+              "points": 20,
+              "message": "定义至少两个带阈值和持续时间的告警。"
+            },
+            {
+              "id": "runbook",
+              "type": "json-field",
+              "path": "observability.json",
+              "rule": "runbook",
+              "required": true,
+              "points": 30,
+              "message": "写出诊断、止损、恢复和复盘步骤。"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "production-engineering",
+      "title": "上线与演进",
+      "summary": "通过灰度、监控、回滚和版本契约控制生产风险。",
+      "level": "中级",
+      "tasks": [
+        {
+          "id": "release-safety",
+          "title": "为 AI 功能设计上线与回滚",
+          "summary": "为一次 Agent 版本发布定义灰度、监控、告警和回滚条件。",
+          "level": "中级",
+          "kind": "operations",
+          "estimatedMinutes": 35,
+          "skills": ["监控", "灰度发布", "回滚", "版本演进"],
+          "objective": "让 AI 功能在指标恶化或模型行为变化时可以被发现、控制和恢复。",
+          "scenario": "新 Prompt 版本即将发布，团队需要在不影响全部用户的情况下验证它。",
+          "mentorAgentId": "project-agent",
+          "starterFiles": [
+            {
+              "path": "release.json",
+              "content": "{\n  \"version\": \"\",\n  \"rollout\": {},\n  \"metrics\": [],\n  \"rollback\": {}\n}"
+            }
+          ],
+          "checks": [
+            {
+              "id": "rollout",
+              "type": "json-field",
+              "path": "release.json",
+              "rule": "rollout",
+              "required": true,
+              "points": 25,
+              "message": "定义灰度比例、观察窗口和放量步骤。"
+            },
+            {
+              "id": "metrics",
+              "type": "json-array-min",
+              "path": "release.json",
+              "rule": "metrics:3",
+              "required": true,
+              "points": 25,
+              "message": "至少监控三项带阈值的业务或技术指标。"
+            },
+            {
+              "id": "rollback",
+              "type": "json-field",
+              "path": "release.json",
+              "rule": "rollback",
+              "required": true,
+              "points": 25,
+              "message": "写出触发条件、回滚动作和数据兼容处理。"
+            },
+            {
+              "id": "version",
+              "type": "regex",
+              "path": "release.json",
+              "rule": "\\\"version\\\"\\s*:\\s*\\\"v[0-9]+",
+              "required": true,
+              "points": 25,
+              "message": "版本必须可追踪。"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "architecture-teamwork",
+      "title": "架构与团队交付",
+      "summary": "用边界、业务规则、所有权和决策记录组织多人协作。",
+      "level": "中级",
+      "tasks": [
+        {
+          "id": "architecture-collaboration",
+          "title": "写出团队可执行的架构决策",
+          "summary": "把业务逻辑、模块边界、所有权、评审和回滚责任写进同一份交付契约。",
+          "level": "中级",
+          "kind": "architecture",
+          "estimatedMinutes": 45,
+          "skills": ["架构", "团队协作", "业务逻辑", "需求拆解", "决策记录"],
+          "objective": "让多人能并行工作，同时知道接口、责任、风险和变更决策由谁维护。",
+          "scenario": "团队要把学习系统拆成课程、沙箱、评测、Agent 发布和观测模块，并持续演进。",
+          "mentorAgentId": "project-agent",
+          "starterFiles": [
+            {
+              "path": "architecture.md",
+              "content": "# 架构决策\n\n## 业务规则\n\n## 模块边界\n\n## 数据与接口\n\n## 所有权与协作\n\n## 决策记录与回滚\n"
+            }
+          ],
+          "checks": [
+            {
+              "id": "business",
+              "type": "markdown-section",
+              "path": "architecture.md",
+              "rule": "## 业务规则",
+              "required": true,
+              "points": 20,
+              "message": "列出必须由系统保证的核心业务规则。"
+            },
+            {
+              "id": "boundaries",
+              "type": "markdown-section",
+              "path": "architecture.md",
+              "rule": "## 模块边界",
+              "required": true,
+              "points": 20,
+              "message": "说明模块职责和禁止跨越的边界。"
+            },
+            {
+              "id": "contracts",
+              "type": "markdown-section",
+              "path": "architecture.md",
+              "rule": "## 数据与接口",
+              "required": true,
+              "points": 20,
+              "message": "定义数据所有权和跨模块接口。"
+            },
+            {
+              "id": "ownership",
+              "type": "markdown-section",
+              "path": "architecture.md",
+              "rule": "## 所有权与协作",
+              "required": true,
+              "points": 20,
+              "message": "明确负责人、评审者和协作流程。"
+            },
+            {
+              "id": "decision",
+              "type": "markdown-section",
+              "path": "architecture.md",
+              "rule": "## 决策记录与回滚",
+              "required": true,
+              "points": 20,
+              "message": "记录方案取舍、版本影响和撤销路径。"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

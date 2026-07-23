@@ -71,6 +71,22 @@ class GameEngineOrchestrationTests {
     }
 
     @Test
+    void shouldMakeThePreferredAgentTheFocusAndAReplyAuthorForAuthoredBeats() {
+        String sessionId = "preferred-" + UUID.randomUUID();
+
+        GameResponse response = gameEngine.next(new GameRequest(
+                sessionId,
+                "",
+                "Java/RAG 面试考查",
+                "companion"));
+
+        assertThat(response.orchestration().focusAgentId()).isEqualTo("companion");
+        assertThat(response.orchestration().spotlightAgentIds()).contains("companion");
+        assertThat(response.orchestration().speakingAgentIds()).contains("companion");
+        assertThat(response.agentReplies()).extracting(reply -> reply.agentId()).contains("companion");
+    }
+
+    @Test
     void shouldPreferSeededStoryWhenAuthoredChoiceMatches() {
         String sessionId = "seed-" + UUID.randomUUID();
 

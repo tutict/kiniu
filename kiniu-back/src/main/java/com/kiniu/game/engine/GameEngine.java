@@ -83,6 +83,10 @@ public class GameEngine {
         String sessionId = normalizeSessionId(request.sessionId());
         String input = normalizeText(request.input());
         String choice = normalizeText(request.choice());
+        String preferredAgentId = normalizeText(request.preferredAgentId());
+        if (!preferredAgentId.isBlank() && !agentManager.containsAgent(preferredAgentId)) {
+            throw new IllegalArgumentException("Unknown preferred Agent: " + preferredAgentId);
+        }
 
         WorldState state = getSessionState(sessionId);
         updateWorldState(state, input, choice);
@@ -90,11 +94,19 @@ public class GameEngine {
         memoryService.storeDialogue(sessionId, "Player", buildPlayerTurn(input, choice));
 
         Optional<StoryEvent> seededEvent = storyEngine.findTriggeredEvent(state, input, choice);
-        String speakerId = seededEvent.map(StoryEvent::speakerId)
-                .orElseGet(() -> storyEngine.getCurrentSpeakerId(state));
+        String speakerId = preferredAgentId.isBlank()
+                ? seededEvent.map(StoryEvent::speakerId).orElseGet(() -> storyEngine.getCurrentSpeakerId(state))
+                : preferredAgentId;
         List<Agent> contextAgents = agentManager.resolveActiveAgents(state, speakerId, input, choice);
         StoryEvent storyBeat = plotAgentService.resolveStoryBeat(state, input, choice, seededEvent, contextAgents);
-        List<Agent> activeAgents = agentManager.resolveActiveAgents(state, storyBeat.speakerId(), input, choice);
+        if (!preferredAgentId.isBlank()) {
+            storyBeat = storyBeat.withSpeaker(preferredAgentId);
+        }
+        List<Agent> activeAgents = agentManager.resolveActiveAgents(
+                state,
+                preferredAgentId.isBlank() ? storyBeat.speakerId() : preferredAgentId,
+                input,
+                choice);
         List<String> nextChoices = dynamicBranchService.generateChoices(state, storyBeat, activeAgents);
         StoryEvent directedBeat =
                 directorAgentService.directStoryBeat(state, storyBeat, activeAgents, input, choice, nextChoices);

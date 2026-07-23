@@ -14,6 +14,8 @@ import org.springframework.test.web.servlet.MockMvc;
 @SpringBootTest(properties = {
         "game.story.catalog-path=target/test-security-story-catalog.json",
         "game.agents.catalog-path=target/test-security-agent-catalog.json",
+        "game.learning.progress-path=target/test-security-learning-progress.json",
+        "game.learning.attempts-path=target/test-security-learning-attempts.json",
         "game.sessions.export-path=target/test-security-session-exports",
         "game.security.local-token=test-token",
         "game.security.allowed-origins=http://localhost:3000,http://127.0.0.1:3000",
@@ -28,6 +30,12 @@ class GameControllerSecurityTests {
     @Test
     void shouldRequireLocalTokenWhenConfigured() throws Exception {
         mockMvc.perform(get("/agent/story")
+                        .header("Origin", "http://localhost:3000"))
+                .andExpect(status().isUnauthorized());
+    }
+    @Test
+    void shouldRequireLocalTokenForLearningCatalog() throws Exception {
+        mockMvc.perform(get("/learn/catalog")
                         .header("Origin", "http://localhost:3000"))
                 .andExpect(status().isUnauthorized());
     }

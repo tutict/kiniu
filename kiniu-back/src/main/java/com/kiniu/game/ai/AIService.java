@@ -3,6 +3,8 @@ package com.kiniu.game.ai;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.kiniu.game.agent.Agent;
+import com.kiniu.game.learn.LearningAttempt;
+import com.kiniu.game.learn.LearningTaskDefinition;
 import com.kiniu.game.agent.AgentTurnPlan;
 import com.kiniu.game.dto.AgentReplyView;
 import com.kiniu.game.engine.BranchOption;
@@ -236,6 +238,51 @@ public class AIService {
                 () -> fallbackOptions);
     }
 
+    public String generateLearningFeedback(
+            LearningTaskDefinition task,
+            LearningAttempt attempt,
+            String question) {
+        String evidence = attempt.results().stream()
+                .map(result -> result.checkId() + "=" + (result.passed() ? "pass" : "needs-fix")
+                        + "; evidence=" + result.evidence()
+                        + "; criterion=" + result.message())
+                .collect(Collectors.joining("\n"));
+        String prompt = "Task objective: " + task.objective()
+                + "\nTask scenario: " + task.scenario()
+                + "\nAttempt score: " + attempt.score()
+                + "\nAttempt passed: " + attempt.passed()
+                + "\nDeterministic check evidence:\n" + evidence
+                + "\nLearner question: " + safe(question)
+                + "\nExplain the evidence, identify the next smallest fix, and never change the score.";
+        return withTelemetry(
+                "learning-feedback",
+                attempt.attemptId(),
+                config -> sanitize(openAICompatibleClient.complete(
+                        config,
+                        "You are a software engineering mentor. Use only the supplied deterministic evidence. Return concise, actionable feedback.",
+                        prompt,
+                        0.2,
+                        360)),
+                () -> learningFeedbackFallback(task, attempt, question));
+    }
+
+    private String learningFeedbackFallback(
+            LearningTaskDefinition task,
+            LearningAttempt attempt,
+            String question) {
+        List<String> failed = attempt.results().stream()
+                .filter(result -> !result.passed())
+                .map(result -> result.checkId() + ": " + result.message())
+                .toList();
+        String next = failed.isEmpty()
+                ? "复查每一项证据，并把通过标准写成团队可以重复执行的检查。"
+                : "下一步先修复：" + String.join("；", failed);
+        return "任务目标：" + task.objective()
+                + "。本次得分：" + attempt.score()
+                + "。" + next
+                + (safe(question).isBlank() ? "" : " 你的问题：" + safe(question))
+                + " 分数只由确定性检查决定。";
+    }
     public String generateAgentMemoryNote(
             Agent agent,
             AgentTurnPlan turnPlan,

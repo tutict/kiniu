@@ -1,5 +1,6 @@
 package com.kiniu.game.story;
 
+import java.util.LinkedHashSet;
 import java.util.List;
 
 public record StoryEvent(
@@ -82,6 +83,24 @@ public record StoryEvent(
                 sourceType,
                 directorSummary,
                 spotlightAgentIds);
+    }
+
+    public StoryEvent withSpeaker(String speakerId) {
+        LinkedHashSet<String> spotlight = new LinkedHashSet<>();
+        spotlight.add(speakerId);
+        spotlight.addAll(spotlightAgentIds);
+        return new StoryEvent(
+                id,
+                sourceNodeId,
+                targetNodeId,
+                targetScene,
+                speakerId,
+                title,
+                narrative,
+                choices,
+                sourceType,
+                directorSummary,
+                List.copyOf(spotlight));
     }
 
     public boolean isGenerated() {
