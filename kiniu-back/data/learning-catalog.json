@@ -972,7 +972,15 @@
               "message": "填写证据采集时间。"
             }
           ]
-        },
+        }
+      ]
+    },
+    {
+      "id": "evaluation-agent",
+      "title": "评测与 Agent 项目",
+      "summary": "把测试样例、评分器与多次试验连成持续评测体系，并交付可验证的完整 Agent。",
+      "level": "中级",
+      "tasks": [
         {
           "level": "中级",
           "mentorAgentId": "project-agent",
@@ -1995,7 +2003,7 @@
               "path": "agent-card.json",
               "rule": "/skills:2:id,name,inputModes,outputModes",
               "required": true,
-              "points": 30,
+              "points": 20,
               "message": "定义至少两个可发现技能。"
             },
             {
@@ -2004,8 +2012,8 @@
               "path": "agent-card.json",
               "rule": "/capabilities",
               "required": true,
-              "points": 10,
-              "message": "声明能力。"
+              "points": 5,
+              "message": "声明能力发现与传输能力。"
             },
             {
               "id": "auth",
@@ -2013,7 +2021,7 @@
               "path": "agent-card.json",
               "rule": "/authentication",
               "required": true,
-              "points": 10,
+              "points": 5,
               "message": "声明身份与认证。"
             },
             {
@@ -2038,10 +2046,10 @@
               "id": "tasks",
               "type": "json-array-shape",
               "path": "delegation-trace.json",
-              "rule": "/tasks:3:taskId,status,from,to,messageParts,idempotency,errorHandling",
+              "rule": "/tasks:3:taskId,status,from,to,messageParts,idempotency,cancellation,retry,delivery,identity,errorHandling",
               "required": true,
               "points": 35,
-              "message": "至少三个带状态和错误处理的委派任务。"
+              "message": "至少三个委派任务必须记录消息 parts、状态、身份、幂等、取消、重试、传输方式和错误恢复。"
             },
             {
               "id": "captured-at",
@@ -2051,6 +2059,24 @@
               "required": true,
               "points": 5,
               "message": "填写证据采集时间。"
+            },
+            {
+              "id": "delivery-modes",
+              "type": "regex",
+              "path": "delegation-trace.json",
+              "rule": "(?s)(?=.*\"delivery\"\\s*:\\s*\"streaming\")(?=.*\"delivery\"\\s*:\\s*\"callback\")",
+              "required": true,
+              "points": 10,
+              "message": "轨迹同时覆盖流式和回调交付。"
+            },
+            {
+              "id": "lifecycle",
+              "type": "regex",
+              "path": "delegation-trace.json",
+              "rule": "(?s)(?=.*\"status\"\\s*:\\s*\"canceled\")(?=.*\"status\"\\s*:\\s*\"(?:completed|failed)\")",
+              "required": true,
+              "points": 10,
+              "message": "轨迹同时覆盖取消和终态处理。"
             }
           ]
         }
@@ -2058,8 +2084,8 @@
     },
     {
       "id": "production-engineering",
-      "title": "可观测与发布",
-      "summary": "用统一 trace、脱敏遥测、评测门禁、灰度指标和回滚控制生产风险。",
+      "title": "生产与综合项目",
+      "summary": "用统一 trace、发布门禁和回滚控制生产风险，并形成团队可执行的最终架构决策。",
       "level": "高级",
       "tasks": [
         {
@@ -2112,7 +2138,7 @@
             },
             {
               "path": "trace-sample.json",
-              "content": "{\n  \"source\": \"\",\n  \"capturedAt\": \"\",\n  \"requestId\": \"\",\n  \"traceId\": \"\",\n  \"spans\": []\n}"
+              "content": "{\n  \"source\": \"\",\n  \"capturedAt\": \"\",\n  \"requestId\": \"\",\n  \"trace_id\": \"\",\n  \"provider\": \"\",\n  \"model\": \"\",\n  \"input_tokens\": 0,\n  \"output_tokens\": 0,\n  \"latency_ms\": 0,\n  \"correlations\": {\n    \"tool_call_id\": \"\",\n    \"mcp_request_id\": \"\",\n    \"a2a_task_id\": \"\"\n  },\n  \"redaction\": {\n    \"applied\": false,\n    \"fields\": []\n  },\n  \"spans\": []\n}"
             }
           ],
           "checks": [
@@ -2122,7 +2148,7 @@
               "path": "observability.json",
               "rule": "/structuredLogs:4:name,fields,redacted",
               "required": true,
-              "points": 10,
+              "points": 5,
               "message": "至少四类带脱敏说明的日志。"
             },
             {
@@ -2131,7 +2157,7 @@
               "path": "observability.json",
               "rule": "/metrics:4:name,unit,threshold",
               "required": true,
-              "points": 15,
+              "points": 5,
               "message": "至少四项带单位和阈值的指标。"
             },
             {
@@ -2140,7 +2166,7 @@
               "path": "observability.json",
               "rule": "/alerts:2:name,threshold,duration",
               "required": true,
-              "points": 15,
+              "points": 5,
               "message": "至少两个可执行告警。"
             },
             {
@@ -2149,8 +2175,17 @@
               "path": "observability.json",
               "rule": "/runbook",
               "required": true,
-              "points": 15,
+              "points": 5,
               "message": "写出诊断、止损、恢复和复盘。"
+            },
+            {
+              "id": "redaction-policy",
+              "type": "json-pointer-present",
+              "path": "observability.json",
+              "rule": "/redaction",
+              "required": true,
+              "points": 5,
+              "message": "定义遥测脱敏规则。"
             },
             {
               "id": "source",
@@ -2160,24 +2195,6 @@
               "required": true,
               "points": 5,
               "message": "填写 trace 来源。"
-            },
-            {
-              "id": "trace",
-              "type": "json-pointer-present",
-              "path": "trace-sample.json",
-              "rule": "/traceId",
-              "required": true,
-              "points": 5,
-              "message": "填写 trace_id。"
-            },
-            {
-              "id": "spans",
-              "type": "json-array-shape",
-              "path": "trace-sample.json",
-              "rule": "/spans:4:spanId,kind,durationMs,status",
-              "required": true,
-              "points": 10,
-              "message": "至少四个结构化 span。"
             },
             {
               "id": "captured-at",
@@ -2198,22 +2215,103 @@
               "message": "填写请求标识。"
             },
             {
-              "id": "correlations",
-              "type": "regex",
-              "path": "observability.json",
-              "rule": "(?s)(?=.*trace_id)(?=.*span_id)(?=.*provider)(?=.*model)(?=.*token)(?=.*latency)(?=.*tool)(?=.*mcp)(?=.*a2a)",
-              "required": true,
-              "points": 10,
-              "message": "覆盖模型、token、延迟和工具/MCP/A2A 关联字段。"
-            },
-            {
-              "id": "redaction",
+              "id": "trace",
               "type": "json-pointer-present",
-              "path": "observability.json",
-              "rule": "/redaction",
+              "path": "trace-sample.json",
+              "rule": "/trace_id",
               "required": true,
               "points": 5,
-              "message": "定义遥测脱敏规则。"
+              "message": "填写实际 trace_id。"
+            },
+            {
+              "id": "spans",
+              "type": "json-array-shape",
+              "path": "trace-sample.json",
+              "rule": "/spans:4:span_id,trace_id,parent_span_id,kind,duration_ms,status",
+              "required": true,
+              "points": 10,
+              "message": "至少四个带 trace/span 关联的结构化 span。"
+            },
+            {
+              "id": "provider",
+              "type": "json-pointer-present",
+              "path": "trace-sample.json",
+              "rule": "/provider",
+              "required": true,
+              "points": 5,
+              "message": "trace 样本必须记录 provider。"
+            },
+            {
+              "id": "model",
+              "type": "json-pointer-present",
+              "path": "trace-sample.json",
+              "rule": "/model",
+              "required": true,
+              "points": 5,
+              "message": "trace 样本必须记录 model。"
+            },
+            {
+              "id": "input-tokens",
+              "type": "json-number-range",
+              "path": "trace-sample.json",
+              "rule": "/input_tokens:1:10000000",
+              "required": true,
+              "points": 5,
+              "message": "记录有效输入 token 数。"
+            },
+            {
+              "id": "output-tokens",
+              "type": "json-number-range",
+              "path": "trace-sample.json",
+              "rule": "/output_tokens:1:10000000",
+              "required": true,
+              "points": 5,
+              "message": "记录有效输出 token 数。"
+            },
+            {
+              "id": "latency",
+              "type": "json-number-range",
+              "path": "trace-sample.json",
+              "rule": "/latency_ms:1:3600000",
+              "required": true,
+              "points": 5,
+              "message": "记录有效端到端延迟。"
+            },
+            {
+              "id": "tool-correlation",
+              "type": "json-pointer-present",
+              "path": "trace-sample.json",
+              "rule": "/correlations/tool_call_id",
+              "required": true,
+              "points": 5,
+              "message": "关联工具调用标识。"
+            },
+            {
+              "id": "mcp-correlation",
+              "type": "json-pointer-present",
+              "path": "trace-sample.json",
+              "rule": "/correlations/mcp_request_id",
+              "required": true,
+              "points": 5,
+              "message": "关联 MCP 请求标识。"
+            },
+            {
+              "id": "a2a-correlation",
+              "type": "json-pointer-present",
+              "path": "trace-sample.json",
+              "rule": "/correlations/a2a_task_id",
+              "required": true,
+              "points": 5,
+              "message": "关联 A2A 任务标识。"
+            },
+            {
+              "id": "trace-redacted",
+              "type": "regex",
+              "path": "trace-sample.json",
+              "rule": "\"applied\"\\s*:\\s*true",
+              "required": true,
+              "points": 5,
+              "message": "trace 样本必须声明已应用脱敏。"
             }
           ]
         },
@@ -2328,15 +2426,7 @@
               "message": "定义模型、Schema、索引兼容性。"
             }
           ]
-        }
-      ]
-    },
-    {
-      "id": "architecture-teamwork",
-      "title": "综合架构与团队交付",
-      "summary": "汇总 Agent、RAG、安全、协议和生产证据，形成团队可执行的最终架构决策。",
-      "level": "高级",
-      "tasks": [
+        },
         {
           "level": "中级",
           "mentorAgentId": "project-agent",

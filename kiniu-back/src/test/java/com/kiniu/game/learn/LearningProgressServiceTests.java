@@ -74,6 +74,21 @@ class LearningProgressServiceTests {
         assertTrue(catalogService.isUnlocked("data", updated));
     }
 
+    @Test
+    void shouldExposeAnEmptyCurrentTaskWhenTheCatalogIsComplete() throws Exception {
+        LearningProgressService service = new LearningProgressService(
+                objectMapper,
+                catalogService(),
+                tempDir.resolve("completed-progress.json"));
+
+        service.recordAttempt("first", 100, List.of("requirements"));
+        service.recordAttempt("second", 100, List.of("data"));
+        LearningProgress completed = service.recordAttempt("third", 100, List.of("release"));
+
+        assertEquals("", completed.currentTaskId());
+        assertEquals(List.of("first", "second", "third"), completed.completedTaskIds());
+    }
+
     private LearningCatalogService catalogService() throws Exception {
         LearningTaskDefinition first = task("first");
         LearningTaskDefinition second = task("second");

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonPointer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -91,7 +92,7 @@ public class LearningCatalogService {
                 .filter(task -> isUnlocked(task.id(), progress))
                 .map(LearningTaskDefinition::id)
                 .findFirst()
-                .orElse(completedTaskId);
+                .orElse("");
     }
 
     public List<String> unlockedTaskIds(LearningProgress progress) {
@@ -176,7 +177,8 @@ public class LearningCatalogService {
         task.starterFiles().forEach(file -> {
             requireText(file.path(), "Learning starter file path");
             if (!starterPaths.add(file.path()) || file.content() == null
-                    || file.content().length() > TaskCheckService.MAX_FILE_CHARS) {
+                    || file.content().length() > TaskCheckService.MAX_FILE_CHARS
+                    || file.content().getBytes(StandardCharsets.UTF_8).length > TaskCheckService.MAX_FILE_BYTES) {
                 throw new IllegalStateException("Learning starter files must have unique safe content.");
             }
         });
@@ -197,6 +199,9 @@ public class LearningCatalogService {
             }
             validateRule(check);
         });
+        if (task.checks().stream().mapToInt(TaskCheckDefinition::points).sum() != 100) {
+            throw new IllegalStateException("Learning task checks must total 100 points.");
+        }
         boolean hasRequired = task.checks().stream().anyMatch(TaskCheckDefinition::required);
         if (!hasRequired) {
             throw new IllegalStateException("Learning tasks must contain at least one required check.");

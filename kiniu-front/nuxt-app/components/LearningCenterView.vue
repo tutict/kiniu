@@ -8,6 +8,10 @@ import type {
   LearningPublishResponse
 } from '../types/learning'
 import { useUiI18n } from '../i18n'
+import {
+  buildLearningRequestHeaders,
+  type LearningRequestKind
+} from '../utils/learningRequestHeaders'
 
 const props = defineProps<{
   backendUrl: string
@@ -50,18 +54,15 @@ const selectedTask = computed<LearningTask | null>(() =>
   tasks.value.find(task => task.id === selectedTaskId.value) ?? tasks.value[0] ?? null)
 const completed = computed(() => new Set(progress.value?.completedTaskIds ?? []))
 const score = computed(() => progress.value?.bestScores[selectedTaskId.value] ?? 0)
-const requestHeaders = computed<Record<string, string>>(() =>
-  props.localToken.trim() ? { 'X-Local-Token': props.localToken.trim() } : {})
-const feedbackHeaders = computed<Record<string, string>>(() => {
-  const headers = { ...requestHeaders.value }
-  if (props.apiKey.trim()) {
-    headers.Authorization = 'Bearer ' + props.apiKey.trim()
-    headers['X-API-Key'] = props.apiKey.trim()
-  }
-  if (props.providerUrl.trim()) headers['X-Provider-Url'] = props.providerUrl.trim()
-  if (props.model.trim()) headers['X-Model'] = props.model.trim()
-  return headers
-})
+
+function learningHeaders(kind: LearningRequestKind) {
+  return buildLearningRequestHeaders(kind, {
+    localToken: props.localToken,
+    providerUrl: props.providerUrl,
+    apiKey: props.apiKey,
+    model: props.model
+  })
+}
 
 function isLoopbackBackendUrl(value: string) {
   try {
@@ -150,8 +151,8 @@ async function loadLearning() {
   try {
     assertSafeSecretTarget()
     const [nextCatalog, nextProgress] = await Promise.all([
-      $fetch<LearningCatalog>('/learn/catalog', { baseURL: props.backendUrl.trim(), headers: requestHeaders.value }),
-      $fetch<LearningProgress>('/learn/progress', { baseURL: props.backendUrl.trim(), headers: requestHeaders.value })
+      $fetch<LearningCatalog>('/learn/catalog', { baseURL: props.backendUrl.trim(), headers: learningHeaders('catalog') }),
+      $fetch<LearningProgress>('/learn/progress', { baseURL: props.backendUrl.trim(), headers: learningHeaders('progress') })
     ])
     if (generation !== requestGeneration) return
     catalog.value = nextCatalog
@@ -190,7 +191,7 @@ async function checkTask() {
       {
         baseURL: props.backendUrl.trim(),
         method: 'POST',
-        headers: requestHeaders.value,
+        headers: learningHeaders('check'),
         body: { files: files.value }
       })
     if (generation !== requestGeneration) return
@@ -225,7 +226,7 @@ async function askMentor() {
       {
         baseURL: props.backendUrl.trim(),
         method: 'POST',
-        headers: feedbackHeaders.value,
+        headers: learningHeaders('feedback'),
         body: { attemptId: currentAttemptId, question: mentorQuestion.value }
       })
     if (generation === requestGeneration && selectedTaskId.value === taskId && attemptId.value === currentAttemptId) {
@@ -255,7 +256,7 @@ async function publishAgent() {
       {
         baseURL: props.backendUrl.trim(),
         method: 'POST',
-        headers: requestHeaders.value,
+        headers: learningHeaders('publish'),
         body: { attemptId: currentAttemptId }
       })
     if (generation === requestGeneration && selectedTaskId.value === taskId) {
