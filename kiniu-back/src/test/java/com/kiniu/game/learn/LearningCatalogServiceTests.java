@@ -36,6 +36,11 @@ class LearningCatalogServiceTests {
     }
 
     @Test
+    void shouldAcceptFrontmatterRegexCheckTypes() throws Exception {
+        serviceWith(task("first", "frontmatter-regex"));
+    }
+
+    @Test
     void shouldRejectTasksWithoutRequiredChecks() throws Exception {
         LearningTaskDefinition task = new LearningTaskDefinition(
                 "first",
@@ -109,7 +114,7 @@ class LearningCatalogServiceTests {
     }
 
     @Test
-    void productionCatalogShouldExposeVersionThreeCurriculum() {
+    void productionCatalogShouldExposeVersionFourCurriculum() {
         LearningCatalogService service = new LearningCatalogService(
                 objectMapper,
                 Path.of("data", "learning-catalog.json").toString());
@@ -118,9 +123,9 @@ class LearningCatalogServiceTests {
                 .flatMap(module -> module.tasks().stream())
                 .toList();
 
-        assertEquals(3, catalog.version());
+        assertEquals(4, catalog.version());
         assertEquals(8, catalog.modules().size());
-        assertEquals(20, tasks.size());
+        assertEquals(21, tasks.size());
         assertEquals(
                 List.of(
                         "foundations",
@@ -176,6 +181,18 @@ class LearningCatalogServiceTests {
                 .allMatch(rule -> observability.checks().stream()
                         .anyMatch(check -> "trace-sample.json".equals(check.path()) && rule.equals(check.rule()))));
         assertTrue(observability.checks().stream().anyMatch(check -> "trace-redacted".equals(check.id())));
+
+        LearningTaskDefinition skillAuthoring = taskById(tasks, "agent-skill-authoring");
+        assertEquals(List.of("tool-contract", "prompt-context-design"), skillAuthoring.prerequisiteTaskIds());
+        assertTrue(skillAuthoring.checks().stream().anyMatch(check -> "progressive-disclosure".equals(check.id())));
+        List<TaskCheckDefinition> metadataChecks = skillAuthoring.checks().stream()
+                .filter(check -> List.of("name", "description").contains(check.id()))
+                .toList();
+        assertEquals(2, metadataChecks.size());
+        assertTrue(metadataChecks.stream().allMatch(check -> "SKILL.md".equals(check.path())
+                        && "frontmatter-regex".equals(check.type())));
+        assertTrue(skillAuthoring.checks().stream()
+                .anyMatch(check -> "evaluation".equals(check.id()) && check.required()));
     }
 
     private LearningTaskDefinition taskById(List<LearningTaskDefinition> tasks, String taskId) {

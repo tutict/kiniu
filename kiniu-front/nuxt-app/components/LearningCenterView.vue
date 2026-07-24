@@ -348,16 +348,15 @@ function confirmImport() {
         <h2>{{ t('learningTitle') }}</h2>
         <p class="hero-copy">{{ t('learningHeroCopy') }}</p>
         <div class="course-meta-line">
-          <span>{{ t('learningLabs', { count: tasks.length || 20 }) }}</span>
+          <span>{{ t('learningLabs', { count: tasks.length || 21 }) }}</span>
           <span>{{ t('learningDuration') }}</span>
-          <span>v{{ catalog?.version ?? 3 }}</span>
         </div>
       </div>
       <div class="hero-progress-card">
         <div class="progress-label"><span>{{ t('learningProgress') }}</span><strong>{{ progressPercent }}%</strong></div>
         <div class="progress-track" aria-hidden="true"><span :style="{ width: `${progressPercent}%` }" /></div>
         <div class="hero-metrics">
-          <div><strong>{{ progress?.completedTaskIds.length ?? 0 }}/{{ tasks.length || 20 }}</strong><span>{{ t('learningCompleted') }}</span></div>
+          <div><strong>{{ progress?.completedTaskIds.length ?? 0 }}/{{ tasks.length || 21 }}</strong><span>{{ t('learningCompleted') }}</span></div>
           <div><strong>{{ progress?.weakSkills.length ?? 0 }}</strong><span>{{ t('learningWeakSkills') }}</span></div>
         </div>
       </div>
@@ -389,7 +388,6 @@ function confirmImport() {
             <span>
               <strong>{{ task.title }}</strong>
               <span class="task-badges">
-                <small>{{ task.kind }}</small>
                 <small>{{ t('learningMinutes', { minutes: task.estimatedMinutes, level: task.level }) }}</small>
               </span>
               <small v-if="!taskUnlocked(task)" class="lock-reason">{{ t('learningLockedPrerequisites', { prerequisites: prerequisiteTitles(task).join('、') || t('learningPreviousTask') }) }}</small>
@@ -413,7 +411,7 @@ function confirmImport() {
 
         <section id="lab-brief" class="task-brief panel">
           <div class="section-heading">
-            <div><p class="eyebrow">{{ t('learningCurrentTask', { kind: selectedTask.kind }) }}</p><h3>{{ selectedTask.title }}</h3></div>
+            <div><p class="eyebrow">{{ t('learningCurrentTask') }}</p><h3>{{ selectedTask.title }}</h3></div>
             <span class="score-chip">{{ t('learningBestScore', { score: score || '—' }) }}</span>
           </div>
           <p class="summary">{{ selectedTask.summary }}</p>
@@ -421,7 +419,6 @@ function confirmImport() {
             <div><small>{{ t('learningDifficulty') }}</small><strong>{{ selectedTask.level }}</strong></div>
             <div><small>{{ t('learningTime') }}</small><strong>{{ selectedTask.estimatedMinutes }} {{ t('learningMinuteUnit') }}</strong></div>
             <div><small>{{ t('learningChecks') }}</small><strong>{{ selectedTask.checks.length }}</strong></div>
-            <div><small>{{ t('learningEvidenceMode') }}</small><strong>{{ selectedTask.evidenceMode }}</strong></div>
           </div>
           <div class="objective"><strong>{{ t('learningObjective') }}</strong><span>{{ selectedTask.objective }}</span></div>
           <div class="scenario"><strong>{{ t('learningScenario') }}</strong><span>{{ selectedTask.scenario }}</span></div>
@@ -469,7 +466,7 @@ function confirmImport() {
             <div class="section-heading"><div><p class="eyebrow">{{ t('learningEvidence') }}</p><h3>{{ t('learningChecklist') }}</h3></div><span>{{ results.length }}/{{ selectedTask.checks.length }}</span></div>
             <div v-if="results.length" class="check-list">
               <article v-for="result in results" :key="result.checkId" :class="['check-row', result.passed ? 'passed' : 'failed']">
-                <strong>{{ result.passed ? t('learningPassed') : t('learningNeedsFix') }} · {{ result.checkId }}</strong>
+                <strong>{{ result.passed ? t('learningPassed') : t('learningNeedsFix') }}</strong>
                 <span>{{ result.message }}</span>
                 <small>{{ result.evidence }}</small>
               </article>
@@ -553,7 +550,7 @@ function confirmImport() {
 .task-brief{border-top:3px solid var(--color-primary)}
 .section-heading h3{font-size:20px;line-height:1.3}
 .score-chip{border-radius:4px}
-.task-facts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));margin-top:16px;border:1px solid var(--color-border);border-radius:5px;background:var(--color-row)}
+.task-facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin-top:16px;border:1px solid var(--color-border);border-radius:5px;background:var(--color-row)}
 .task-facts div{display:grid;gap:4px;min-width:0;padding:11px 13px}
 .task-facts div+div{border-left:1px solid var(--color-border-soft)}
 .task-facts small{color:var(--color-faint);font-size:10px;font-weight:700}
@@ -592,7 +589,6 @@ function confirmImport() {
   .lab-context-status{width:100%;justify-content:space-between}
   .task-facts{grid-template-columns:repeat(2,minmax(0,1fr))}
   .task-facts div:nth-child(3){border-left:0;border-top:1px solid var(--color-border-soft)}
-  .task-facts div:nth-child(4){border-top:1px solid var(--color-border-soft)}
   .panel{padding:15px}
   .file-panel textarea{min-height:330px}
 }

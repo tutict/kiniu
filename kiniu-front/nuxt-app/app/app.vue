@@ -109,20 +109,13 @@ const navigationItems = computed(() => [
   { id: 'learning' as const, label: t('navLearning'), meta: t('navLearningMeta'), key: '1' },
   { id: 'chat' as const, label: t('navChat'), meta: sceneLabel.value, key: '2' },
   { id: 'studio' as const, label: t('navStudio'), meta: `${storyDraft.value?.nodes.length ?? 0} ${t('labelNodes')}`, key: '3' },
-  { id: 'settings' as const, label: t('navSettings'), meta: settings.backendUrl || t('fieldNotConfigured'), key: '4' }
+  { id: 'settings' as const, label: t('navSettings'), meta: t('navSettingsMeta'), key: '4' }
 ])
 
 const studioItems = computed(() => [
   { id: 'flow' as const, label: t('studioTaskFlow'), meta: storyDraft.value?.entryNodeId || t('fieldNotEntered') },
   { id: 'agents' as const, label: t('agentStageTitle'), meta: `${agentDraft.value?.agents.length ?? 0}` },
   { id: 'debug' as const, label: t('sessionDebugTitle'), meta: `${sessionExport.value?.turns.length ?? 0} ${t('labelTurns')}` }
-])
-
-const statusItems = computed(() => [
-  { label: t('labelSession'), value: sessionId.value || '-' },
-  { label: t('labelBackendShort'), value: settings.backendUrl || t('fieldNotConfigured') },
-  { label: t('settingsModel'), value: settings.model || t('fieldNoModel') },
-  { label: 'AI', value: `${currentOrchestration.value?.aiInvocations.length ?? 0}` }
 ])
 
 const sceneLabel = computed(() => {
@@ -141,8 +134,6 @@ const sceneLabel = computed(() => {
   const key = labels[worldState.value.currentScene]
   return key ? t(key) : worldState.value.currentScene
 })
-
-const affinityEntries = computed(() => Object.entries(worldState.value.affinityScores))
 
 watch(currentLocale, (locale) => {
   if (settings.locale !== locale) settings.locale = locale
@@ -984,25 +975,9 @@ async function sendTurn(choice = '') {
             </span>
           </button>
         </nav>
-
-        <div class="rail-status">
-          <span>{{ t('labelSession') }}</span>
-          <strong>{{ sessionId }}</strong>
-        </div>
       </aside>
 
       <main class="workspace">
-        <div class="top-strip">
-          <div
-            v-for="item in statusItems"
-            :key="item.label"
-            class="status-chip"
-          >
-            <span>{{ item.label }}</span>
-            <strong>{{ item.value }}</strong>
-          </div>
-        </div>
-
         <LearningCenterView
           :provider-url='settings.providerUrl'
           :api-key='settings.apiKey'
@@ -1016,10 +991,8 @@ async function sendTurn(choice = '') {
         <AgentConsoleView
           v-else-if="activeView === 'chat'"
           v-model:player-input="playerInput"
-          :settings="settings"
           :world-state="worldState"
           :scene-label="sceneLabel"
-          :affinity-entries="affinityEntries"
           :current-branch-options="currentBranchOptions"
           :orchestration="currentOrchestration"
           :messages="messages"
@@ -1253,14 +1226,7 @@ h1{font-size:20px;line-height:1.1;letter-spacing:0;color:var(--color-heading);ov
 .nav-button.active{border-color:var(--color-border-strong);background:var(--color-surface-muted);color:var(--color-primary-strong);box-shadow:var(--shadow-active)}
 .nav-button.active .nav-key{background:var(--color-primary);color:var(--color-on-primary)}
 .nav-button:hover{border-color:var(--color-border);background:var(--color-hover);color:var(--color-primary-strong)}
-.rail-status{display:grid;gap:6px;padding-top:14px;border-top:1px solid var(--color-border-soft);min-width:0}
-.rail-status span{font-size:11px;letter-spacing:0;color:var(--color-faint);font-weight:800}
-.rail-status strong{font-size:12px;line-height:1.35;color:var(--color-muted);overflow-wrap:anywhere}
-.workspace{display:grid;grid-template-rows:auto minmax(0,1fr);gap:10px;min-width:0;min-height:calc(100dvh - 24px)}
-.top-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;min-width:0}
-.status-chip{display:grid;gap:3px;min-width:0;min-height:48px;padding:8px 10px;border:1px solid var(--color-border-soft);border-radius:var(--radius);background:var(--color-surface-panel);color:var(--color-muted)}
-.status-chip span{font-size:11px;line-height:1.2;color:var(--color-faint);font-weight:700;letter-spacing:0}
-.status-chip strong{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;line-height:1.2;color:var(--color-text)}
+.workspace{display:grid;grid-template-rows:minmax(0,1fr);gap:10px;min-width:0;min-height:calc(100dvh - 24px)}
 .studio-frame{display:grid;grid-template-rows:auto minmax(0,1fr);gap:10px;min-width:0;min-height:0}
 .studio-switcher{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;min-width:0}
 .studio-tab{appearance:none;border:1px solid var(--color-border-soft);cursor:pointer;display:grid;gap:3px;min-height:52px;padding:9px 12px;border-radius:var(--radius);background:var(--color-surface-panel);color:var(--color-muted);text-align:left;transition:background 180ms var(--ease),border-color 180ms var(--ease),box-shadow 180ms var(--ease),color 180ms var(--ease)}
@@ -1277,9 +1243,7 @@ h1{font-size:20px;line-height:1.1;letter-spacing:0;color:var(--color-heading);ov
   .nav{grid-template-columns:repeat(4,minmax(0,1fr))}
   .nav-button{grid-template-columns:1fr;justify-items:center;min-height:62px;text-align:center}
   .nav-copy small{display:none}
-  .rail-status{display:none}
   .workspace{min-height:auto}
-  .top-strip{grid-template-columns:repeat(2,minmax(0,1fr))}
   .status-row{grid-column:1}
 }
 @media (max-width:720px){
@@ -1291,9 +1255,7 @@ h1{font-size:20px;line-height:1.1;letter-spacing:0;color:var(--color-heading);ov
   .nav{grid-template-columns:repeat(4,minmax(0,1fr))}
   .nav-button{min-height:54px}
   .nav-copy strong{font-size:12px}
-  .top-strip{grid-template-columns:repeat(2,minmax(0,1fr))}
   .studio-switcher{grid-template-columns:1fr}
-  .status-chip{min-height:42px}
 }
 @media (prefers-reduced-motion:reduce){
   .nav-button,.studio-tab{transition:none}
@@ -1301,7 +1263,7 @@ h1{font-size:20px;line-height:1.1;letter-spacing:0;color:var(--color-heading);ov
 
 /* The lab shell keeps navigation visible like a course platform while leaving the work surface spacious. */
 .workbench{grid-template-columns:1fr;gap:0;width:min(1480px,calc(100vw - 32px));min-height:100dvh;padding:0 0 28px}
-.rail{position:sticky;top:0;z-index:20;grid-template-columns:auto minmax(0,1fr) auto;gap:28px;align-items:center;height:auto;padding:14px 0;border:0;border-bottom:1px solid var(--color-border);border-radius:0;background:color-mix(in srgb,var(--color-bg) 92%,transparent);box-shadow:none;backdrop-filter:blur(14px)}
+.rail{position:sticky;top:0;z-index:20;grid-template-columns:auto minmax(0,1fr);gap:28px;align-items:center;height:auto;padding:14px 0;border:0;border-bottom:1px solid var(--color-border);border-radius:0;background:color-mix(in srgb,var(--color-bg) 92%,transparent);box-shadow:none;backdrop-filter:blur(14px)}
 .brand-lockup{grid-template-columns:36px minmax(0,1fr);gap:10px}
 .brand-mark{width:36px;height:36px;border-radius:5px;background:var(--color-primary);color:var(--color-on-primary);font-size:15px;box-shadow:var(--shadow-primary)}
 .eyebrow{font-size:10px;letter-spacing:0;text-transform:uppercase}
@@ -1314,14 +1276,7 @@ h1{font-size:17px;letter-spacing:0;font-weight:800}
 .nav-copy small{max-width:140px;font-size:11px}
 .nav-button.active{border-color:var(--color-border-strong);background:var(--color-token-bg);color:var(--color-primary-strong);box-shadow:none}
 .nav-button.active .nav-key{border-color:var(--color-primary);background:var(--color-primary);color:var(--color-on-primary)}
-.rail-status{display:flex;align-items:center;gap:8px;padding:0;border:0}
-.rail-status span{font-size:10px;letter-spacing:0;text-transform:uppercase}
-.rail-status strong{max-width:150px;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.workspace{grid-template-rows:auto minmax(0,1fr);gap:18px;min-height:calc(100dvh - 94px);padding-top:18px}
-.top-strip{grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;border:1px solid var(--color-border);background:var(--color-border);border-radius:6px;overflow:hidden}
-.status-chip{min-height:54px;padding:10px 13px;border:0;border-radius:0;background:var(--color-surface-panel)}
-.status-chip span{font-size:10px;letter-spacing:0;text-transform:uppercase}
-.status-chip strong{font-size:12px}
+.workspace{grid-template-rows:minmax(0,1fr);gap:18px;min-height:calc(100dvh - 94px);padding-top:18px}
 .status-row{grid-column:1}
 @media (max-width:1100px){
   .workbench{width:min(calc(100vw - 24px),1480px)}
@@ -1329,7 +1284,6 @@ h1{font-size:17px;letter-spacing:0;font-weight:800}
   .nav{width:100%;padding-bottom:2px}
   .nav-button{display:flex;min-height:40px;text-align:left}
   .nav-copy small{display:block}
-  .rail-status{display:flex}
   .workspace{min-height:auto;padding-top:14px}
 }
 @media (max-width:720px){
@@ -1339,6 +1293,5 @@ h1{font-size:17px;letter-spacing:0;font-weight:800}
   h1{font-size:16px}
   .nav-button{padding:7px 9px}
   .nav-copy small{display:none}
-  .top-strip{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 </style>

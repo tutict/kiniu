@@ -26,6 +26,7 @@ public class LearningCatalogService {
             "contains",
             "markdown-section",
             "regex",
+            "frontmatter-regex",
             "json-field",
             "json-array-min",
             "json-pointer-present",
@@ -240,7 +241,7 @@ public class LearningCatalogService {
                 throw new IllegalStateException("Learning task prerequisites must be unique, known, and non-self references.");
             }
             if (modernCatalog && index > 0 && unique.isEmpty()) {
-                throw new IllegalStateException("Every version 3 task after the first needs prerequisites.");
+                throw new IllegalStateException("Every modern catalog task after the first needs prerequisites.");
             }
             dependencies.put(task.id(), List.copyOf(unique));
         }
@@ -272,7 +273,7 @@ public class LearningCatalogService {
     private void validateRule(TaskCheckDefinition check) {
         try {
             switch (check.type()) {
-                case "regex" -> {
+                case "regex", "frontmatter-regex" -> {
                     if (check.rule().length() > 500) {
                         throw new IllegalArgumentException("Regex rule too long");
                     }

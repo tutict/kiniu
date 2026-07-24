@@ -58,6 +58,7 @@ public class TaskCheckService {
                 case "contains" -> content.contains(definition.rule());
                 case "markdown-section" -> markdownSectionHasContent(content, definition.rule());
                 case "regex" -> Pattern.compile(definition.rule(), Pattern.MULTILINE).matcher(content).find();
+                case "frontmatter-regex" -> frontmatterRegex(content, definition.rule());
                 case "json-field" -> jsonField(content, definition.rule());
                 case "json-array-min" -> jsonArrayMin(content, definition.rule());
                 case "json-pointer-present" -> jsonPointerPresent(content, definition.rule());
@@ -77,23 +78,65 @@ public class TaskCheckService {
     }
 
     private boolean markdownSectionHasContent(String content, String heading) {
+        String target = heading.trim();
+        int targetLevel = headingLevel(target);
+        int breakLevel = targetLevel == 0 ? Integer.MAX_VALUE : targetLevel;
         String[] lines = content.replace("\r", "").split("\n", -1);
         boolean inSection = false;
         StringBuilder section = new StringBuilder();
         for (String line : lines) {
             String trimmed = line.trim();
-            if (!inSection && trimmed.equals(heading.trim())) {
+            if (!inSection && trimmed.equals(target)) {
                 inSection = true;
                 continue;
             }
-            if (inSection && trimmed.startsWith("#")) {
+            if (inSection && trimmed.startsWith("#") && headingLevel(trimmed) <= breakLevel) {
                 break;
             }
-            if (inSection) {
+            if (inSection && isSubstantiveMarkdownLine(trimmed)) {
                 section.append(line).append('\n');
             }
         }
         return inSection && !section.toString().trim().isBlank();
+    }
+
+    private int headingLevel(String line) {
+        int level = 0;
+        while (level < line.length() && line.charAt(level) == '#') {
+            level++;
+        }
+        return level;
+    }
+
+    private boolean isHorizontalRule(String line) {
+        return line.matches("(?:-[ \\t]*){3,}|(?:\\*[ \\t]*){3,}|(?:_[ \\t]*){3,}");
+    }
+
+    private boolean isSubstantiveMarkdownLine(String line) {
+        return !line.isBlank()
+                && !line.startsWith("#")
+                && !isHorizontalRule(line)
+                && !line.matches("(?:[-+*]|\\d+[.)])(?:[ \\t]+\\[[ xX]\\])?[ \\t]*")
+                && !line.matches("(?:>[ \\t]*)+")
+                && !line.matches("(?:`{3,}|~{3,}).*");
+    }
+
+    private boolean frontmatterRegex(String content, String rule) {
+        String[] lines = content.replace("\r", "").split("\n", -1);
+        if (lines.length < 3 || !lines[0].trim().equals("---")) {
+            return false;
+        }
+        StringBuilder frontmatter = new StringBuilder();
+        for (int index = 1; index < lines.length; index++) {
+            String line = lines[index];
+            if (line.trim().equals("---")) {
+                return Pattern.compile(rule, Pattern.MULTILINE)
+                        .matcher(frontmatter)
+                        .find();
+            }
+            frontmatter.append(line).append('\n');
+        }
+        return false;
     }
 
     private boolean jsonField(String content, String field) throws Exception {

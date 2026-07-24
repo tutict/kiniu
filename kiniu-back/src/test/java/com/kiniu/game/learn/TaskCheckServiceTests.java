@@ -30,6 +30,23 @@ class TaskCheckServiceTests {
     }
 
     @Test
+    void shouldMatchFrontmatterRegexOnlyInsideYamlFrontmatter() {
+        LearningTaskDefinition task = task(List.of(
+                new TaskCheckDefinition("name", "frontmatter-regex", "SKILL.md",
+                        "^name:[ \\t]*[a-z][a-z0-9-]{2,}[ \\t]*$", true, 100, "Name")));
+
+        List<TaskCheckResult> valid = service.check(
+                task,
+                Map.of("SKILL.md", "---\nname: review-code\ndescription: Review code changes.\n---\n\n# Review"));
+        List<TaskCheckResult> bodyOnly = service.check(
+                task,
+                Map.of("SKILL.md", "# Review\n\nname: review-code"));
+
+        assertTrue(service.passed(valid));
+        assertFalse(service.passed(bodyOnly));
+    }
+
+    @Test
     void shouldRejectEmptyStructuredValuesAndArrayItems() {
         LearningTaskDefinition task = task(List.of(
                 new TaskCheckDefinition("policy", "json-field", "agent.json", "memoryPolicy", true, 50, "Policy"),
@@ -53,6 +70,68 @@ class TaskCheckServiceTests {
                 Map.of("requirements.md", "# Requirements\n\n## User\n\n## Goal\nSomething"));
 
         assertFalse(service.passed(results));
+    }
+
+    @Test
+    void shouldAcceptMarkdownSectionContentUnderSubHeadings() {
+        LearningTaskDefinition task = task(List.of(
+                new TaskCheckDefinition("flow", "markdown-section", "requirements.md", "## Flow", true, 100, "Flow")));
+
+        List<TaskCheckResult> results = service.check(
+                task,
+                Map.of("requirements.md", "## Flow\n### Step 1\nGather inputs.\n\n## Next\nOther"));
+
+        assertTrue(service.passed(results));
+    }
+
+    @Test
+    void shouldNotCountBareSubHeadingsAsMarkdownSectionContent() {
+        LearningTaskDefinition task = task(List.of(
+                new TaskCheckDefinition("flow", "markdown-section", "requirements.md", "## Flow", true, 100, "Flow")));
+
+        List<TaskCheckResult> results = service.check(
+                task,
+                Map.of("requirements.md", "## Flow\n### Step 1\n\n## Next\nOther"));
+
+        assertFalse(service.passed(results));
+    }
+
+    @Test
+    void shouldNotCountHorizontalRulesAsMarkdownSectionContent() {
+        LearningTaskDefinition task = task(List.of(
+                new TaskCheckDefinition("user", "markdown-section", "requirements.md", "## User", true, 100, "User")));
+
+        List<TaskCheckResult> results = service.check(
+                task,
+                Map.of("requirements.md", "## User\n\n---\n\n## Goal\nSomething"));
+
+        assertFalse(service.passed(results));
+    }
+
+    @Test
+    void shouldNotCountSpacedHorizontalRulesAsMarkdownSectionContent() {
+        LearningTaskDefinition task = task(List.of(
+                new TaskCheckDefinition("user", "markdown-section", "requirements.md", "## User", true, 100, "User")));
+
+        List<TaskCheckResult> results = service.check(
+                task,
+                Map.of("requirements.md", "## User\n\n- - -\n\n## Goal\nSomething"));
+
+        assertFalse(service.passed(results));
+    }
+
+    @Test
+    void shouldNotCountEmptyMarkdownSyntaxAsSectionContent() {
+        LearningTaskDefinition task = task(List.of(
+                new TaskCheckDefinition("workflow", "markdown-section", "SKILL.md", "## Workflow", true, 100, "Workflow")));
+
+        for (String placeholder : List.of("-", "*", "1.", "- [ ]", ">", "```\n```")) {
+            List<TaskCheckResult> results = service.check(
+                    task,
+                    Map.of("SKILL.md", "# Skill\n\n## Workflow\n\n" + placeholder + "\n\n## Boundaries\n"));
+
+            assertFalse(service.passed(results), placeholder);
+        }
     }
 
     @Test

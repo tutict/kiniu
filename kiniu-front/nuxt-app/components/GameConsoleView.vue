@@ -1,12 +1,10 @@
 <script setup lang="ts">
 import { useUiI18n } from '../i18n'
-import type { ApiSettings, BranchOptionView, ChatMessage, OrchestrationTraceView, SandboxPlanDraft, WorldState } from '../types/game'
+import type { BranchOptionView, ChatMessage, OrchestrationTraceView, SandboxPlanDraft, WorldState } from '../types/game'
 
 const props = defineProps<{
-  settings: ApiSettings
   worldState: WorldState
   sceneLabel: string
-  affinityEntries: [string, number][]
   currentBranchOptions: BranchOptionView[]
   orchestration: OrchestrationTraceView | null
   messages: ChatMessage[]
@@ -51,10 +49,9 @@ const previewBranch = computed(() => {
 
 const previewAffinity = computed(() => {
   const option = previewBranch.value
-  if (!option || !option.targetAgentId) return null
+  if (!option?.targetAgentId) return null
   const currentValue = props.worldState.affinityScores?.[option.targetAgentId] ?? 0
   return {
-    agentId: option.targetAgentId,
     currentValue,
     nextValue: currentValue + option.relationshipDelta
   }
@@ -62,22 +59,16 @@ const previewAffinity = computed(() => {
 
 const previewFlags = computed(() => {
   const option = previewBranch.value
-  const nextFlags = new Set(props.worldState.flags ?? [])
   if (!option) {
     return {
       added: [] as string[],
-      removed: [] as string[],
-      finalFlags: Array.from(nextFlags)
+      removed: [] as string[]
     }
   }
 
-  option.removedFlags.forEach(flag => nextFlags.delete(flag))
-  option.addedFlags.forEach(flag => nextFlags.add(flag))
-
   return {
     added: option.addedFlags,
-    removed: option.removedFlags,
-    finalFlags: Array.from(nextFlags)
+    removed: option.removedFlags
   }
 })
 
@@ -186,10 +177,6 @@ function displayCode(value: string) {
           <p class="eyebrow">{{ t('labelCurrentWorkspace') }}</p>
           <h2>{{ sceneLabel }}</h2>
         </div>
-        <div class="session-meta">
-          <span>{{ worldState.currentNodeId || t('fieldNotEntered') }}</span>
-          <span>{{ settings.backendUrl || t('fieldNotConfigured') }}</span>
-        </div>
       </header>
 
       <div class="dialogue-feed">
@@ -211,7 +198,6 @@ function displayCode(value: string) {
           @click="emit('send-turn', option.label)"
         >
           <strong>{{ option.label }}</strong>
-          <small>{{ displayCode(option.intent) }} · {{ displayCode(option.risk) }} · {{ displayCode(option.targetMood) }}</small>
           <span>{{ option.consequenceSummary }}</span>
         </button>
       </div>
@@ -227,7 +213,6 @@ function displayCode(value: string) {
           @input="emit('update:playerInput', ($event.target as HTMLTextAreaElement).value)"
         />
         <div class="composer-footer">
-          <p class="hint">{{ t('labelSendEndpoint') }} <strong>{{ settings.backendUrl }}/agent/next</strong></p>
           <button class="primary-button" type="submit" :disabled="isSending">
             {{ isSending ? t('actionSending') : t('actionSend') }}
           </button>
@@ -252,27 +237,18 @@ function displayCode(value: string) {
       </header>
 
       <div v-if="isContextOpen" class="context-body">
-        <section class="context-card">
-          <div class="meta-grid">
-            <div>
-              <span>{{ t('labelBackend') }}</span>
-              <strong>{{ settings.backendUrl || t('fieldNotConfigured') }}</strong>
-            </div>
-            <div>
-              <span>{{ t('labelFlowNode') }}</span>
-              <strong>{{ worldState.currentNodeId || t('fieldNotEntered') }}</strong>
-            </div>
-          </div>
-        </section>
-
         <section v-if="previewBranch" class="context-card featured">
           <div class="preview-head">
             <h3>{{ t('labelNextPreview') }}</h3>
-            <span class="preview-risk">{{ displayCode(previewBranch.risk) }}</span>
+            <span class="preview-risk">{{ t('labelRisk') }} · {{ displayCode(previewBranch.risk) }}</span>
           </div>
           <p class="plan-copy strong">{{ previewBranch.label }}</p>
           <p class="plan-copy">{{ previewBranch.consequenceSummary }}</p>
-          <div class="meta-grid compact">
+          <div class="verification-grid">
+            <div>
+              <span>{{ t('labelTarget') }}</span>
+              <strong>{{ previewBranch.targetAgentId || t('fieldWorkspace') }}</strong>
+            </div>
             <div>
               <span>{{ t('labelIntent') }}</span>
               <strong>{{ displayCode(previewBranch.intent) }}</strong>
@@ -281,14 +257,14 @@ function displayCode(value: string) {
               <span>{{ t('labelMood') }}</span>
               <strong>{{ displayCode(previewBranch.targetMood) }}</strong>
             </div>
-            <div>
-              <span>{{ t('labelTarget') }}</span>
-              <strong>{{ previewBranch.targetAgentId || t('fieldWorkspace') }}</strong>
+            <div v-if="previewAffinity">
+              <span>{{ t('labelAffinity') }}</span>
+              <strong>{{ previewAffinity.currentValue }} -> {{ previewAffinity.nextValue }}</strong>
             </div>
           </div>
-          <div class="token-row">
-            <span v-for="flag in previewFlags.added" :key="`add-${flag}`" class="token added">+ {{ flag }}</span>
-            <span v-for="flag in previewFlags.removed" :key="`remove-${flag}`" class="token removed">- {{ flag }}</span>
+          <div class="token-row" :aria-label="t('labelFlags')">
+            <span v-for="flag in previewFlags.added" :key="'add-' + flag" class="token added">+ {{ flag }}</span>
+            <span v-for="flag in previewFlags.removed" :key="'remove-' + flag" class="token removed">- {{ flag }}</span>
             <span v-if="!previewFlags.added.length && !previewFlags.removed.length" class="token muted">{{ t('labelNoFlagChanges') }}</span>
           </div>
           <div class="sandbox-actions">
@@ -297,22 +273,6 @@ function displayCode(value: string) {
           </div>
           <p v-if="sandboxStatus" class="hint">{{ sandboxStatus }}</p>
         </section>
-
-        <details class="context-section">
-          <summary>{{ t('labelRuntime') }}</summary>
-          <div class="section-body">
-            <div class="token-row">
-              <span v-for="flag in worldState.flags" :key="flag" class="token">{{ flag }}</span>
-              <span v-if="worldState.flags.length === 0" class="token muted">{{ t('fieldNone') }}</span>
-            </div>
-            <div class="affinity-list">
-              <div v-for="[name, value] in affinityEntries" :key="name" class="affinity-item">
-                <span>{{ name }}</span>
-                <strong>{{ value }}</strong>
-              </div>
-            </div>
-          </div>
-        </details>
 
         <details v-if="sandboxOptions.length" class="context-section" open>
           <summary>{{ t('labelSessionSandbox') }}</summary>
@@ -325,12 +285,11 @@ function displayCode(value: string) {
               >
                 <div class="plan-head">
                   <strong>#{{ index + 1 }} {{ option.label }}</strong>
-                  <span>{{ option.relationshipDelta >= 0 ? '+' : '' }}{{ option.relationshipDelta }}</span>
                 </div>
                 <p>{{ option.consequenceSummary }}</p>
               </article>
             </div>
-            <div class="meta-grid compact">
+            <div class="verification-grid">
               <div>
                 <span>{{ t('labelTotalDelta') }}</span>
                 <strong>{{ sandboxRelationshipDelta >= 0 ? '+' : '' }}{{ sandboxRelationshipDelta }}</strong>
@@ -351,11 +310,8 @@ function displayCode(value: string) {
         <details v-if="orchestration" class="context-section">
           <summary>{{ t('labelAgentOrchestration') }}</summary>
           <div class="section-body">
-            <div class="meta-grid compact">
-              <div>
-                <span>{{ t('labelStory') }}</span>
-                <strong>{{ orchestration.storyTitle }}</strong>
-              </div>
+            <p class="plan-copy strong">{{ orchestration.storyTitle }}</p>
+            <div class="verification-grid">
               <div>
                 <span>{{ t('labelFocus') }}</span>
                 <strong>{{ orchestration.focusAgentId }}</strong>
@@ -366,20 +322,20 @@ function displayCode(value: string) {
               </div>
             </div>
             <p class="plan-copy">{{ orchestration.planner.sceneGoal }}</p>
-            <div class="token-row">
+            <div v-if="orchestration.speakingAgentIds.length" class="token-row">
               <span v-for="agentId in orchestration.speakingAgentIds" :key="agentId" class="token">{{ agentId }}</span>
             </div>
-            <div class="plan-list" v-if="orchestration.aiInvocations.length">
+            <div v-if="orchestration.aiInvocations.length" class="plan-list">
               <article
                 v-for="invocation in orchestration.aiInvocations.slice(0, 3)"
-                :key="`${invocation.operation}-${invocation.targetId}`"
+                :key="invocation.operation + '-' + invocation.targetId"
                 class="plan-card"
               >
                 <div class="plan-head">
                   <strong>{{ invocation.operation }}</strong>
                   <span>{{ invocation.latencyMs }}ms</span>
                 </div>
-                <p>{{ invocation.model || t('fieldNoModel') }}</p>
+                <p>{{ invocation.targetId || t('fieldWorkspace') }} / {{ invocation.model || t('fieldNoModel') }}</p>
               </article>
             </div>
           </div>
@@ -404,8 +360,6 @@ h2,h3,p{margin:0}
 h2{font-size:23px;line-height:1.15;color:var(--color-heading);overflow-wrap:anywhere}
 h3{font-size:16px;line-height:1.25;color:var(--color-heading-soft);overflow-wrap:anywhere}
 .session-bar,.context-head,.preview-head,.plan-head,.composer-footer{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
-.session-meta{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;max-width:54%;min-width:0}
-.session-meta span{padding:5px 8px;border-radius:var(--radius);background:var(--color-token-muted-bg);color:var(--color-muted);font-size:12px;font-weight:700;line-height:1.3;overflow-wrap:anywhere}
 .dialogue-feed{display:grid;gap:10px;align-content:start;min-height:0;overflow:auto;padding-right:4px;scrollbar-gutter:stable}
 .message{max-width:min(78%,840px);padding:12px 14px;border:1px solid var(--color-border-soft);border-radius:var(--radius);line-height:1.62;background:var(--color-surface);overflow-wrap:anywhere}
 .message.assistant,.message.system{background:var(--color-row)}
@@ -421,8 +375,7 @@ h3{font-size:16px;line-height:1.25;color:var(--color-heading-soft);overflow-wrap
 .composer-label{font-size:12px;letter-spacing:0;color:var(--color-primary-strong);font-weight:800}
 .composer-input{width:100%;resize:vertical;min-height:104px;padding:12px 14px;border:1px solid var(--color-border);border-radius:var(--radius);outline:none;color:var(--color-text);background:var(--color-input);font:inherit;line-height:1.6}
 .composer-input:focus{border-color:var(--color-primary);box-shadow:0 0 0 4px var(--color-focus-ring)}
-.composer-footer{align-items:center;flex-wrap:wrap}
-.composer-footer .hint{min-width:0;overflow-wrap:anywhere}
+.composer-footer{align-items:center;justify-content:flex-end;flex-wrap:wrap}
 .primary-button,.secondary-button,.context-toggle{min-height:38px;padding:0 13px;border-radius:var(--radius);font-weight:800}
 .primary-button{border:0;background:var(--color-accent);color:var(--color-on-accent)}
 .secondary-button,.context-toggle{border:1px solid var(--color-border);background:var(--color-input);color:var(--color-primary-strong)}
@@ -438,19 +391,20 @@ h3{font-size:16px;line-height:1.25;color:var(--color-heading-soft);overflow-wrap
 .context-section[open] summary{border-bottom:1px solid var(--color-border-soft)}
 .context-section[open] summary::after{content:'-'}
 .section-body{display:grid;gap:10px;padding:12px}
-.meta-grid,.affinity-list,.plan-list{display:grid;gap:8px}
-.meta-grid{grid-template-columns:1fr}
-.meta-grid.compact{grid-template-columns:repeat(2,minmax(0,1fr))}
-.meta-grid div,.affinity-item{display:flex;justify-content:space-between;gap:10px;align-items:center;min-width:0}
-.meta-grid span,.affinity-item span,.plan-head span{color:var(--color-faint);font-size:12px;line-height:1.35}
-.meta-grid strong,.affinity-item strong,.plan-head strong{min-width:0;color:var(--color-text);overflow-wrap:anywhere}
-.preview-risk{display:inline-flex;padding:4px 8px;border-radius:var(--radius);background:var(--color-warning-bg);color:var(--color-warning-text);font-size:11px;font-weight:800;white-space:nowrap}
-.plan-copy.strong{font-size:14px;font-weight:800;color:var(--color-heading-soft)}
-.token-row{display:flex;flex-wrap:wrap;gap:7px}
-.token{padding:5px 8px;border-radius:var(--radius);background:var(--color-token-bg);color:var(--color-token-text);font-size:12px;font-weight:800;line-height:1.25;overflow-wrap:anywhere}
+.verification-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;border:1px solid var(--color-border-soft);border-radius:var(--radius);background:var(--color-border-soft);overflow:hidden}
+.verification-grid div{display:grid;gap:4px;min-width:0;padding:8px 9px;background:var(--color-surface)}
+.verification-grid span{color:var(--color-faint);font-size:10px;font-weight:700;line-height:1.2}
+.verification-grid strong{min-width:0;color:var(--color-text);font-size:12px;line-height:1.35;overflow-wrap:anywhere}
+.token-row{display:flex;flex-wrap:wrap;gap:6px}
+.token{padding:4px 7px;border-radius:var(--radius);background:var(--color-token-bg);color:var(--color-token-text);font-size:11px;font-weight:800;line-height:1.25;overflow-wrap:anywhere}
 .token.muted{background:var(--color-token-muted-bg);color:var(--color-faint)}
 .token.added{background:var(--color-success-bg);color:var(--color-success-text)}
 .token.removed{background:var(--color-danger-bg);color:var(--color-danger-text)}
+.plan-list{display:grid;gap:8px}
+.plan-head span{color:var(--color-faint);font-size:12px;line-height:1.35}
+.plan-head strong{min-width:0;color:var(--color-text);overflow-wrap:anywhere}
+.preview-risk{display:inline-flex;padding:4px 8px;border-radius:var(--radius);background:var(--color-warning-bg);color:var(--color-warning-text);font-size:11px;font-weight:800;white-space:nowrap}
+.plan-copy.strong{font-size:14px;font-weight:800;color:var(--color-heading-soft)}
 .plan-card{display:grid;gap:5px;padding:10px;border:1px solid var(--color-border-soft);border-radius:var(--radius);background:var(--color-surface);overflow-wrap:anywhere}
 .plan-card p{margin:0;color:var(--color-muted);font-size:12px;line-height:1.45}
 .sandbox-actions{display:flex;flex-wrap:wrap;gap:8px}
@@ -462,11 +416,10 @@ h3{font-size:16px;line-height:1.25;color:var(--color-heading-soft);overflow-wrap
   .context-panel.collapsed .context-head{writing-mode:horizontal-tb}
   .context-panel.collapsed .eyebrow,.context-panel.collapsed .context-head h3{display:block}
   .session-bar{display:grid}
-  .session-meta{max-width:none;justify-content:flex-start}
   .choice-row{grid-template-columns:1fr}
   .message{max-width:100%}
   .composer-footer .primary-button{width:100%}
 }
-@media (max-width:520px){.meta-grid.compact{grid-template-columns:1fr}.context-head{align-items:center}.context-toggle{min-width:72px}}
+@media (max-width:520px){.verification-grid{grid-template-columns:1fr}.context-head{align-items:center}.context-toggle{min-width:72px}}
 @media (prefers-reduced-motion:reduce){.choice-button,.primary-button,.secondary-button,.context-toggle{transition:none}.choice-button:hover{transform:none}}
 </style>

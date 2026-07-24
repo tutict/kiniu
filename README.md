@@ -8,7 +8,7 @@
 - **任务流编排**：通过节点、动作、标记和亲和度变化描述可复用的智能体流程。
 - **智能体管理**：维护智能体身份、角色、系统提示词、工作区、目标和调度参数。
 - **会话回放**：导出会话、查看分支、沙盘推演和 AI 调用路径，便于复盘和调试。
-- **工程课程**：通过 20 个可验证任务学习模型契约、Agent、RAG、安全、协议互操作和生产发布。
+- **工程课程**：通过 21 个可验证任务学习模型契约、Agent、Skill、RAG、安全、协议互操作和生产发布。
 - **轻量运行**：项目优先控制依赖和系统资源占用，适合与 GraalVM 后端运行方式配合。
 
 ## 目录结构
@@ -104,9 +104,9 @@ http://localhost:8080
 - `/learn/tasks/{taskId}/feedback`
 - `/learn/tasks/{taskId}/publish-agent`
 
-## AI 工程课程 3.0
+## AI 工程课程 4.0
 
-学习中心使用 `kiniu-back/data/learning-catalog.json` 中的静态版本 3 目录，面向零基础转行者设计，预计 18–20 小时完成。原有 7 个任务 ID 全部保留，历史完成项、最高分、草稿和已发布 Agent 不会因目录升级而重置。
+学习中心使用 `kiniu-back/data/learning-catalog.json` 中的静态版本 4 目录，面向零基础转行者设计，预计 19–21 小时完成。版本 3 的 20 个任务 ID 全部保留，历史完成项、最高分、草稿和已发布 Agent 不会因目录升级而重置。
 
 ### 课程地图
 
@@ -114,7 +114,7 @@ http://localhost:8080
 |---|---|---|
 | 基础与模型契约 | `requirements-contract`、`http-json-basics`、`model-response-contract` | 需求契约、HTTP 交换、结构化模型响应 |
 | Prompt、Context 与数据 | `prompt-context-design`、`data-lifecycle`、`context-memory-budget` | Context 方案、数据生命周期、记忆预算 |
-| Workflow、工具与 Agent | `workflow-agent-decision`、`tool-contract`、`agent-trace-recovery` | 架构选型、工具契约、Agent 轨迹与恢复 |
+| Workflow、工具与 Agent | `workflow-agent-decision`、`tool-contract`、`agent-skill-authoring`、`agent-trace-recovery` | 架构选型、工具契约、Skill 设计、Agent 轨迹与恢复 |
 | 评测与 Agent 项目 | `evaluation-suite`、`companion-agent` | 持续评测集、完整 Agent 项目 |
 | RAG 检索增强 | `rag-pipeline`、`rag-evaluation` | RAG 设计、召回与 groundedness 证据 |
 | GenAI 安全 | `genai-red-team`、`access-concurrency` | 威胁模型、攻击结果、服务安全契约 |
@@ -127,6 +127,7 @@ http://localhost:8080
 
 每项任务包含 300–600 字中文讲义、明确交付物、总计 100 分的确定性检查，以及 1–3 个带版本和访问日期的官方 HTTPS 参考链接。检查器支持原有规则，并增加：
 
+- `frontmatter-regex`：只在文件开头的 YAML frontmatter 内匹配元数据字段。
 - `json-pointer-present`：使用 RFC 6901 JSON Pointer 验证嵌套字段存在且内容有效。
 - `json-array-shape`：验证数组最小数量以及每个对象必须包含的字段。
 - `json-number-range`：验证延迟、token、预算等数值位于允许区间。
