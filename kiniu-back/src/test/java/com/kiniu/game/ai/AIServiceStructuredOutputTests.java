@@ -8,7 +8,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.kiniu.game.agent.Agent;
 import com.kiniu.game.agent.AgentTurnPlan;
 import com.kiniu.game.dto.AgentReplyView;

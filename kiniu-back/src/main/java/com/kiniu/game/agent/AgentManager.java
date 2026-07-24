@@ -1,6 +1,7 @@
 package com.kiniu.game.agent;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 import com.kiniu.game.dto.AgentCatalogResponse;
 import com.kiniu.game.state.WorldState;
 import java.io.IOException;
@@ -107,7 +108,7 @@ public class AgentManager {
 
             createCatalogDirectories();
             persistCatalog(getAgentCatalog());
-        } catch (IOException exception) {
+        } catch (IOException | JacksonException exception) {
             throw new IllegalStateException("Failed to initialize agent catalog from " + catalogPath, exception);
         }
     }
@@ -134,7 +135,7 @@ public class AgentManager {
         try {
             createCatalogDirectories();
             objectMapper.writerWithDefaultPrettyPrinter().writeValue(catalogPath.toFile(), response);
-        } catch (IOException exception) {
+        } catch (IOException | JacksonException exception) {
             throw new IllegalStateException("Failed to persist agent catalog to " + catalogPath, exception);
         }
     }

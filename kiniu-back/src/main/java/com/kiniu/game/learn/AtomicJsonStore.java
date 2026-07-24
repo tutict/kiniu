@@ -1,6 +1,7 @@
 package com.kiniu.game.learn;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
@@ -30,6 +31,8 @@ final class AtomicJsonStore {
             } catch (AtomicMoveNotSupportedException exception) {
                 Files.move(temporary, target, StandardCopyOption.REPLACE_EXISTING);
             }
+        } catch (JacksonException exception) {
+            throw new IOException("Failed to serialize JSON for " + target, exception);
         } finally {
             Files.deleteIfExists(temporary);
         }

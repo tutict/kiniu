@@ -1,8 +1,8 @@
 package com.kiniu.game.learn;
 
-import com.fasterxml.jackson.core.JsonPointer;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import java.io.IOException;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.JsonPointer;
+import tools.jackson.databind.ObjectMapper;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -124,7 +124,7 @@ public class LearningCatalogService {
                 throw new IllegalStateException("Learning catalog does not exist: " + catalogPath);
             }
             return objectMapper.readValue(catalogPath.toFile(), LearningCatalogDefinition.class);
-        } catch (IOException exception) {
+        } catch (JacksonException exception) {
             throw new IllegalStateException("Failed to load learning catalog from " + catalogPath, exception);
         }
     }

@@ -1,11 +1,71 @@
-# .idea directory
+# IDE and editor state
 .idea/
-
-# Build files
+.vscode/
+.fleet/
 *.iml
-.gitignore
-.gitattributes
+*.ipr
+*.iws
+*.swp
+*.swo
+*~
 
-# Local runtime files
-.run/
-logs/
+# Operating system files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+
+# Local agent and browser automation state
+/.claude/settings.local.json
+/.playwright-cli/
+/output/
+
+# Local runtime state and logs
+/.run/
+/logs/
+*.log
+*.pid
+
+# Java, Maven, and JVM artifacts
+target/
+.apt_generated/
+.classpath
+.factorypath
+.project
+.settings/
+.springBeans
+.sts4-cache/
+hs_err_pid*
+replay_pid*
+dependency-reduced-pom.xml
+pom.xml.versionsBackup
+release.properties
+.attach_pid*
+/kiniu-back/build/
+/kiniu-back/dist/
+/kiniu-back/nbbuild/
+/kiniu-back/nbdist/
+/kiniu-back/nbproject/private/
+
+# Node, Nuxt, and test artifacts
+node_modules/
+.nuxt/
+.output/
+.nitro/
+.cache/
+.data/
+dist/
+coverage/
+.nyc_output/
+test-results/
+playwright-report/
+blob-report/
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*

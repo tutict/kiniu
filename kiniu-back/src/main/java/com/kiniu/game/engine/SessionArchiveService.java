@@ -1,7 +1,7 @@
 package com.kiniu.game.engine;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 import com.kiniu.game.agent.Agent;
 import com.kiniu.game.dto.AgentReplyView;
 import com.kiniu.game.dto.BranchOptionView;
@@ -246,7 +246,7 @@ public class SessionArchiveService {
                 SessionTurnView turn;
                 try {
                     turn = objectMapper.readValue(line, SessionTurnView.class);
-                } catch (JsonProcessingException exception) {
+                } catch (JacksonException exception) {
                     LOGGER.warn("Skipping malformed session turn line {} for {}.", lineNumber, sessionId);
                     continue;
                 }
@@ -269,7 +269,7 @@ public class SessionArchiveService {
 
         try {
             return normalizeExport(objectMapper.readValue(exportPath.toFile(), SessionExportResponse.class));
-        } catch (IOException exception) {
+        } catch (JacksonException exception) {
             LOGGER.warn("Ignoring unreadable session export {}.", exportPath, exception);
             return null;
         }
@@ -288,7 +288,7 @@ public class SessionArchiveService {
                     0,
                     0,
                     archiveState.sandboxPlans()));
-        } catch (IOException exception) {
+        } catch (IOException | JacksonException exception) {
             throw new IllegalStateException("Failed to persist session header for " + archiveState.sessionId(), exception);
         }
     }
@@ -302,7 +302,7 @@ public class SessionArchiveService {
                     StandardCharsets.UTF_8,
                     StandardOpenOption.CREATE,
                     StandardOpenOption.APPEND);
-        } catch (IOException exception) {
+        } catch (IOException | JacksonException exception) {
             throw new IllegalStateException("Failed to append session turn for " + sessionId, exception);
         }
     }

@@ -1,6 +1,7 @@
 package com.kiniu.game.story;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 import com.kiniu.game.dto.StoryCatalogResponse;
 import com.kiniu.game.dto.StoryChoiceView;
 import com.kiniu.game.dto.StoryNodeView;
@@ -153,7 +154,7 @@ public class StoryEngine {
 
             createCatalogDirectories();
             persistCatalog(getStoryCatalog());
-        } catch (IOException exception) {
+        } catch (IOException | JacksonException exception) {
             throw new IllegalStateException("Failed to initialize story catalog from " + catalogPath, exception);
         }
     }
@@ -162,7 +163,7 @@ public class StoryEngine {
         try {
             createCatalogDirectories();
             objectMapper.writerWithDefaultPrettyPrinter().writeValue(catalogPath.toFile(), catalog);
-        } catch (IOException exception) {
+        } catch (IOException | JacksonException exception) {
             throw new IllegalStateException("Failed to persist story catalog to " + catalogPath, exception);
         }
     }

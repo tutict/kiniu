@@ -2,7 +2,7 @@ package com.kiniu.game.story;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import com.kiniu.game.dto.StoryCatalogResponse;
 import com.kiniu.game.state.WorldState;
 import java.util.List;

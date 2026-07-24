@@ -1,7 +1,7 @@
 package com.kiniu.game.learn;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.InvalidPathException;
@@ -203,14 +203,14 @@ public class TaskCheckService {
         if (node == null || node.isNull() || node.isMissingNode()) {
             return false;
         }
-        if (node.isTextual()) {
-            return !node.asText().trim().isBlank();
+        if (node.isString()) {
+            return !node.asString().trim().isBlank();
         }
         if (node.isArray()) {
             return node.valueStream().anyMatch(this::isMeaningful);
         }
         if (node.isObject()) {
-            return node.fields().hasNext() && node.valueStream().anyMatch(this::isMeaningful);
+            return !node.properties().isEmpty() && node.valueStream().anyMatch(this::isMeaningful);
         }
         return true;
     }

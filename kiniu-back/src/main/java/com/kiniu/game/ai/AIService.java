@@ -1,7 +1,7 @@
 package com.kiniu.game.ai;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import com.kiniu.game.agent.Agent;
 import com.kiniu.game.learn.LearningAttempt;
 import com.kiniu.game.learn.LearningTaskDefinition;
@@ -595,7 +595,7 @@ public class AIService {
     }
 
     private String requireText(JsonNode root, String fieldName) throws IOException {
-        String value = safe(root.path(fieldName).asText(""));
+        String value = safe(root.path(fieldName).asString(""));
         if (value.isBlank()) {
             throw new IOException("Missing text field: " + fieldName);
         }

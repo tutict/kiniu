@@ -1,6 +1,6 @@
 package com.kiniu.game.learn;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -102,7 +102,7 @@ public class LearningAttemptService {
             }
             int start = Math.max(0, loaded.size() - MAX_ATTEMPTS);
             return List.copyOf(loaded.subList(start, loaded.size()));
-        } catch (IOException | RuntimeException exception) {
+        } catch (RuntimeException exception) {
             log.error("Learning attempts at {} are invalid and will be quarantined.", attemptsPath, exception);
             quarantineCorruptFile();
             return List.of();

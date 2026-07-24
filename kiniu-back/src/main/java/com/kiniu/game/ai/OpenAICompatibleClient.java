@@ -1,7 +1,8 @@
 package com.kiniu.game.ai;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -41,12 +42,18 @@ public class OpenAICompatibleClient {
                         Map.of("role", "user", "content", userPrompt)),
                 "temperature", temperature,
                 "max_tokens", maxTokens);
+        String requestBody;
+        try {
+            requestBody = objectMapper.writeValueAsString(payload);
+        } catch (JacksonException exception) {
+            throw new IOException("Failed to serialize provider request.", exception);
+        }
 
         HttpRequest request = HttpRequest.newBuilder(URI.create(endpoint))
                 .timeout(REQUEST_TIMEOUT)
                 .header("Content-Type", "application/json")
                 .header("Authorization", "Bearer " + config.apiKey().trim())
-                .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(payload)))
+                .POST(HttpRequest.BodyPublishers.ofString(requestBody))
                 .build();
 
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
@@ -54,9 +61,14 @@ public class OpenAICompatibleClient {
             throw new IOException("Provider returned HTTP " + response.statusCode() + ".");
         }
 
-        JsonNode root = objectMapper.readTree(response.body());
+        JsonNode root;
+        try {
+            root = objectMapper.readTree(response.body());
+        } catch (JacksonException exception) {
+            throw new IOException("Provider response was not valid JSON.", exception);
+        }
         JsonNode contentNode = root.path("choices").path(0).path("message").path("content");
-        String content = contentNode.asText("").trim();
+        String content = contentNode.asString("").trim();
         if (content.isBlank()) {
             throw new IOException("Provider response did not contain choices[0].message.content.");
         }

@@ -1,7 +1,7 @@
 package com.kiniu.game.learn;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import com.kiniu.game.agent.Agent;
 import com.kiniu.game.agent.AgentManager;
 import com.kiniu.game.dto.AgentCatalogResponse;
@@ -42,14 +42,14 @@ public class LearningAgentPublisher {
             List<String> boundaries = requiredTextArray(root, "boundaries", 2);
             String memoryPolicy = requiredText(root, "memoryPolicy");
             String failurePolicy = requiredText(root, "failurePolicy");
-            String id = normalizeAgentId(root.path("id").asText("student-companion"));
+            String id = normalizeAgentId(root.path("id").asString("student-companion"));
 
             Agent agent = new Agent(
                     id,
                     name,
                     "companion",
                     "A learner-built companion Agent with explicit goals, memory policy, boundaries, and failure handling.",
-                    root.path("personality").asText("warm, practical, bounded"),
+                    root.path("personality").asString("warm, practical, bounded"),
                     buildSystemPrompt(goals, boundaries, memoryPolicy, failurePolicy),
                     List.of("agent-hub", "companion-check-in", "learning-review"),
                     Map.of(
@@ -82,7 +82,7 @@ public class LearningAgentPublisher {
     }
 
     private String requiredText(JsonNode root, String field) {
-        String value = root.path(field).asText("").trim();
+        String value = root.path(field).asString("").trim();
         if (value.isBlank()) {
             throw new IllegalArgumentException(field + " must not be blank.");
         }
@@ -98,8 +98,8 @@ public class LearningAgentPublisher {
             throw new IllegalArgumentException(field + " must be an array.");
         }
         List<String> values = node.valueStream()
-                .filter(JsonNode::isTextual)
-                .map(value -> value.asText("").trim())
+                .filter(JsonNode::isString)
+                .map(value -> value.asString("").trim())
                 .filter(value -> !value.isBlank())
                 .toList();
         if (values.size() > MAX_ARRAY_ITEMS
