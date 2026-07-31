@@ -4,6 +4,13 @@ const devtoolsEnabled = process.env.NUXT_DEVTOOLS_ENABLED === 'true'
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   ssr: false,
+  buildDir: process.env.NUXT_BUILD_DIR || '.nuxt',
+  runtimeConfig: {
+    public: {
+      kiniuBackendUrl: '',
+      kiniuLocalToken: ''
+    }
+  },
   devtools: { enabled: devtoolsEnabled },
   nitro: {
     preset: 'static'

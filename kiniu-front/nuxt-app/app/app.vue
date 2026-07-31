@@ -4,6 +4,7 @@ import AgentStudioView from '../components/StoryEditorView.vue'
 import SettingsPanelView from '../components/SettingsPanelView.vue'
 import LearningCenterView from '../components/LearningCenterView.vue'
 import { normalizeLocale, provideUiI18n, type I18nKey } from '../i18n'
+import { resolveStartupSettings } from '../utils/startupSettings'
 import type {
   AgentCatalogResponse,
   ApiSettings,
@@ -26,6 +27,7 @@ type ViewMode = 'learning' | 'chat' | 'studio' | 'settings'
 type StudioMode = 'flow' | 'agents' | 'debug'
 type ThemeMode = ApiSettings['theme']
 
+const runtimeConfig = useRuntimeConfig()
 const SETTINGS_STORAGE_KEY = 'kiniu.agent.settings'
 const SESSION_STORAGE_KEY = 'kiniu.agent.session'
 const STORY_DRAFT_STORAGE_KEY = 'kiniu.agent.flowDraft'
@@ -204,8 +206,6 @@ function createLocalSandboxPlan(plan: SandboxPlanDraft): SavedSandboxPlan {
 
 
 onMounted(() => {
-  isHydrated.value = true
-
   const savedSettings = readStoredJson<Partial<ApiSettings>>(SETTINGS_STORAGE_KEY, value => value)
   if (savedSettings) {
     Object.assign(settings, defaultSettings, savedSettings, {
@@ -220,7 +220,17 @@ onMounted(() => {
   }
 
   settings.apiKey = sessionStorage.getItem(API_KEY_STORAGE_KEY) || ''
-  settings.localToken = sessionStorage.getItem(LOCAL_TOKEN_STORAGE_KEY) || ''
+  const startupSettings = resolveStartupSettings({
+    runtimeBackendUrl: runtimeConfig.public.kiniuBackendUrl,
+    runtimeLocalToken: runtimeConfig.public.kiniuLocalToken,
+    storedBackendUrl: settings.backendUrl,
+    sessionLocalToken: sessionStorage.getItem(LOCAL_TOKEN_STORAGE_KEY) || ''
+  })
+  settings.backendUrl = startupSettings.backendUrl
+  settings.localToken = startupSettings.localToken
+  if (startupSettings.bootstrappedToken) {
+    persistSessionSecret(LOCAL_TOKEN_STORAGE_KEY, startupSettings.localToken)
+  }
 
   const savedSessionId = localStorage.getItem(SESSION_STORAGE_KEY)
   sessionId.value = savedSessionId || `session-${Date.now()}`
@@ -239,6 +249,7 @@ onMounted(() => {
   if (sessionExport.value) {
     replaceSessionSandboxPlans(sessionExport.value.sessionId, sessionExport.value.sandboxPlans)
   }
+  isHydrated.value = true
 })
 
 watch([() => activeView.value, () => activeStudioView.value], async ([view, studioView]) => {
@@ -986,6 +997,7 @@ async function sendTurn(choice = '') {
           :backend-url="settings.backendUrl"
           :local-token="settings.localToken"
           @use-agent="useLearningAgent"
+          @open-settings="activeView = 'settings'"
         />
 
         <AgentConsoleView

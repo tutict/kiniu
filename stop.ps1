@@ -4,49 +4,36 @@ param(
     [switch]$CleanRunFiles,
     [switch]$ForcePortKill,
     [int]$BackendPort = 8080,
-    [int]$FrontendPort = 3000
+    [int]$FrontendPort = 3000,
+    [ValidatePattern('^[A-Za-z0-9][A-Za-z0-9._-]{0,31}$')]
+    [string]$RuntimeName = "default"
 )
 
 $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $MyInvocation.MyCommand.Path
-$RunDir = Join-Path $Root ".run"
+. (Join-Path $Root "scripts\runtime-process.ps1")
+$RunRoot = Join-Path $Root ".run"
+$RunDir = if ($RuntimeName -eq "default") { $RunRoot } else { Join-Path $RunRoot $RuntimeName }
 
 function Write-Step([string]$Message) {
     Write-Host "[kiniu] $Message"
 }
 
-function Stop-ProcessTree([int]$ProcessId, [string]$Name) {
-    $Process = Get-Process -Id $ProcessId -ErrorAction SilentlyContinue
-    if (-not $Process) {
-        Write-Step "$Name pid=$ProcessId is not running"
-        return
-    }
-
-    $Children = Get-CimInstance Win32_Process -Filter "ParentProcessId = $ProcessId" -ErrorAction SilentlyContinue
-    foreach ($Child in $Children) {
-        Stop-ProcessTree -ProcessId ([int]$Child.ProcessId) -Name "$Name child"
-    }
-
-    Stop-Process -Id $ProcessId -Force -ErrorAction SilentlyContinue
-    Write-Step "Stopped $Name pid=$ProcessId"
-}
-
-function Stop-PidFile([string]$PidFile, [string]$Name) {
+function Stop-PidFile([string]$PidFile, [string]$Name, [string]$CommandMarker) {
     if (-not (Test-Path -LiteralPath $PidFile)) {
         Write-Step "$Name pid file not found"
         return
     }
-
-    $PidText = Get-Content -LiteralPath $PidFile -ErrorAction SilentlyContinue | Select-Object -First 1
-    $ProcessId = 0
-    if (-not [int]::TryParse($PidText, [ref]$ProcessId)) {
+    $Result = Stop-KiniuRecordedProcess -Path $PidFile -Name $Name -ExpectedCommandMarker $CommandMarker
+    if ($Result.stopped) {
+        Write-Step "Stopped $Name pid=$($Result.pid)"
+    } elseif ($Result.reason -eq "not-running") {
+        Write-Step "$Name pid=$($Result.pid) is not running"
+    } elseif ($Result.reason -eq "invalid-record") {
         Write-Step "$Name pid file is invalid"
-        Remove-Item -LiteralPath $PidFile -Force -ErrorAction SilentlyContinue
-        return
+    } else {
+        Write-Warning "Refusing to stop pid=$($Result.pid) for $Name because process identity did not match ($($Result.reason))."
     }
-
-    Stop-ProcessTree -ProcessId $ProcessId -Name $Name
-    Remove-Item -LiteralPath $PidFile -Force -ErrorAction SilentlyContinue
 }
 
 function Stop-PortOwner([int]$Port, [string]$Name) {
@@ -58,7 +45,8 @@ function Stop-PortOwner([int]$Port, [string]$Name) {
     foreach ($Connection in $Connections) {
         $OwningPid = [int]$Connection.OwningProcess
         if ($OwningPid -le 0 -or $OwningPid -eq $PID) { continue }
-        Stop-ProcessTree -ProcessId $OwningPid -Name "$Name port $Port owner"
+        Stop-KiniuProcessTree -ProcessId $OwningPid
+        Write-Step "Stopped $Name port $Port owner pid=$OwningPid"
     }
 }
 
@@ -67,8 +55,8 @@ if ($BackendOnly -and $FrontendOnly) {
 }
 
 if (Test-Path -LiteralPath $RunDir) {
-    if (-not $FrontendOnly) { Stop-PidFile (Join-Path $RunDir "backend.pid") "backend" }
-    if (-not $BackendOnly) { Stop-PidFile (Join-Path $RunDir "frontend.pid") "frontend" }
+    if (-not $FrontendOnly) { Stop-PidFile (Join-Path $RunDir "backend.pid") "backend" "spring-boot:run" }
+    if (-not $BackendOnly) { Stop-PidFile (Join-Path $RunDir "frontend.pid") "frontend" "npm.cmd run dev" }
 } else {
     Write-Step "No .run directory found"
 }
@@ -79,6 +67,11 @@ if ($ForcePortKill) {
 }
 
 if ($CleanRunFiles -and (Test-Path -LiteralPath $RunDir)) {
-    Get-ChildItem -LiteralPath $RunDir -File -ErrorAction SilentlyContinue | Remove-Item -Force
-    Write-Step "Cleaned .run files"
+    $RemainingPidFile = Get-ChildItem -LiteralPath $RunDir -Filter "*.pid" -File -ErrorAction SilentlyContinue | Select-Object -First 1
+    if ($RemainingPidFile) {
+        Write-Warning "Skipped cleanup for $RunDir because an unmatched PID record remains."
+    } else {
+        Remove-Item -LiteralPath $RunDir -Recurse -Force
+        Write-Step "Cleaned runtime directory: $RunDir"
+    }
 }

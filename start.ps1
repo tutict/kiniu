@@ -8,15 +8,22 @@ param(
     [switch]$NoLocalToken,
     [int]$BackendPort = 8080,
     [int]$FrontendPort = 3000,
-    [string]$LocalToken = $env:KINIU_LOCAL_TOKEN
+    [string]$LocalToken = $env:KINIU_LOCAL_TOKEN,
+    [ValidatePattern('^[A-Za-z0-9][A-Za-z0-9._-]{0,31}$')]
+    [string]$RuntimeName = "default"
 )
 
 $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $MyInvocation.MyCommand.Path
 $BackendDir = Join-Path $Root "kiniu-back"
 $FrontendDir = Join-Path $Root "kiniu-front\nuxt-app"
-$LogDir = Join-Path $Root "logs"
-$RunDir = Join-Path $Root ".run"
+. (Join-Path $Root "scripts\runtime-process.ps1")
+$LogRoot = Join-Path $Root "logs"
+$RunRoot = Join-Path $Root ".run"
+$LogDir = if ($RuntimeName -eq "default") { $LogRoot } else { Join-Path $LogRoot $RuntimeName }
+$RunDir = if ($RuntimeName -eq "default") { $RunRoot } else { Join-Path $RunRoot $RuntimeName }
+$NuxtBuildDir = if ($RuntimeName -eq "default") { Join-Path $FrontendDir ".nuxt" } else { Join-Path $RunDir "nuxt" }
+$TokenPath = Join-Path $RunDir "local-token"
 $RunStamp = Get-Date -Format "yyyyMMdd-HHmmss"
 
 function Write-Step([string]$Message) {
@@ -40,17 +47,14 @@ function Test-PortOpen([int]$Port) {
         $Client.Close()
     }
 }
-function Test-NuxtDevServerRunning {
-    $ExistingNode = Get-CimInstance Win32_Process -Filter "Name = 'node.exe'" -ErrorAction SilentlyContinue | Where-Object {
-        $_.CommandLine -and $_.CommandLine.Contains($FrontendDir) -and $_.CommandLine.Contains("nuxt") -and $_.CommandLine.Contains("dev")
-    } | Select-Object -First 1
-    if ($ExistingNode) { return $true }
-
+function Test-NuxtDevServerRunning([string]$BuildDirectory) {
     $LockCandidates = @(
-        (Join-Path $FrontendDir ".nuxt\nuxt.lock"),
-        (Join-Path $FrontendDir ".nuxt\dev\server.lock"),
-        (Join-Path $FrontendDir "node_modules\.cache\nuxt\.nuxt\dev\server.lock")
+        (Join-Path $BuildDirectory "nuxt.lock"),
+        (Join-Path $BuildDirectory "dev\server.lock")
     )
+    if ($BuildDirectory -eq (Join-Path $FrontendDir ".nuxt")) {
+        $LockCandidates += Join-Path $FrontendDir "node_modules\.cache\nuxt\.nuxt\dev\server.lock"
+    }
     foreach ($LockPath in $LockCandidates) {
         if (-not (Test-Path -LiteralPath $LockPath)) { continue }
         try {
@@ -80,27 +84,13 @@ function Wait-Port([int]$Port, [string]$Name, [int]$TimeoutSeconds = 90) {
     return $false
 }
 
-function Stop-ProcessTree([int]$ProcessId, [string]$Name) {
-    $Process = Get-Process -Id $ProcessId -ErrorAction SilentlyContinue
-    if (-not $Process) { return }
-
-    $Children = Get-CimInstance Win32_Process -Filter "ParentProcessId = $ProcessId" -ErrorAction SilentlyContinue
-    foreach ($Child in $Children) {
-        Stop-ProcessTree -ProcessId ([int]$Child.ProcessId) -Name "$Name child"
+function Stop-RecordedService([string]$PidFile, [string]$Name, [string]$CommandMarker) {
+    $Result = Stop-KiniuRecordedProcess -Path $PidFile -Name $Name -ExpectedCommandMarker $CommandMarker
+    if ($Result.stopped) {
+        Write-Step "Stopped stale $Name pid=$($Result.pid)"
+    } elseif ($Result.reason -in @("legacy-record", "command-mismatch", "name-mismatch", "marker-mismatch", "start-time-mismatch")) {
+        Write-Warning "Refusing to stop pid=$($Result.pid) for $Name because process identity did not match ($($Result.reason))."
     }
-
-    Write-Step "Stopping stale $Name pid=$ProcessId"
-    Stop-Process -Id $ProcessId -Force -ErrorAction SilentlyContinue
-}
-
-function Stop-PidFileProcess([string]$PidFile, [string]$Name) {
-    if (-not (Test-Path -LiteralPath $PidFile)) { return }
-    $PidText = Get-Content -LiteralPath $PidFile -ErrorAction SilentlyContinue | Select-Object -First 1
-    $ProcessId = 0
-    if ([int]::TryParse($PidText, [ref]$ProcessId)) {
-        Stop-ProcessTree -ProcessId $ProcessId -Name $Name
-    }
-    Remove-Item -LiteralPath $PidFile -Force -ErrorAction SilentlyContinue
 }
 
 function New-LocalToken {
@@ -121,11 +111,16 @@ function New-CmdSet([string]$Name, [string]$Value) {
     return "set `"$Name=$Escaped`""
 }
 
+function New-CmdUnset([string]$Name) {
+    return 'set "' + $Name + '="'
+}
+
 function Start-LoggedService(
     [string]$Name,
     [int]$Port,
     [string]$WorkingDirectory,
     [string]$Command,
+    [string]$CommandMarker,
     [string[]]$EnvironmentCommands
 ) {
     if (Test-PortOpen $Port) {
@@ -149,7 +144,7 @@ function Start-LoggedService(
     $Process = [System.Diagnostics.Process]::Start($StartInfo)
     if (-not $Process) { throw "Failed to start $Name." }
 
-    Set-Content -LiteralPath $PidPath -Value $Process.Id -Encoding ascii
+    Write-KiniuProcessRecord -Path $PidPath -Process $Process -Name $Name -CommandMarker $CommandMarker
     Write-Step "Started $Name pid=$($Process.Id)"
     return $Process
 }
@@ -157,7 +152,7 @@ function Start-LoggedService(
 function Stop-StartedProcesses([array]$Processes) {
     foreach ($Process in $Processes) {
         if ($Process -and -not $Process.HasExited) {
-            Stop-ProcessTree -ProcessId $Process.Id -Name "started service"
+            Stop-KiniuProcessTree -ProcessId $Process.Id
         }
     }
 }
@@ -188,17 +183,28 @@ if (-not $FrontendOnly -and -not (Test-CommandAvailable "mvn")) {
 if (-not $BackendOnly -and -not (Test-CommandAvailable "npm.cmd")) {
     throw "npm.cmd is not available. Install Node.js or add it to PATH."
 }
-if (-not $BackendOnly -and (Test-NuxtDevServerRunning)) {
-    throw "A Nuxt dev server is already running for $FrontendDir. Stop it before starting another frontend instance."
+if (-not $BackendOnly -and (Test-NuxtDevServerRunning $NuxtBuildDir)) {
+    throw "A Nuxt dev server is already running for runtime '$RuntimeName'. Stop it before starting another frontend instance."
 }
 
-if (-not $FrontendOnly) { Stop-PidFileProcess (Join-Path $RunDir "backend.pid") "backend" }
-if (-not $BackendOnly) { Stop-PidFileProcess (Join-Path $RunDir "frontend.pid") "frontend" }
+if (-not $FrontendOnly) { Stop-RecordedService (Join-Path $RunDir "backend.pid") "backend" "spring-boot:run" }
+if (-not $BackendOnly) { Stop-RecordedService (Join-Path $RunDir "frontend.pid") "frontend" "npm.cmd run dev" }
 
-if (-not $FrontendOnly -and -not $NoLocalToken -and [string]::IsNullOrWhiteSpace($LocalToken)) {
-    $LocalToken = New-LocalToken
-    Set-Content -LiteralPath (Join-Path $RunDir "local-token") -Value $LocalToken -Encoding ascii
-    Write-Step "Generated local access token in .run\\local-token"
+if ($NoLocalToken) {
+    $LocalToken = ""
+    Remove-Item -LiteralPath $TokenPath -Force -ErrorAction SilentlyContinue
+} elseif ([string]::IsNullOrWhiteSpace($LocalToken)) {
+    if ($FrontendOnly -and (Test-Path -LiteralPath $TokenPath)) {
+        $LocalToken = (Get-Content -LiteralPath $TokenPath -Raw).Trim()
+        Write-Step "Loaded local access token from $TokenPath"
+    } else {
+        $LocalToken = New-LocalToken
+        Write-Step "Generated local access token for runtime '$RuntimeName'"
+    }
+}
+if (-not [string]::IsNullOrWhiteSpace($LocalToken)) {
+    $LocalToken = $LocalToken.Trim()
+    Set-Content -LiteralPath $TokenPath -Value $LocalToken -Encoding ascii
 }
 
 if (-not $BackendOnly -and -not $SkipInstall -and -not (Test-Path -LiteralPath (Join-Path $FrontendDir "node_modules"))) {
@@ -212,13 +218,19 @@ $Started = @()
 if (-not $FrontendOnly) {
     $BackendEnv = @(
         (New-CmdSet "SERVER_PORT" ([string]$BackendPort)),
-        (New-CmdSet "SERVER_ADDRESS" "127.0.0.1")
+        (New-CmdSet "SERVER_ADDRESS" "127.0.0.1"),
+        (New-CmdSet "GAME_SECURITY_ALLOWED_ORIGINS" "http://localhost:$FrontendPort,http://127.0.0.1:$FrontendPort")
     )
+    if ($RuntimeName -ne "default") {
+        $BackendEnv += New-CmdSet "GAME_LEARNING_PROGRESS_PATH" (Join-Path $RunDir "learning-progress.json")
+    }
     if ($LocalToken -and $LocalToken.Trim()) {
         $BackendEnv += New-CmdSet "KINIU_LOCAL_TOKEN" $LocalToken.Trim()
-        Write-Step "Local token enabled; use the same value in the frontend settings."
+        Write-Step "Local token enabled for backend and browser bootstrap."
+    } else {
+        $BackendEnv += New-CmdUnset "KINIU_LOCAL_TOKEN"
     }
-    $Started += Start-LoggedService -Name "backend" -Port $BackendPort -WorkingDirectory $BackendDir -Command "mvn spring-boot:run" -EnvironmentCommands $BackendEnv
+    $Started += Start-LoggedService -Name "backend" -Port $BackendPort -WorkingDirectory $BackendDir -Command "mvn spring-boot:run" -CommandMarker "spring-boot:run" -EnvironmentCommands $BackendEnv
 }
 
 if (-not $BackendOnly) {
@@ -226,9 +238,16 @@ if (-not $BackendOnly) {
     $FrontendEnv = @(
         (New-CmdSet "HOST" "127.0.0.1"),
         (New-CmdSet "PORT" ([string]$FrontendPort)),
-        (New-CmdSet "NUXT_DEVTOOLS_ENABLED" $DevtoolsValue)
+        (New-CmdSet "NUXT_DEVTOOLS_ENABLED" $DevtoolsValue),
+        (New-CmdSet "NUXT_BUILD_DIR" $NuxtBuildDir),
+        (New-CmdSet "NUXT_PUBLIC_KINIU_BACKEND_URL" "http://127.0.0.1:$BackendPort")
     )
-    $Started += Start-LoggedService -Name "frontend" -Port $FrontendPort -WorkingDirectory $FrontendDir -Command "npm.cmd run dev -- --host 127.0.0.1 --port $FrontendPort" -EnvironmentCommands $FrontendEnv
+    $FrontendEnv += if ([string]::IsNullOrWhiteSpace($LocalToken)) {
+        New-CmdUnset "NUXT_PUBLIC_KINIU_LOCAL_TOKEN"
+    } else {
+        New-CmdSet "NUXT_PUBLIC_KINIU_LOCAL_TOKEN" $LocalToken
+    }
+    $Started += Start-LoggedService -Name "frontend" -Port $FrontendPort -WorkingDirectory $FrontendDir -Command "npm.cmd run dev -- --host 127.0.0.1 --port $FrontendPort" -CommandMarker "npm.cmd run dev" -EnvironmentCommands $FrontendEnv
 }
 
 $BackendReady = $true
@@ -246,14 +265,15 @@ Write-Host ""
 Write-Step "Startup complete"
 if (-not $BackendOnly) { Write-Host "  Frontend: http://127.0.0.1:$FrontendPort" }
 if (-not $FrontendOnly) { Write-Host "  Backend:  http://127.0.0.1:$BackendPort" }
-if (-not $FrontendOnly -and -not $NoLocalToken) { Write-Host "  Token:    $RunDir\\local-token" }
+if (-not [string]::IsNullOrWhiteSpace($LocalToken)) { Write-Host "  Token:    $TokenPath" }
 Write-Host "  Logs:     $LogDir"
 Write-Host "  PID files: $RunDir"
+Write-Host "  Runtime:  $RuntimeName"
 if (-not $BackendOnly -and $EnableDevtools) { Write-Host "  Nuxt DevTools: enabled" }
 Write-Host ""
 Write-Host "Stop commands:"
-if (-not $FrontendOnly) { Write-Host "  Stop backend:  .\stop.ps1 -BackendOnly -BackendPort $BackendPort" }
-if (-not $BackendOnly) { Write-Host "  Stop frontend: .\stop.ps1 -FrontendOnly -FrontendPort $FrontendPort" }
+if (-not $FrontendOnly) { Write-Host "  Stop backend:  .\stop.ps1 -BackendOnly -BackendPort $BackendPort -RuntimeName $RuntimeName" }
+if (-not $BackendOnly) { Write-Host "  Stop frontend: .\stop.ps1 -FrontendOnly -FrontendPort $FrontendPort -RuntimeName $RuntimeName" }
 
 if (-not $NoBrowser -and -not $BackendOnly) {
     Start-Process -WindowStyle Hidden "http://127.0.0.1:$FrontendPort"

@@ -17,6 +17,7 @@
 kiniu-back/            后端服务
 kiniu-front/nuxt-app/  Nuxt/Vue 前端界面
 build/                 构建脚本与打包辅助文件
+scripts/               运行时进程校验与端到端测试脚本
 ```
 
 ## 一键启动
@@ -31,10 +32,11 @@ Windows 下可在项目根目录双击或运行：
 
 默认安全行为：
 
-- 启动后端时会自动生成本机访问令牌，并写入 `.run/local-token`。
+- 启动后端时会自动生成本机访问令牌，写入 `.run/local-token`，并注入前端启动配置；浏览器首次加载时会自动写入当前会话，无需手动复制。
+- 自定义前后端端口会同步到前端后端地址和后端 CORS 白名单，二者保持联动。
 - 前端设置页的“本机访问令牌”只在当前浏览器会话保存，不写入长期 localStorage。
 - 如果目标端口已经被其他进程占用，启动脚本会直接失败，不会把已有监听进程当成启动成功。
-- 停止脚本默认只停止 `.run/` 中记录的本项目进程，不会按端口杀掉不明进程。
+- `.run/` 中的 PID 记录包含进程名、命令标记和启动时间；停止脚本仅在身份全部匹配时结束进程，不会因 PID 被系统复用而误杀。
 
 常用参数：
 
@@ -44,11 +46,11 @@ Windows 下可在项目根目录双击或运行：
 .\start.ps1 -FrontendOnly         # 只启动前端
 .\start.ps1 -NoBrowser            # 启动后不打开浏览器
 .\start.ps1 -CleanLogs            # 启动前清理旧日志
-.\start.ps1 -BackendPort 18080    # 自定义后端端口
-.\start.ps1 -FrontendPort 13000   # 自定义前端端口
+.\start.ps1 -BackendPort 18080 -FrontendPort 13000  # 自定义前后端端口并自动联动
 .\start.ps1 -LocalToken "..."     # 使用指定本机访问令牌
 .\start.ps1 -NoLocalToken         # 不生成本机访问令牌，仅用于明确的本地调试
 .\start.ps1 -EnableDevtools       # 需要调试时才开启 Nuxt DevTools
+.\start.ps1 -RuntimeName demo     # 使用隔离的日志、PID、令牌和 Nuxt 构建目录
 ```
 
 停止服务：
@@ -58,6 +60,7 @@ Windows 下可在项目根目录双击或运行：
 .\stop.ps1 -BackendOnly
 .\stop.ps1 -FrontendOnly
 .\stop.ps1 -BackendPort 18080 -FrontendPort 13000  # 自定义端口时同步传入
+.\stop.ps1 -RuntimeName demo                        # 停止指定隔离运行实例
 .\stop.ps1 -ForcePortKill                           # 显式按端口结束监听进程
 ```
 
@@ -163,9 +166,16 @@ mvn test
 cd ..\kiniu-front\nuxt-app
 npm run test:unit
 npm run build
+
+# 首次运行 Playwright 时安装浏览器
+npx playwright install chromium
+npm run test:e2e
+
+cd ..\..
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\tests\runtime-process.tests.ps1
 ```
 
-浏览器验收至少覆盖基础主线、RAG、安全、MCP/A2A 和最终综合项目的解锁路径，并分别检查桌面端与移动端无横向溢出、控制台无错误、关键学习 API 返回成功。浏览器测试使用临时进度时，不应覆盖用户现有的 `learning-progress.json`。
+`npm run test:e2e` 会先验证 `-NoLocalToken` 能清除父进程继承的令牌，再在 `18080/13000` 启动名为 `e2e` 的隔离实例，使用独立学习进度文件，验证令牌自动引导、自定义端口、真实后端 401 错误引导和设置跳转，并在结束后清理对应进程与运行目录。本次自动化测试仅覆盖上述启动链路；完整发布验收还应覆盖基础主线、RAG、安全、MCP/A2A 和最终综合项目的解锁路径，并分别检查桌面端与移动端无横向溢出、控制台无错误、关键学习 API 返回成功。任何浏览器测试都不应覆盖用户现有的 `learning-progress.json`。
 
 ## 命名
 
