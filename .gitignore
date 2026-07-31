@@ -2,22 +2,36 @@
 .idea/
 .vscode/
 .fleet/
+.history/
 *.iml
 *.ipr
 *.iws
 *.swp
 *.swo
+*.bak
+*.tmp
+*.temp
 *~
 
 # Operating system files
 .DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100/
+.Trashes/
 Thumbs.db
+ehthumbs.db
 Desktop.ini
 
 # Local environment and secrets
 .env
 .env.*
 !.env.example
+.envrc
+.direnv/
+/kiniu-back/src/main/resources/application-local.yml
+/kiniu-back/src/main/resources/application-local.yaml
 
 # Local agent and browser automation state
 /.claude/settings.local.json
@@ -42,29 +56,46 @@ target/
 hs_err_pid*
 replay_pid*
 dependency-reduced-pom.xml
+flattened-pom.xml
+.flattened-pom.xml
 pom.xml.versionsBackup
 release.properties
 .attach_pid*
+*.hprof
+**/.mvn/timing.properties
 /kiniu-back/build/
 /kiniu-back/dist/
 /kiniu-back/nbbuild/
 /kiniu-back/nbdist/
 /kiniu-back/nbproject/private/
 
+# Local learning submissions used for manual checks
+/kiniu-back/src/main/resources/learning-test.txt
+
 # Node, Nuxt, and test artifacts
 node_modules/
+.npm/
+.pnpm-store/
+**/.yarn/cache/
+**/.yarn/install-state.gz
 .nuxt/
 .output/
 .nitro/
 .cache/
 .data/
+.vite/
+.vitest/
+.sass-cache/
 dist/
 coverage/
 .nyc_output/
 test-results/
 playwright-report/
 blob-report/
+.eslintcache
+.stylelintcache
 *.tsbuildinfo
+vite.config.*.timestamp-*
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
