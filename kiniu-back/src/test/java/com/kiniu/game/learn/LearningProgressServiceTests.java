@@ -103,7 +103,10 @@ class LearningProgressServiceTests {
                         List.of(first, second, third))));
         Path path = tempDir.resolve("catalog.json");
         objectMapper.writeValue(path.toFile(), catalog);
-        return new LearningCatalogService(objectMapper, path.toString());
+        return new LearningCatalogService(
+                objectMapper,
+                path.toString(),
+                TaskCheckRegistryTestFactory.standard(objectMapper));
     }
 
     private LearningCatalogService branchCatalogService() throws Exception {
@@ -120,7 +123,10 @@ class LearningProgressServiceTests {
                         List.of(foundation, data, tools))));
         Path path = tempDir.resolve("branch-catalog.json");
         objectMapper.writeValue(path.toFile(), catalog);
-        return new LearningCatalogService(objectMapper, path.toString());
+        return new LearningCatalogService(
+                objectMapper,
+                path.toString(),
+                TaskCheckRegistryTestFactory.standard(objectMapper));
     }
 
     private LearningTaskDefinition task(String id) {

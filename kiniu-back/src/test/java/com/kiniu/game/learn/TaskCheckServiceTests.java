@@ -12,7 +12,9 @@ import org.junit.jupiter.api.Test;
 
 class TaskCheckServiceTests {
 
-    private final TaskCheckService service = new TaskCheckService(new ObjectMapper());
+    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final TaskCheckService service =
+            new TaskCheckService(TaskCheckRegistryTestFactory.standard(objectMapper));
 
     @Test
     void shouldRequireAllRequiredChecksAndReportEvidence() {
@@ -58,6 +60,21 @@ class TaskCheckServiceTests {
 
         assertEquals(0, service.score(results));
         assertFalse(service.passed(results));
+    }
+
+    @Test
+    void shouldAcceptEnoughMeaningfulJsonArrayItems() {
+        LearningTaskDefinition task = task(List.of(
+                new TaskCheckDefinition("goals", "json-array-min", "agent.json", "coreGoals:2", true, 100, "Goals")));
+
+        List<TaskCheckResult> results = service.check(
+                task,
+                Map.of("agent.json", """
+                        {"coreGoals":["reliable","auditable"]}
+                        """));
+
+        assertEquals(100, service.score(results));
+        assertTrue(service.passed(results));
     }
 
     @Test
@@ -144,6 +161,10 @@ class TaskCheckServiceTests {
         assertEquals(0, service.score(results));
         assertFalse(service.passed(results));
         assertTrue(results.get(0).evidence().contains("无法解析"));
+
+        List<TaskCheckResult> missing = service.check(task, Map.of());
+        assertFalse(service.passed(missing));
+        assertTrue(missing.get(0).evidence().contains("文件不存在"));
     }
 
     @Test

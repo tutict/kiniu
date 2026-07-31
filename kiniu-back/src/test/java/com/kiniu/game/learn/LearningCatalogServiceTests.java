@@ -117,7 +117,8 @@ class LearningCatalogServiceTests {
     void productionCatalogShouldExposeVersionFourCurriculum() {
         LearningCatalogService service = new LearningCatalogService(
                 objectMapper,
-                Path.of("data", "learning-catalog.json").toString());
+                Path.of("data", "learning-catalog.json").toString(),
+                TaskCheckRegistryTestFactory.standard(objectMapper));
         LearningCatalogDefinition catalog = service.getCatalog();
         List<LearningTaskDefinition> tasks = catalog.modules().stream()
                 .flatMap(module -> module.tasks().stream())
@@ -205,7 +206,10 @@ class LearningCatalogServiceTests {
                 List.of(new LearningModuleDefinition("module", "Module", "Summary", "beginner", List.of(tasks))));
         Path path = tempDir.resolve("catalog-" + System.nanoTime() + ".json");
         objectMapper.writeValue(path.toFile(), catalog);
-        return new LearningCatalogService(objectMapper, path.toString());
+        return new LearningCatalogService(
+                objectMapper,
+                path.toString(),
+                TaskCheckRegistryTestFactory.standard(objectMapper));
     }
 
     private LearningTaskDefinition task(String id, String type) {

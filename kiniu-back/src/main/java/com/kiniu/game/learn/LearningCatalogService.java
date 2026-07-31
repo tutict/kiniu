@@ -1,7 +1,6 @@
 package com.kiniu.game.learn;
 
 import tools.jackson.core.JacksonException;
-import tools.jackson.core.JsonPointer;
 import tools.jackson.databind.ObjectMapper;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -14,7 +13,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.regex.Pattern;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -22,29 +20,21 @@ import org.springframework.stereotype.Service;
 @Service
 public class LearningCatalogService {
 
-    private static final Set<String> SUPPORTED_CHECK_TYPES = Set.of(
-            "contains",
-            "markdown-section",
-            "regex",
-            "frontmatter-regex",
-            "json-field",
-            "json-array-min",
-            "json-pointer-present",
-            "json-array-shape",
-            "json-number-range",
-            "min-length");
     private static final Set<String> SUPPORTED_EVIDENCE_MODES = Set.of("document", "import");
 
     private final ObjectMapper objectMapper;
     private final Path catalogPath;
+    private final TaskCheckRegistry taskCheckRegistry;
     private final LearningCatalogDefinition catalog;
 
     @Autowired
     public LearningCatalogService(
             ObjectMapper objectMapper,
-            @Value("${game.learning.catalog-path:data/learning-catalog.json}") String catalogPath) {
+            @Value("${game.learning.catalog-path:data/learning-catalog.json}") String catalogPath,
+            TaskCheckRegistry taskCheckRegistry) {
         this.objectMapper = objectMapper;
         this.catalogPath = Paths.get(catalogPath).toAbsolutePath().normalize();
+        this.taskCheckRegistry = taskCheckRegistry;
         this.catalog = loadCatalog();
         validateCatalog(this.catalog);
     }
@@ -192,13 +182,11 @@ public class LearningCatalogService {
             requireText(check.id(), "Learning check id");
             requireText(check.type(), "Learning check type");
             requireText(check.path(), "Learning check path");
-            requireText(check.rule(), "Learning check rule");
             requireText(check.message(), "Learning check message");
-            if (!checkIds.add(check.id()) || !SUPPORTED_CHECK_TYPES.contains(check.type())
-                    || !starterPaths.contains(check.path()) || check.points() <= 0) {
-                throw new IllegalStateException("Learning checks must use supported types, starter paths, and positive points.");
+            if (!checkIds.add(check.id()) || !starterPaths.contains(check.path()) || check.points() <= 0) {
+                throw new IllegalStateException("Learning checks must use starter paths and positive points.");
             }
-            validateRule(check);
+            taskCheckRegistry.validateRule(check);
         });
         if (task.checks().stream().mapToInt(TaskCheckDefinition::points).sum() != 100) {
             throw new IllegalStateException("Learning task checks must total 100 points.");
@@ -268,53 +256,6 @@ public class LearningCatalogService {
                 .forEach(dependency -> visitDependency(dependency, dependencies, visiting, visited));
         visiting.remove(taskId);
         visited.add(taskId);
-    }
-
-    private void validateRule(TaskCheckDefinition check) {
-        try {
-            switch (check.type()) {
-                case "regex", "frontmatter-regex" -> {
-                    if (check.rule().length() > 500) {
-                        throw new IllegalArgumentException("Regex rule too long");
-                    }
-                    Pattern.compile(check.rule());
-                }
-                case "json-array-min" -> {
-                    String[] parts = check.rule().split(":", 2);
-                    if (parts.length != 2 || Integer.parseInt(parts[1]) <= 0) {
-                        throw new IllegalArgumentException("Invalid array minimum rule");
-                    }
-                }
-                case "json-pointer-present" -> {
-                    JsonPointer.compile(check.rule());
-                }
-                case "json-array-shape" -> {
-                    String[] parts = check.rule().split(":", 3);
-                    if (parts.length != 3 || Integer.parseInt(parts[1]) <= 0 || parts[2].isBlank()) {
-                        throw new IllegalArgumentException("Invalid array shape rule");
-                    }
-                    JsonPointer.compile(parts[0]);
-                }
-                case "json-number-range" -> {
-                    String[] parts = check.rule().split(":", 3);
-                    if (parts.length != 3
-                            || new java.math.BigDecimal(parts[1]).compareTo(new java.math.BigDecimal(parts[2])) > 0) {
-                        throw new IllegalArgumentException("Invalid number range rule");
-                    }
-                    JsonPointer.compile(parts[0]);
-                }
-                case "min-length" -> {
-                    if (Integer.parseInt(check.rule()) <= 0) {
-                        throw new IllegalArgumentException("Invalid minimum length rule");
-                    }
-                }
-                default -> {
-                    // contains, markdown-section and json-field use non-blank rules.
-                }
-            }
-        } catch (RuntimeException exception) {
-            throw new IllegalStateException("Invalid learning check rule: " + check.id(), exception);
-        }
     }
 
     private void requireText(String value, String label) {

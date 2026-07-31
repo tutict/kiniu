@@ -1,8 +1,5 @@
 package com.kiniu.game.learn;
 
-import tools.jackson.databind.JsonNode;
-import tools.jackson.databind.ObjectMapper;
-import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
@@ -11,11 +8,14 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.regex.Pattern;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 @Service
 public class TaskCheckService {
+
+    private static final Logger log = LoggerFactory.getLogger(TaskCheckService.class);
 
     static final int MAX_FILES = 20;
     static final int MAX_PATH_CHARS = 200;
@@ -24,17 +24,18 @@ public class TaskCheckService {
     static final int MAX_FILE_BYTES = 100_000;
     static final int MAX_TOTAL_BYTES = 500_000;
 
-    private final ObjectMapper objectMapper;
+    private final TaskCheckRegistry registry;
 
-    public TaskCheckService(ObjectMapper objectMapper) {
-        this.objectMapper = objectMapper;
+    public TaskCheckService(TaskCheckRegistry registry) {
+        this.registry = registry;
     }
 
     public List<TaskCheckResult> check(LearningTaskDefinition task, Map<String, String> files) {
         Map<String, String> safeFiles = files == null ? Map.of() : new LinkedHashMap<>(files);
         validateSubmission(task, safeFiles);
+        SubmissionSnapshot submission = new SubmissionSnapshot(safeFiles);
         return task.checks().stream()
-                .map(definition -> evaluate(definition, safeFiles.get(definition.path())))
+                .map(definition -> evaluateRegistered(definition, submission))
                 .toList();
     }
 
@@ -49,170 +50,26 @@ public class TaskCheckService {
         return !required.isEmpty() && required.stream().allMatch(TaskCheckResult::passed);
     }
 
-    private TaskCheckResult evaluate(TaskCheckDefinition definition, String content) {
-        if (content == null) {
-            return result(definition, false, "文件不存在", "提交中缺少 " + definition.path());
-        }
+    private TaskCheckResult evaluateRegistered(
+            TaskCheckDefinition definition,
+            SubmissionSnapshot submission) {
         try {
-            boolean passed = switch (definition.type()) {
-                case "contains" -> content.contains(definition.rule());
-                case "markdown-section" -> markdownSectionHasContent(content, definition.rule());
-                case "regex" -> Pattern.compile(definition.rule(), Pattern.MULTILINE).matcher(content).find();
-                case "frontmatter-regex" -> frontmatterRegex(content, definition.rule());
-                case "json-field" -> jsonField(content, definition.rule());
-                case "json-array-min" -> jsonArrayMin(content, definition.rule());
-                case "json-pointer-present" -> jsonPointerPresent(content, definition.rule());
-                case "json-array-shape" -> jsonArrayShape(content, definition.rule());
-                case "json-number-range" -> jsonNumberRange(content, definition.rule());
-                case "min-length" -> content.trim().length() >= Integer.parseInt(definition.rule());
-                default -> false;
-            };
-            return result(
-                    definition,
-                    passed,
-                    passed ? "规则已匹配且内容有效" : "规则未满足：" + definition.rule(),
-                    definition.message());
-        } catch (Exception exception) {
-            return result(definition, false, "检查输入无法解析：" + safeMessage(exception), definition.message());
+            RuleCheckOutcome outcome = registry.evaluate(definition, submission);
+            return result(definition, outcome.passed(), outcome.evidence(), definition.message());
+        } catch (RuntimeException exception) {
+            return failedResult(definition, exception);
         }
     }
 
-    private boolean markdownSectionHasContent(String content, String heading) {
-        String target = heading.trim();
-        int targetLevel = headingLevel(target);
-        int breakLevel = targetLevel == 0 ? Integer.MAX_VALUE : targetLevel;
-        String[] lines = content.replace("\r", "").split("\n", -1);
-        boolean inSection = false;
-        StringBuilder section = new StringBuilder();
-        for (String line : lines) {
-            String trimmed = line.trim();
-            if (!inSection && trimmed.equals(target)) {
-                inSection = true;
-                continue;
-            }
-            if (inSection && trimmed.startsWith("#") && headingLevel(trimmed) <= breakLevel) {
-                break;
-            }
-            if (inSection && isSubstantiveMarkdownLine(trimmed)) {
-                section.append(line).append('\n');
-            }
-        }
-        return inSection && !section.toString().trim().isBlank();
-    }
-
-    private int headingLevel(String line) {
-        int level = 0;
-        while (level < line.length() && line.charAt(level) == '#') {
-            level++;
-        }
-        return level;
-    }
-
-    private boolean isHorizontalRule(String line) {
-        return line.matches("(?:-[ \\t]*){3,}|(?:\\*[ \\t]*){3,}|(?:_[ \\t]*){3,}");
-    }
-
-    private boolean isSubstantiveMarkdownLine(String line) {
-        return !line.isBlank()
-                && !line.startsWith("#")
-                && !isHorizontalRule(line)
-                && !line.matches("(?:[-+*]|\\d+[.)])(?:[ \\t]+\\[[ xX]\\])?[ \\t]*")
-                && !line.matches("(?:>[ \\t]*)+")
-                && !line.matches("(?:`{3,}|~{3,}).*");
-    }
-
-    private boolean frontmatterRegex(String content, String rule) {
-        String[] lines = content.replace("\r", "").split("\n", -1);
-        if (lines.length < 3 || !lines[0].trim().equals("---")) {
-            return false;
-        }
-        StringBuilder frontmatter = new StringBuilder();
-        for (int index = 1; index < lines.length; index++) {
-            String line = lines[index];
-            if (line.trim().equals("---")) {
-                return Pattern.compile(rule, Pattern.MULTILINE)
-                        .matcher(frontmatter)
-                        .find();
-            }
-            frontmatter.append(line).append('\n');
-        }
-        return false;
-    }
-
-    private boolean jsonField(String content, String field) throws Exception {
-        JsonNode root = objectMapper.readTree(content);
-        return root != null && root.has(field) && isMeaningful(root.get(field));
-    }
-
-    private boolean jsonArrayMin(String content, String rule) throws Exception {
-        String[] parts = rule.split(":", 2);
-        if (parts.length != 2) {
-            return false;
-        }
-        JsonNode root = objectMapper.readTree(content);
-        if (root == null || !root.path(parts[0]).isArray()) {
-            return false;
-        }
-        int required = Integer.parseInt(parts[1]);
-        long meaningfulItems = root.path(parts[0]).valueStream().filter(this::isMeaningful).count();
-        return required > 0 && meaningfulItems >= required;
-    }
-
-    private boolean jsonPointerPresent(String content, String pointer) throws Exception {
-        JsonNode root = objectMapper.readTree(content);
-        return root != null && isMeaningful(root.at(pointer));
-    }
-
-    private boolean jsonArrayShape(String content, String rule) throws Exception {
-        String[] parts = rule.split(":", 3);
-        if (parts.length != 3) {
-            return false;
-        }
-        int minimum = Integer.parseInt(parts[1]);
-        List<String> requiredFields = Pattern.compile(",")
-                .splitAsStream(parts[2])
-                .map(String::trim)
-                .filter(field -> !field.isBlank())
-                .toList();
-        JsonNode root = objectMapper.readTree(content);
-        JsonNode array = root == null ? null : root.at(parts[0]);
-        if (array == null || !array.isArray() || array.size() < minimum || requiredFields.isEmpty()) {
-            return false;
-        }
-        return array.valueStream().allMatch(item -> item.isObject()
-                && requiredFields.stream().allMatch(field -> isMeaningful(item.get(field))));
-    }
-
-    private boolean jsonNumberRange(String content, String rule) throws Exception {
-        String[] parts = rule.split(":", 3);
-        if (parts.length != 3) {
-            return false;
-        }
-        JsonNode root = objectMapper.readTree(content);
-        JsonNode value = root == null ? null : root.at(parts[0]);
-        if (value == null || !value.isNumber()) {
-            return false;
-        }
-        BigDecimal minimum = new BigDecimal(parts[1]);
-        BigDecimal maximum = new BigDecimal(parts[2]);
-        BigDecimal actual = value.decimalValue();
-        return actual.compareTo(minimum) >= 0 && actual.compareTo(maximum) <= 0;
-    }
-
-    private boolean isMeaningful(JsonNode node) {
-        if (node == null || node.isNull() || node.isMissingNode()) {
-            return false;
-        }
-        if (node.isString()) {
-            return !node.asString().trim().isBlank();
-        }
-        if (node.isArray()) {
-            return node.valueStream().anyMatch(this::isMeaningful);
-        }
-        if (node.isObject()) {
-            return !node.properties().isEmpty() && node.valueStream().anyMatch(this::isMeaningful);
-        }
-        return true;
+    private TaskCheckResult failedResult(TaskCheckDefinition definition, RuntimeException exception) {
+        log.error(
+                "Learning check failed unexpectedly: id={}, type={}",
+                definition.id(),
+                definition.type(),
+                exception);
+        return result(definition, false,
+                "检查输入无法解析：内部检查器错误",
+                definition.message());
     }
 
     private void validateSubmission(LearningTaskDefinition task, Map<String, String> files) {
@@ -259,14 +116,6 @@ public class TaskCheckService {
         } catch (InvalidPathException exception) {
             return false;
         }
-    }
-
-    private String safeMessage(Exception exception) {
-        String message = exception.getMessage();
-        if (message == null || message.isBlank()) {
-            return exception.getClass().getSimpleName();
-        }
-        return message.length() <= 160 ? message : message.substring(0, 157) + "...";
     }
 
     private TaskCheckResult result(TaskCheckDefinition definition, boolean passed, String evidence, String message) {
