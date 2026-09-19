@@ -327,6 +327,23 @@ class LearningCatalogServiceTests {
                         "human-handoff"),
                 traceRecovery.quizQuestions().stream().map(LearningQuizQuestion::id).toList());
         assertEquals("state-effects", traceRecovery.quizQuestions().get(0).correctOptionId());
+        LearningTaskDefinition evaluationSuite = taskById(tasks, "evaluation-suite");
+        assertEquals("quiz", evaluationSuite.evidenceMode());
+        assertEquals(10, evaluationSuite.quizQuestions().size());
+        assertEquals(
+                List.of(
+                        "not-an-exam",
+                        "case-mix",
+                        "three-graders",
+                        "self-grade",
+                        "holdout",
+                        "three-trials",
+                        "golden-path",
+                        "gate",
+                        "run-evidence",
+                        "pii-cases"),
+                evaluationSuite.quizQuestions().stream().map(LearningQuizQuestion::id).toList());
+        assertEquals("feedback-loop", evaluationSuite.quizQuestions().get(0).correctOptionId());
         assertTrue(tasks.stream()
                 .filter(task -> "import".equals(task.evidenceMode()))
                 .allMatch(task -> List.of("/source", "/capturedAt", "/requestId").stream()

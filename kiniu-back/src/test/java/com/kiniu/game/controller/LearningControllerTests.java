@@ -319,5 +319,27 @@ class LearningControllerTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.passed").value(true))
                 .andExpect(jsonPath("$.progress.currentTaskId").value("evaluation-suite"));
+
+        mockMvc.perform(post("/learn/tasks/evaluation-suite/check")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "answers": {
+                                    "not-an-exam": "feedback-loop",
+                                    "case-mix": "normal-boundary-adversarial",
+                                    "three-graders": "split-roles",
+                                    "self-grade": "need-calibration",
+                                    "holdout": "keep-holdout",
+                                    "three-trials": "sampling",
+                                    "golden-path": "miss-regressions",
+                                    "gate": "block-regression",
+                                    "run-evidence": "ids-trials",
+                                    "pii-cases": "redact-or-synthetic"
+                                  }
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.passed").value(true))
+                .andExpect(jsonPath("$.progress.currentTaskId").value("companion-agent"));
     }
 }

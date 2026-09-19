@@ -2988,13 +2988,13 @@
       "level": "中级",
       "tasks": [
         {
-          "level": "中级",
+          "level": "初级",
           "mentorAgentId": "project-agent",
           "id": "evaluation-suite",
           "title": "构建可重复的 Agent 评测集",
-          "summary": "准备正常、边界和对抗样例，组合代码、模型与人工 grader。",
+          "summary": "围绕晚间计划助手 Prompt 更新后开发集变好、线上投诉增加，用场景判断分清样例类别、grader、切分和多次 trial。",
           "kind": "evaluation",
-          "estimatedMinutes": 65,
+          "estimatedMinutes": 25,
           "skills": [
             "Evals",
             "Grader",
@@ -3002,16 +3002,16 @@
             "Trial"
           ],
           "objective": "把“Agent 变好了”转成可重复、可比较、能阻止回归的评测门禁。",
-          "scenario": "Prompt 更新后开发集变好但线上投诉增加，团队需要保留集、多次 trial 和多种评分器。",
-          "lesson": "## 核心概念\n评测是产品迭代的反馈系统，不是一次发布前考试。样例应覆盖正常、边界、拒绝和对抗输入；代码 grader 适合结构与硬约束，模型 grader 适合语义比较，人工 grader 用于高风险和校准。训练集与保留集必须隔离。\n\n## 算法思想\n多次 trial 是用采样对抗随机性：单次结果只是分布中的一个样本，均值与波动一起看才可信；train/holdout 隔离防过拟合——在同一份数据上反复调参，分数上涨可能只是背题。\n\n## 完成步骤\n准备至少十个带 id、category、input、expected 的案例；定义代码、模型和人工三类 grader 及标准；划分 train 与 holdout；设置至少三次 trial；导入一次脱敏 eval-run，记录来源、请求标识和每个 grader 结果。 留下可复现记录，提交前移除密钥和个人信息。\n\n## 常见误区\n不要只测黄金路径，也不要让模型给自己打分而没有校准。单次 trial 的波动不能代表质量，保留集不能在调参时反复查看。\n\n## 完成标准\n评测集达到十例，三类 grader、切分和 trial 齐全，运行证据能定位失败案例和门禁结果。",
+          "scenario": "晚间计划助手改了一版 Prompt，开发集分数涨了，线上却更多人抱怨：空输入乱编、被要求改日历时还是答应。有人想用同一批样例继续调参，只跑一次 trial，并让模型给自己打分。评测样例里还夹着林舟的真实姓名。",
+          "lesson": "## 核心概念\n评测是产品迭代的反馈系统，不是发布前一次考试。样例要覆盖正常、边界、拒绝和对抗输入。代码 grader 查结构和硬约束，模型 grader 比语义，人工 grader 校准高风险。训练集与保留集必须隔离。\n\n## 算法思想\n多次 trial 用采样对抗随机性：单次只是分布中的一个点。train/holdout 隔离防过拟合——在同一份数据上反复调参，分数上涨可能只是背题。\n\n## 完成步骤\n结合晚间计划助手判断：Prompt 改完开发集变好但线上投诉增加时，该不该看保留集、要不要三类 grader、一次 trial 够不够、黄金路径能不能代表质量。\n\n## 常见误区\n不要只测黄金路径，也不要让模型给自己打分而不校准。单次波动不能代表质量，保留集不能在调参时反复查看。\n\n## 完成标准\n十道场景判断全部选对，并能说明错误选项会让回归被开发集分数掩盖。",
           "deliverables": [
-            "eval-suite.json：评测集与 grader 定义",
-            "eval-run.json：一次多 trial 运行记录"
+            "场景判断：完成十道题，覆盖样例类别、三类 grader、train/holdout、多次 trial 和回归门禁"
           ],
           "prerequisiteTaskIds": [
             "model-response-contract"
           ],
-          "evidenceMode": "import",
+          "evidenceMode": "quiz",
+          "passingScore": 100,
           "references": [
             {
               "title": "Evaluation best practices",
@@ -3028,115 +3028,258 @@
               "accessedAt": "2026-07-23"
             }
           ],
-          "starterFiles": [
+          "starterFiles": [],
+          "checks": [],
+          "quizQuestions": [
             {
-              "path": "eval-suite.json",
-              "content": "{\n  \"cases\": [],\n  \"graders\": [],\n  \"split\": {\n    \"train\": [],\n    \"holdout\": []\n  },\n  \"trials\": 0\n}"
+              "id": "not-an-exam",
+              "prompt": "评测对晚间计划助手意味着什么？",
+              "options": [
+                {
+                  "id": "ship-exam",
+                  "label": "发布前考一次，过了就永远不用再测"
+                },
+                {
+                  "id": "feedback-loop",
+                  "label": "持续反馈系统：每次改 Prompt 都要能比较、能拦住回归"
+                },
+                {
+                  "id": "user-feel",
+                  "label": "问几个同事感觉好不好就行"
+                },
+                {
+                  "id": "offline-only",
+                  "label": "只看开发集分数，线上投诉不算评测"
+                }
+              ],
+              "correctOptionId": "feedback-loop",
+              "points": 10,
+              "explanation": "评测是迭代反馈，不是一次考试。线上投诉增加说明门禁失效。"
             },
             {
-              "path": "eval-run.json",
-              "content": "{\n  \"source\": \"\",\n  \"capturedAt\": \"\",\n  \"requestId\": \"\",\n  \"trials\": 0,\n  \"taskId\": \"\",\n  \"status\": \"\",\n  \"graderResults\": []\n}"
-            }
-          ],
-          "checks": [
-            {
-              "id": "cases",
-              "type": "json-array-shape",
-              "path": "eval-suite.json",
-              "rule": "/cases:10:id,category,input,expected",
-              "required": true,
-              "points": 20,
-              "message": "至少十个覆盖不同类别的样例。"
+              "id": "case-mix",
+              "prompt": "评测集至少该覆盖哪些类别？",
+              "options": [
+                {
+                  "id": "happy-only",
+                  "label": "只要黄金路径：粘贴清晰待办、返回三条建议"
+                },
+                {
+                  "id": "normal-boundary-adversarial",
+                  "label": "正常、边界（空输入）、拒绝/对抗（要求改日历）都要有"
+                },
+                {
+                  "id": "random-chat",
+                  "label": "随便抓十句闲聊"
+                },
+                {
+                  "id": "dev-favorites",
+                  "label": "只放开发觉得模型已经会的例子"
+                }
+              ],
+              "correctOptionId": "normal-boundary-adversarial",
+              "points": 10,
+              "explanation": "只测黄金路径会漏掉空输入乱编和越权写入。类别必须齐全。"
             },
             {
-              "id": "graders",
-              "type": "json-array-shape",
-              "path": "eval-suite.json",
-              "rule": "/graders:3:type,criterion",
-              "required": true,
-              "points": 15,
-              "message": "定义代码、模型、人工三类 grader。"
+              "id": "three-graders",
+              "prompt": "代码、模型、人工三类 grader 各管什么？",
+              "options": [
+                {
+                  "id": "model-only",
+                  "label": "全部交给模型 grader，最懂语义"
+                },
+                {
+                  "id": "split-roles",
+                  "label": "代码查条数/拒绝/Schema，模型比语义，人工校准高风险"
+                },
+                {
+                  "id": "human-only",
+                  "label": "全部人工，自动化不可信"
+                },
+                {
+                  "id": "no-code",
+                  "label": "有自然语言就不要代码 grader"
+                }
+              ],
+              "correctOptionId": "split-roles",
+              "points": 10,
+              "explanation": "硬约束用代码，语义用模型，高风险用人工校准。缺一类就会漏回归。"
+            },
+            {
+              "id": "self-grade",
+              "prompt": "让同一个模型给自己的建议打分，有什么问题？",
+              "options": [
+                {
+                  "id": "fine",
+                  "label": "没问题，它最了解自己"
+                },
+                {
+                  "id": "need-calibration",
+                  "label": "会偏袒自己，必须有代码硬约束或人工校准"
+                },
+                {
+                  "id": "faster",
+                  "label": "更快所以应该作为唯一 grader"
+                },
+                {
+                  "id": "illegal",
+                  "label": "模型 grader 永远不能用"
+                }
+              ],
+              "correctOptionId": "need-calibration",
+              "points": 10,
+              "explanation": "模型自评缺少校准。高风险和硬约束不能只靠它。"
             },
             {
               "id": "holdout",
-              "type": "json-pointer-present",
-              "path": "eval-suite.json",
-              "rule": "/split/holdout",
-              "required": true,
-              "points": 5,
-              "message": "定义保留集。"
-            },
-            {
-              "id": "trials",
-              "type": "json-number-range",
-              "path": "eval-suite.json",
-              "rule": "/trials:3:100",
-              "required": true,
+              "prompt": "开发集变好、线上变差时，正确做法是？",
+              "options": [
+                {
+                  "id": "tune-holdout",
+                  "label": "打开保留集继续调，直到分数也涨"
+                },
+                {
+                  "id": "keep-holdout",
+                  "label": "保留集只在最终门禁看一次，不在调参时反复查看"
+                },
+                {
+                  "id": "merge-sets",
+                  "label": "把保留集合并进开发集，数据越多越好"
+                },
+                {
+                  "id": "ignore-live",
+                  "label": "线上投诉是噪声，听开发集"
+                }
+              ],
+              "correctOptionId": "keep-holdout",
               "points": 10,
-              "message": "设置至少三次 trial。"
+              "explanation": "train/holdout 必须隔离。调参时偷看保留集等于背题。"
             },
             {
-              "id": "run-source",
-              "type": "json-pointer-present",
-              "path": "eval-run.json",
-              "rule": "/source",
-              "required": true,
-              "points": 5,
-              "message": "填写运行来源。"
-            },
-            {
-              "id": "run-request",
-              "type": "json-pointer-present",
-              "path": "eval-run.json",
-              "rule": "/requestId",
-              "required": true,
-              "points": 5,
-              "message": "填写请求标识。"
-            },
-            {
-              "id": "run-trials",
-              "type": "json-number-range",
-              "path": "eval-run.json",
-              "rule": "/trials:3:100",
-              "required": true,
+              "id": "three-trials",
+              "prompt": "为什么至少要跑三次 trial？",
+              "options": [
+                {
+                  "id": "waste",
+                  "label": "浪费钱，一次成功就够"
+                },
+                {
+                  "id": "sampling",
+                  "label": "单次只是抽样中的一个点，均值和波动一起看才可信"
+                },
+                {
+                  "id": "odd-number",
+                  "label": "必须奇数次才能投票"
+                },
+                {
+                  "id": "until-pass",
+                  "label": "一直跑到某次满分再停止"
+                }
+              ],
+              "correctOptionId": "sampling",
               "points": 10,
-              "message": "运行记录包含多次 trial。"
+              "explanation": "模型有随机性。多次 trial 才能判断是真改进还是运气。"
             },
             {
-              "id": "captured-at",
-              "type": "json-pointer-present",
-              "path": "eval-run.json",
-              "rule": "/capturedAt",
-              "required": true,
-              "points": 5,
-              "message": "填写证据采集时间。"
-            },
-            {
-              "id": "train",
-              "type": "json-pointer-present",
-              "path": "eval-suite.json",
-              "rule": "/split/train",
-              "required": true,
-              "points": 5,
-              "message": "训练集不能为空。"
-            },
-            {
-              "id": "case-categories",
-              "type": "regex",
-              "path": "eval-suite.json",
-              "rule": "(?s)(?=.*\"category\"\\s*:\\s*\"normal\")(?=.*\"category\"\\s*:\\s*\"boundary\")(?=.*\"category\"\\s*:\\s*\"adversarial\")",
-              "required": true,
+              "id": "golden-path",
+              "prompt": "只保留“粘贴待办→三条建议”这一种样例，会怎样？",
+              "options": [
+                {
+                  "id": "enough",
+                  "label": "这就是产品主路径，够了"
+                },
+                {
+                  "id": "miss-regressions",
+                  "label": "空输入和改日历回归会被掩盖，正是这次线上投诉"
+                },
+                {
+                  "id": "faster-ci",
+                  "label": "样例少，CI 更快，应该永久这么做"
+                },
+                {
+                  "id": "users-same",
+                  "label": "用户只会走黄金路径"
+                }
+              ],
+              "correctOptionId": "miss-regressions",
               "points": 10,
-              "message": "案例必须覆盖正常、边界和对抗类别。"
+              "explanation": "不要只测黄金路径。这次线上故障就出在边界和对抗输入。"
             },
             {
-              "id": "grader-types",
-              "type": "regex",
-              "path": "eval-suite.json",
-              "rule": "(?s)(?=.*\"type\"\\s*:\\s*\"code\")(?=.*\"type\"\\s*:\\s*\"model\")(?=.*\"type\"\\s*:\\s*\"human\")",
-              "required": true,
+              "id": "gate",
+              "prompt": "评测门禁何时应该阻止发布？",
+              "options": [
+                {
+                  "id": "never-block",
+                  "label": "分数只是参考，产品经理说发就发"
+                },
+                {
+                  "id": "block-regression",
+                  "label": "硬约束失败或保留集相对基线回退时阻止发布"
+                },
+                {
+                  "id": "dev-up",
+                  "label": "开发集上涨就可以发"
+                },
+                {
+                  "id": "one-pass",
+                  "label": "任意一次 trial 通过就可以发"
+                }
+              ],
+              "correctOptionId": "block-regression",
               "points": 10,
-              "message": "必须同时定义代码、模型和人工 grader。"
+              "explanation": "门禁要能阻止回归。开发集变好不是放行理由。"
+            },
+            {
+              "id": "run-evidence",
+              "prompt": "一次可比较的 eval-run 需要留下什么？",
+              "options": [
+                {
+                  "id": "chat-log",
+                  "label": "一段“感觉比上次好”"
+                },
+                {
+                  "id": "ids-trials",
+                  "label": "source、requestId、capturedAt，以及每个 grader 在多次 trial 上的结果"
+                },
+                {
+                  "id": "full-prompts",
+                  "label": "完整 Prompt 和 API key"
+                },
+                {
+                  "id": "screenshot",
+                  "label": "仪表盘截图"
+                }
+              ],
+              "correctOptionId": "ids-trials",
+              "points": 10,
+              "explanation": "运行证据要能定位失败案例。标识和多次 trial 结果缺一不可。"
+            },
+            {
+              "id": "pii-cases",
+              "prompt": "评测样例里能不能直接放林舟的真实姓名和待办原文？",
+              "options": [
+                {
+                  "id": "yes-real",
+                  "label": "越真实越好，原样放入"
+                },
+                {
+                  "id": "redact-or-synthetic",
+                  "label": "脱敏或改用合成样例，并写入保留规则"
+                },
+                {
+                  "id": "public-set",
+                  "label": "放到公开仓库当标准集"
+                },
+                {
+                  "id": "no-eval",
+                  "label": "有 PII 就不要评测"
+                }
+              ],
+              "correctOptionId": "redact-or-synthetic",
+              "points": 10,
+              "explanation": "评测集也在数据生命周期里。真实 PII 不能当公开样例。"
             }
           ]
         },
