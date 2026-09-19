@@ -209,5 +209,27 @@ class LearningControllerTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.passed").value(true))
                 .andExpect(jsonPath("$.progress.currentTaskId").value("context-memory-budget"));
+
+        mockMvc.perform(post("/learn/tasks/context-memory-budget/check")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "answers": {
+                                    "two-stores": "working-only",
+                                    "write-gate": "value-consent-sensitivity",
+                                    "pii-phone": "block-or-consent",
+                                    "stale-pref": "fresh-wins",
+                                    "similarity-trap": "stale-recall",
+                                    "pin-rules": "pin-then-lru",
+                                    "compaction": "keep-source",
+                                    "last-n": "lose-constraints",
+                                    "forever-chat": "cost-privacy",
+                                    "delete-memory": "delete-stores"
+                                  }
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.passed").value(true))
+                .andExpect(jsonPath("$.progress.currentTaskId").value("workflow-agent-decision"));
     }
 }

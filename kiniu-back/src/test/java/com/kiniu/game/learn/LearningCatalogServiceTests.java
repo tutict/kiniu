@@ -242,6 +242,23 @@ class LearningCatalogServiceTests {
                         "eval-samples"),
                 dataLifecycle.quizQuestions().stream().map(LearningQuizQuestion::id).toList());
         assertEquals("needed-entities", dataLifecycle.quizQuestions().get(0).correctOptionId());
+        LearningTaskDefinition memoryBudget = taskById(tasks, "context-memory-budget");
+        assertEquals("quiz", memoryBudget.evidenceMode());
+        assertEquals(10, memoryBudget.quizQuestions().size());
+        assertEquals(
+                List.of(
+                        "two-stores",
+                        "write-gate",
+                        "pii-phone",
+                        "stale-pref",
+                        "similarity-trap",
+                        "pin-rules",
+                        "compaction",
+                        "last-n",
+                        "forever-chat",
+                        "delete-memory"),
+                memoryBudget.quizQuestions().stream().map(LearningQuizQuestion::id).toList());
+        assertEquals("working-only", memoryBudget.quizQuestions().get(0).correctOptionId());
         assertTrue(tasks.stream()
                 .filter(task -> "import".equals(task.evidenceMode()))
                 .allMatch(task -> List.of("/source", "/capturedAt", "/requestId").stream()
