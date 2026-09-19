@@ -118,7 +118,7 @@ http://localhost:8080
 | 基础与模型契约 | `requirements-contract`、`http-json-basics`、`model-response-contract` | 场景判断契约、HTTP 判断、结构化输出判断 |
 | Prompt、Context 与数据 | `prompt-context-design`、`data-lifecycle`、`context-memory-budget` | 上下文判断、数据生命周期判断、记忆预算判断 |
 | Workflow、工具与 Agent | `workflow-agent-decision`、`tool-contract`、`agent-skill-authoring`、`agent-trace-recovery` | 架构选型判断、工具契约判断、Skill 判断、轨迹恢复判断 |
-| 评测与 Agent 项目 | `evaluation-suite`、`companion-agent` | 评测门禁判断、完整 Agent 项目 |
+| 评测与 Agent 项目 | `evaluation-suite`、`companion-agent` | 评测门禁判断、陪伴 Agent 判断并可发布 |
 | RAG 检索增强 | `rag-pipeline`、`rag-evaluation` | RAG 设计、召回与 groundedness 证据 |
 | GenAI 安全 | `genai-red-team`、`access-concurrency` | 威胁模型、攻击结果、服务安全契约 |
 | 协议互操作 | `mcp-integration`、`a2a-collaboration` | MCP 服务、A2A Agent Card 与委派轨迹 |
@@ -231,6 +231,14 @@ http://localhost:8080
 1. 阅读目标、回归被掩盖的场景和讲义。
 2. 完成 10 道判断题，覆盖持续评测、正常/边界/对抗样例、三类 grader、自评校准、holdout 隔离、多次 trial、黄金路径陷阱、发布门禁、运行证据和样例脱敏。
 3. 运行确定性检查；全部选对后解锁 `companion-agent`。
+
+### 实验十二怎么学
+
+第十二项任务 `companion-agent` 是场景判断，不再手写 `agent.json`。通过后仍可点“发布并进入自由实验室”，系统会发布符合契约的晚间计划助手。正确流程：
+
+1. 阅读目标、越权陪伴场景和讲义。
+2. 完成 10 道判断题，覆盖身份、目标、边界、人格≠权限、记忆、失败接管、评测组合、优先级、发布含义和高风险拒绝。
+3. 全部选对后解锁 `rag-pipeline`，并可以发布 Agent。
 
 ### 请求安全边界
 

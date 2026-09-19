@@ -341,5 +341,27 @@ class LearningControllerTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.passed").value(true))
                 .andExpect(jsonPath("$.progress.currentTaskId").value("companion-agent"));
+
+        mockMvc.perform(post("/learn/tasks/companion-agent/check")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "answers": {
+                                    "identity": "evening-planner",
+                                    "goals": "next-and-uncertainty",
+                                    "boundaries": "no-write-no-invent",
+                                    "personality-vs-policy": "policy-required",
+                                    "memory-policy": "explicit-forget",
+                                    "failure-policy": "refuse-or-handoff",
+                                    "eval-mix": "mix-fail",
+                                    "priority": "scene-priority",
+                                    "publish-meaning": "operable-fields",
+                                    "high-risk": "refuse-high-risk"
+                                  }
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.passed").value(true))
+                .andExpect(jsonPath("$.progress.currentTaskId").value("rag-pipeline"));
     }
 }

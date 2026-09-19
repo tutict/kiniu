@@ -99,4 +99,47 @@ class LearningAgentPublisherTests {
 
         assertThrows(IllegalArgumentException.class, () -> publisher.publish(task, attempt));
     }
+
+    @Test
+    void shouldPublishCanonicalCompanionWhenQuizAttemptHasNoAgentFile() {
+        AgentManager agentManager = org.mockito.Mockito.mock(AgentManager.class);
+        AgentCatalogResponse catalog = new AgentCatalogResponse(List.of());
+        when(agentManager.upsertAgent(any())).thenReturn(catalog);
+        LearningAgentPublisher publisher = new LearningAgentPublisher(new ObjectMapper(), agentManager);
+        LearningTaskDefinition task = new LearningTaskDefinition(
+                "companion-agent",
+                "Companion",
+                "Summary",
+                "beginner",
+                "agent-project",
+                20,
+                List.of("Agent"),
+                "Objective",
+                "Scenario",
+                "companion",
+                List.of(),
+                List.of(),
+                "Lesson",
+                List.of("Publish"),
+                List.of(),
+                "quiz",
+                List.of(),
+                List.of(),
+                100);
+        LearningAttempt attempt = new LearningAttempt(
+                "attempt-1",
+                task.id(),
+                "2026-07-23T00:00:00Z",
+                true,
+                100,
+                Map.of(),
+                List.of(),
+                "");
+
+        LearningAgentPublisher.PublishedLearningAgent published = publisher.publish(task, attempt);
+
+        assertEquals("student-companion", published.agent().id());
+        assertEquals("晚间计划助手", published.agent().name());
+        verify(agentManager).upsertAgent(any());
+    }
 }

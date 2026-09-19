@@ -344,6 +344,24 @@ class LearningCatalogServiceTests {
                         "pii-cases"),
                 evaluationSuite.quizQuestions().stream().map(LearningQuizQuestion::id).toList());
         assertEquals("feedback-loop", evaluationSuite.quizQuestions().get(0).correctOptionId());
+        LearningTaskDefinition companion = taskById(tasks, "companion-agent");
+        assertEquals("quiz", companion.evidenceMode());
+        assertEquals("agent-project", companion.kind());
+        assertEquals(10, companion.quizQuestions().size());
+        assertEquals(
+                List.of(
+                        "identity",
+                        "goals",
+                        "boundaries",
+                        "personality-vs-policy",
+                        "memory-policy",
+                        "failure-policy",
+                        "eval-mix",
+                        "priority",
+                        "publish-meaning",
+                        "high-risk"),
+                companion.quizQuestions().stream().map(LearningQuizQuestion::id).toList());
+        assertEquals("evening-planner", companion.quizQuestions().get(0).correctOptionId());
         assertTrue(tasks.stream()
                 .filter(task -> "import".equals(task.evidenceMode()))
                 .allMatch(task -> List.of("/source", "/capturedAt", "/requestId").stream()

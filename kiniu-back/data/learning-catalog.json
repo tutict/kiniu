@@ -3284,13 +3284,13 @@
           ]
         },
         {
-          "level": "中级",
+          "level": "初级",
           "mentorAgentId": "project-agent",
           "id": "companion-agent",
           "title": "打造自己的陪伴 Agent",
-          "summary": "将前置的需求、记忆、轨迹和评测汇总为可发布 Agent。",
+          "summary": "把晚间计划助手的需求、记忆、轨迹和评测收成可发布 Agent：先判断身份、目标、边界和失败策略，通过后发布到目录。",
           "kind": "agent-project",
-          "estimatedMinutes": 75,
+          "estimatedMinutes": 25,
           "skills": [
             "Agent 设计",
             "记忆",
@@ -3298,18 +3298,18 @@
             "评测"
           ],
           "objective": "交付一个有身份、目标、边界、记忆和评测证据的个人 Agent，并可发布到现有目录。",
-          "scenario": "你要交付一个每天可用的 AI 陪伴 Agent，但它不能越权记忆、编造事实或替用户做高风险决定。",
-          "lesson": "## 核心概念\nAgent 项目是前置契约的集成练习：身份和目标决定行为方向，边界与失败策略限制风险，记忆策略控制长期影响，评测场景验证稳定性。发布不是把 JSON 存进目录，而是确认所有字段和安全检查都能被后续运营理解。\n\n## 算法思想\n多目标编排是优先级调度：陪伴、纠错、推进各有权重，每轮按场景挑最高价值的动作，与操作系统的调度思路一致。\n\n## 完成步骤\n填写 agent.json 的名称、人格、目标、边界、记忆和失败策略；在 evaluation.json 中准备至少八个正常、边界或对抗场景；把当前 Agent 与需求、上下文预算、工具轨迹和评测结果对齐，再运行发布检查。 留下可复现记录，提交前移除密钥和个人信息。\n\n## 常见误区\n不要用人格描述替代权限控制，也不要把“永远帮助用户”作为无条件目标。评测样例不能全是自选的成功案例，敏感信息和高风险动作必须有拒绝路径。\n\n## 完成标准\nAgent 身份和策略结构完整，场景数量达到要求，且通过检查后能够由已有发布接口安全发布。",
+          "scenario": "你要把晚间计划助手做成每天能用的陪伴 Agent。它必须根据粘贴待办给最多三条下一步，但不能越权记忆、编造事实，也不能替林舟改日历或做高风险决定。有人想把目标写成“永远帮忙”，评测只放成功案例，还觉得温暖人格可以代替权限。",
+          "lesson": "## 核心概念\n陪伴 Agent 是前置契约的集成：身份和目标决定方向，边界限制风险，记忆控制长期影响，评测验证稳定性。人格不能替代权限。发布后字段必须能被运营理解。\n\n## 算法思想\n多目标是优先级调度：陪伴、纠错、推进各有权重，每轮按场景挑最高价值动作。无条件“永远帮忙”会压过拒绝路径。\n\n## 完成步骤\n结合晚间计划助手判断：该叫什么、核心目标是什么、哪些边界必须写死、记忆如何忘、失败如何接管、评测能不能全是成功案例。通过后可发布到目录。\n\n## 常见误区\n不要用人格描述替代权限控制，也不要把“永远帮助用户”当作无条件目标。评测不能全是自选成功案例。\n\n## 完成标准\n十道场景判断全部选对。通过后可用已有发布接口，把符合契约的陪伴 Agent 发到自由实验室。",
           "deliverables": [
-            "agent.json：Agent 身份与行为策略",
-            "evaluation.json：Agent 场景集"
+            "场景判断：完成十道题，覆盖身份、目标、边界、记忆、失败和评测；通过后可发布 Agent"
           ],
           "prerequisiteTaskIds": [
             "context-memory-budget",
             "agent-trace-recovery",
             "evaluation-suite"
           ],
-          "evidenceMode": "document",
+          "evidenceMode": "quiz",
+          "passingScore": 100,
           "references": [
             {
               "title": "Building effective agents",
@@ -3326,70 +3326,258 @@
               "accessedAt": "2026-07-23"
             }
           ],
-          "starterFiles": [
+          "starterFiles": [],
+          "checks": [],
+          "quizQuestions": [
             {
-              "path": "agent.json",
-              "content": "{\n  \"id\": \"student-companion\",\n  \"name\": \"\",\n  \"personality\": \"\",\n  \"coreGoals\": [],\n  \"boundaries\": [],\n  \"memoryPolicy\": \"\",\n  \"failurePolicy\": \"\"\n}"
-            },
-            {
-              "path": "evaluation.json",
-              "content": "{\n  \"scenarios\": []\n}"
-            }
-          ],
-          "checks": [
-            {
-              "id": "name",
-              "type": "json-field",
-              "path": "agent.json",
-              "rule": "name",
-              "required": true,
+              "id": "identity",
+              "prompt": "这个陪伴 Agent 的身份，哪项正确？",
+              "options": [
+                {
+                  "id": "do-all",
+                  "label": "万能助理，邮件、支付、改日历都能做"
+                },
+                {
+                  "id": "evening-planner",
+                  "label": "晚间计划助手：只把粘贴待办变成有限的下一步建议"
+                },
+                {
+                  "id": "no-name",
+                  "label": "不用名字，模型自己扮演就行"
+                },
+                {
+                  "id": "copy-user",
+                  "label": "伪装成林舟本人发消息"
+                }
+              ],
+              "correctOptionId": "evening-planner",
               "points": 10,
-              "message": "Agent 必须有清晰身份。"
+              "explanation": "身份必须清晰可运营。万能助理会把边界冲掉。"
             },
             {
               "id": "goals",
-              "type": "json-array-min",
-              "path": "agent.json",
-              "rule": "coreGoals:2",
-              "required": true,
-              "points": 20,
-              "message": "至少定义两个核心目标。"
+              "prompt": "哪组核心目标符合契约？",
+              "options": [
+                {
+                  "id": "always-help",
+                  "label": "永远帮助用户；用户说什么都答应"
+                },
+                {
+                  "id": "next-and-uncertainty",
+                  "label": "给出最多三条可执行下一步，并标明不确定、拒绝编造"
+                },
+                {
+                  "id": "maximize-chat",
+                  "label": "尽量把对话聊长，提高粘性"
+                },
+                {
+                  "id": "replace-user",
+                  "label": "替林舟做完所有决定"
+                }
+              ],
+              "correctOptionId": "next-and-uncertainty",
+              "points": 10,
+              "explanation": "目标要可检查。无条件帮忙会压过拒绝路径。"
             },
             {
               "id": "boundaries",
-              "type": "json-array-min",
-              "path": "agent.json",
-              "rule": "boundaries:2",
-              "required": true,
-              "points": 20,
-              "message": "至少定义两条行为边界。"
+              "prompt": "至少该写死哪类行为边界？",
+              "options": [
+                {
+                  "id": "be-nice",
+                  "label": "语气要友好，其他不管"
+                },
+                {
+                  "id": "no-write-no-invent",
+                  "label": "不改日历/群发/代下单，不编造记忆或事实"
+                },
+                {
+                  "id": "after-the-fact",
+                  "label": "先做，被投诉再补边界"
+                },
+                {
+                  "id": "model-decides",
+                  "label": "边界由模型按心情决定"
+                }
+              ],
+              "correctOptionId": "no-write-no-invent",
+              "points": 10,
+              "explanation": "人格不能替代权限。高风险动作和编造必须写进边界。"
             },
             {
-              "id": "memory",
-              "type": "json-field",
-              "path": "agent.json",
-              "rule": "memoryPolicy",
-              "required": true,
-              "points": 15,
-              "message": "说明记忆与遗忘。"
+              "id": "personality-vs-policy",
+              "prompt": "写了“温暖、务实”的人格，还要不要权限边界？",
+              "options": [
+                {
+                  "id": "personality-enough",
+                  "label": "人格好就不会越权"
+                },
+                {
+                  "id": "policy-required",
+                  "label": "要。人格管风格，边界管不能做什么"
+                },
+                {
+                  "id": "hide-policy",
+                  "label": "边界会让体验变冷，不要写"
+                },
+                {
+                  "id": "user-vibe",
+                  "label": "林舟喜欢就等于授权"
+                }
+              ],
+              "correctOptionId": "policy-required",
+              "points": 10,
+              "explanation": "不要用人格描述替代权限控制。风格和安全是两层。"
             },
             {
-              "id": "failure",
-              "type": "json-field",
-              "path": "agent.json",
-              "rule": "failurePolicy",
-              "required": true,
-              "points": 15,
-              "message": "说明失败、未知和人工接管。"
+              "id": "memory-policy",
+              "prompt": "记忆策略哪项正确？",
+              "options": [
+                {
+                  "id": "remember-all",
+                  "label": "所有对话永久记住，越懂越好"
+                },
+                {
+                  "id": "explicit-forget",
+                  "label": "只记明确授权的偏好，要求删除时从两类记忆和派生副本清除"
+                },
+                {
+                  "id": "secret-log",
+                  "label": "偷偷记手机号，方便以后联系同事"
+                },
+                {
+                  "id": "no-memory",
+                  "label": "完全不记忆，连当次待办也不放工作记忆"
+                }
+              ],
+              "correctOptionId": "explicit-forget",
+              "points": 10,
+              "explanation": "记忆策略要可删除、可授权，并接上前面的生命周期课。"
             },
             {
-              "id": "scenarios",
-              "type": "json-array-shape",
-              "path": "evaluation.json",
-              "rule": "/scenarios:8:category,input,expected",
-              "required": true,
-              "points": 20,
-              "message": "至少准备八个评测场景。"
+              "id": "failure-policy",
+              "prompt": "失败、未知和高风险时该怎样？",
+              "options": [
+                {
+                  "id": "fake-ok",
+                  "label": "假装成功，以免打断体验"
+                },
+                {
+                  "id": "refuse-or-handoff",
+                  "label": "说清不确定，拒绝越权，必要时转人工"
+                },
+                {
+                  "id": "retry-forever",
+                  "label": "一直重试到看起来对"
+                },
+                {
+                  "id": "blame-user",
+                  "label": "怪用户没说清楚"
+                }
+              ],
+              "correctOptionId": "refuse-or-handoff",
+              "points": 10,
+              "explanation": "失败策略必须包含拒绝和接管，不能靠装成功。"
+            },
+            {
+              "id": "eval-mix",
+              "prompt": "发布前的评测场景，哪项合格？",
+              "options": [
+                {
+                  "id": "wins-only",
+                  "label": "八个都是成功的黄金路径"
+                },
+                {
+                  "id": "mix-fail",
+                  "label": "包含正常、空输入边界、以及要求改日历的对抗/拒绝"
+                },
+                {
+                  "id": "one-case",
+                  "label": "一个自己满意的例子就够"
+                },
+                {
+                  "id": "no-eval",
+                  "label": "能聊天就不必评测"
+                }
+              ],
+              "correctOptionId": "mix-fail",
+              "points": 10,
+              "explanation": "评测不能全是自选成功案例。敏感和高风险必须有拒绝路径。"
+            },
+            {
+              "id": "priority",
+              "prompt": "陪伴、纠错、推进三个目标冲突时怎么调度？",
+              "options": [
+                {
+                  "id": "always-accompany",
+                  "label": "永远先陪聊，再也不拒绝"
+                },
+                {
+                  "id": "scene-priority",
+                  "label": "按场景挑最高价值动作：越权时拒绝优先于陪聊"
+                },
+                {
+                  "id": "random",
+                  "label": "随机选一个，增加人性"
+                },
+                {
+                  "id": "user-latest",
+                  "label": "谁最后说话听谁的"
+                }
+              ],
+              "correctOptionId": "scene-priority",
+              "points": 10,
+              "explanation": "多目标是优先级调度。安全边界的权重必须高于陪伴。"
+            },
+            {
+              "id": "publish-meaning",
+              "prompt": "把 Agent 发布到目录，意味着什么？",
+              "options": [
+                {
+                  "id": "dump-json",
+                  "label": "把任意 JSON 丢进目录就算发布"
+                },
+                {
+                  "id": "operable-fields",
+                  "label": "名称、目标、边界、记忆和失败策略都能被后续运营理解并执行"
+                },
+                {
+                  "id": "secret-ok",
+                  "label": "可以带上 API key 方便别人用"
+                },
+                {
+                  "id": "overwrite-system",
+                  "label": "覆盖平台内置旁白 Agent"
+                }
+              ],
+              "correctOptionId": "operable-fields",
+              "points": 10,
+              "explanation": "发布不是存文件。字段必须可运营，且只能发到 student- 命名空间。"
+            },
+            {
+              "id": "high-risk",
+              "prompt": "林舟说“替我决定要不要辞职并通知老板”，Agent 该怎样？",
+              "options": [
+                {
+                  "id": "decide",
+                  "label": "直接帮他决定并起草通知"
+                },
+                {
+                  "id": "refuse-high-risk",
+                  "label": "拒绝代做高风险决定，只帮助澄清下一步并建议人工"
+                },
+                {
+                  "id": "email-boss",
+                  "label": "先发邮件再问"
+                },
+                {
+                  "id": "joke",
+                  "label": "用笑话岔开，当没听到"
+                }
+              ],
+              "correctOptionId": "refuse-high-risk",
+              "points": 10,
+              "explanation": "不能替用户做高风险决定。陪伴不是接管人生。"
             }
           ]
         }
