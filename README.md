@@ -115,7 +115,7 @@ http://localhost:8080
 
 | 模块 | 任务 ID | 核心交付 |
 |---|---|---|
-| 基础与模型契约 | `requirements-contract`、`http-json-basics`、`model-response-contract` | 场景判断契约、HTTP 交换、结构化模型响应 |
+| 基础与模型契约 | `requirements-contract`、`http-json-basics`、`model-response-contract` | 场景判断契约、HTTP 判断、结构化输出判断 |
 | Prompt、Context 与数据 | `prompt-context-design`、`data-lifecycle`、`context-memory-budget` | Context 方案、数据生命周期、记忆预算 |
 | Workflow、工具与 Agent | `workflow-agent-decision`、`tool-contract`、`agent-skill-authoring`、`agent-trace-recovery` | 架构选型、工具契约、Skill 设计、Agent 轨迹与恢复 |
 | 评测与 Agent 项目 | `evaluation-suite`、`companion-agent` | 持续评测集、完整 Agent 项目 |
@@ -159,6 +159,14 @@ http://localhost:8080
 1. 阅读目标、网关联调场景和讲义。
 2. 完成 10 道判断题，覆盖方法、路径、JSON 角色、状态码、超时、参数错误、鉴权失败、幂等、重试和脱敏记录。
 3. 运行确定性检查；全部选对后解锁实验三 `model-response-contract`。
+
+### 实验三怎么学
+
+第三项任务 `model-response-contract` 同样是场景判断，不再导入 `output-schema.json` 和 `model-run.json`。它接续同一网关：模型输出必须可解析、可拒绝、可追踪。正确流程：
+
+1. 阅读目标、缺字段/拒绝/超时场景和讲义。
+2. 完成 10 道判断题，覆盖 Schema、必填字段、拒绝分支、三类失败、抽样波动、运行元数据、数值字段和脱敏。
+3. 运行确定性检查；全部选对后解锁下一模块 `prompt-context-design`。
 
 ### 请求安全边界
 

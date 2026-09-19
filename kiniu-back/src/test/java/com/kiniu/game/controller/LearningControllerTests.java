@@ -138,5 +138,32 @@ class LearningControllerTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.passed").value(true))
                 .andExpect(jsonPath("$.progress.currentTaskId").value("model-response-contract"));
+
+        mockMvc.perform(get("/learn/tasks/model-response-contract"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.evidenceMode").value("quiz"))
+                .andExpect(jsonPath("$.quizQuestions[0].correctOptionId").doesNotExist());
+
+        mockMvc.perform(post("/learn/tasks/model-response-contract/check")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "answers": {
+                                    "why-schema": "shared-contract",
+                                    "required-fields": "actions-required",
+                                    "refusal-branch": "explicit-refusal",
+                                    "three-failures": "parse-refuse-transport",
+                                    "schema-not-truth": "shape-only",
+                                    "sampling-variance": "distribution",
+                                    "run-metadata": "ids-numbers",
+                                    "numeric-fields": "plain-numbers",
+                                    "parsed-result": "structured",
+                                    "secret-prompt": "redact-run"
+                                  }
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.passed").value(true))
+                .andExpect(jsonPath("$.progress.currentTaskId").value("prompt-context-design"));
     }
 }

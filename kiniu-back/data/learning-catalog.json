@@ -601,26 +601,26 @@
           "mentorAgentId": "project-agent",
           "id": "model-response-contract",
           "title": "建立模型结构化响应契约",
-          "summary": "用 JSON Schema 和运行证据约束模型正常输出与拒绝分支。",
+          "summary": "围绕晚间计划助手的模型输出，用场景判断分清 Schema、拒绝分支、解析失败和可追踪运行记录。",
           "kind": "model-contract",
-          "estimatedMinutes": 55,
+          "estimatedMinutes": 25,
           "skills": [
             "JSON Schema",
             "Structured Outputs",
             "Token",
             "可追踪性"
           ],
-          "objective": "把模型输出从脆弱文本解析升级为显式 Schema，并保存足够的运行元数据定位问题。",
-          "scenario": "模型有时返回缺字段 JSON，有时因安全策略拒绝；调用方需要稳定地区分解析成功、拒绝和传输失败。",
-          "lesson": "## 核心概念\n结构化输出的价值是让调用方和模型共享同一份机器可读契约。Schema 应声明 type、properties 和 required，并为无法完成请求时保留显式拒绝分支。运行记录需要把模型版本、requestId、延迟、输入与输出 token、原始状态和解析结果关联起来。\n\n## 算法思想\n模型输出是对概率分布的加权抽样：temperature 重塑分布、top-p 截断长尾，同一输入本就可能得到不同输出，契约必须容忍并校验这种波动。\n\n## 完成步骤\n在 output-schema.json 中定义对象结构和必填字段，再加入 refusal 分支；从外部模型工具导出或手工整理一次 model-run.json，填写来源、采集时间、请求标识、模型、token、延迟和解析结果。 留下可复现记录，提交前移除密钥和个人信息。\n\n## 常见误区\nSchema 校验通过不代表内容真实；不要把自由文本 JSON 当成严格结构化输出。不要记录密钥或完整敏感 Prompt，token 与延迟必须是数值而非带单位字符串。\n\n## 完成标准\n两个 JSON 均可解析，Schema 字段齐全，运行证据可追踪，数值在合理范围，并且能区分成功解析和拒绝。",
+          "objective": "把模型输出从脆弱文本解析升级为显式 Schema，并知道一次运行要留下哪些可定位问题的元数据。",
+          "scenario": "网关已能 POST /v1/plan/next。模型有时返回散文、有时 JSON 缺 actions、有时因“帮我改同事日历”被安全策略拒绝、有时 5 秒超时。产品仍只要最多 3 条下一步，并标出不确定项；调用方必须稳定区分解析成功、模型拒绝和传输失败，还要留下可定位问题的运行记录。",
+          "lesson": "## 核心概念\n结构化输出让调用方和模型共享同一份机器可读契约。Schema 要声明 type、properties、required，并为做不到的请求保留显式拒绝分支。运行记录必须把模型、requestId、延迟和 token 这些数值关联起来。\n\n## 算法思想\n模型输出是抽样：同一输入也可能得到不同 JSON。契约要校验形状和拒绝，而不是假设唯一正确答案。Schema 通过不等于内容真实。\n\n## 完成步骤\n结合晚间计划助手判断：下一步该有哪些必填字段、改日历该走拒绝、缺字段/拒绝/超时如何区分、运行记录要留哪些数字、哪些秘密不能存。\n\n## 常见误区\n不要用散文加正则冒充结构化输出，也不要把失败都包成一段“失败了”。不要保存 API key 或完整敏感 Prompt。token 与延迟必须是数字。\n\n## 完成标准\n十道场景判断全部选对，并能说明错误选项会让解析、拒绝和超时混成同一种事故。",
           "deliverables": [
-            "output-schema.json：结构化输出 Schema",
-            "model-run.json：一次脱敏模型运行证据"
+            "场景判断：完成十道题，覆盖 Schema、拒绝、三类失败、运行元数据和脱敏"
           ],
           "prerequisiteTaskIds": [
             "http-json-basics"
           ],
-          "evidenceMode": "import",
+          "evidenceMode": "quiz",
+          "passingScore": 100,
           "references": [
             {
               "title": "Structured Outputs",
@@ -637,124 +637,258 @@
               "accessedAt": "2026-07-23"
             }
           ],
-          "starterFiles": [
+          "starterFiles": [],
+          "checks": [],
+          "quizQuestions": [
             {
-              "path": "output-schema.json",
-              "content": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"answer\": {\n      \"type\": \"string\"\n    },\n    \"refusal\": {\n      \"type\": [\n        \"string\",\n        \"null\"\n      ]\n    }\n  },\n  \"required\": []\n}"
-            },
-            {
-              "path": "model-run.json",
-              "content": "{\n  \"source\": \"\",\n  \"capturedAt\": \"\",\n  \"requestId\": \"\",\n  \"model\": \"\",\n  \"latencyMs\": 0,\n  \"inputTokens\": 0,\n  \"outputTokens\": 0,\n  \"parsedResult\": {}\n}"
-            }
-          ],
-          "checks": [
-            {
-              "id": "schema-type",
-              "type": "json-pointer-present",
-              "path": "output-schema.json",
-              "rule": "/type",
-              "required": true,
-              "points": 5,
-              "message": "Schema 必须声明根类型。"
-            },
-            {
-              "id": "schema-properties",
-              "type": "json-pointer-present",
-              "path": "output-schema.json",
-              "rule": "/properties",
-              "required": true,
-              "points": 5,
-              "message": "Schema 必须声明属性。"
-            },
-            {
-              "id": "schema-required",
-              "type": "json-array-min",
-              "path": "output-schema.json",
-              "rule": "required:1",
-              "required": true,
-              "points": 15,
-              "message": "至少声明一个必填字段。"
-            },
-            {
-              "id": "refusal",
-              "type": "json-pointer-present",
-              "path": "output-schema.json",
-              "rule": "/properties/refusal",
-              "required": true,
+              "id": "why-schema",
+              "prompt": "为什么晚间计划助手不能继续用自由文本加正则抠三条建议？",
+              "options": [
+                {
+                  "id": "regex-enough",
+                  "label": "正则已经够用，模型散文里总能找到三条"
+                },
+                {
+                  "id": "shared-contract",
+                  "label": "调用方和模型必须共享同一份机器可读 Schema，缺字段就失败"
+                },
+                {
+                  "id": "longer-prompt",
+                  "label": "只要把 Prompt 写得更长，输出就会稳定成 JSON"
+                },
+                {
+                  "id": "http-200",
+                  "label": "HTTP 200 就表示结构化成功"
+                }
+              ],
+              "correctOptionId": "shared-contract",
               "points": 10,
-              "message": "提供显式拒绝分支。"
+              "explanation": "结构化输出的价值是共享契约。散文加正则无法稳定校验缺字段、拒绝和形状。"
             },
             {
-              "id": "source",
-              "type": "json-pointer-present",
-              "path": "model-run.json",
-              "rule": "/source",
-              "required": true,
+              "id": "required-fields",
+              "prompt": "本版下一步响应里，哪组字段应标成 required？",
+              "options": [
+                {
+                  "id": "vibe-only",
+                  "label": "mood 和 niceness，保证更懂林舟"
+                },
+                {
+                  "id": "actions-required",
+                  "label": "actions（最多 3 条，每条有 text）以及 uncertainty"
+                },
+                {
+                  "id": "calendar-write",
+                  "label": "calendarEventId 和 attendeeEmails"
+                },
+                {
+                  "id": "raw-prose",
+                  "label": "只要一个 answer 字符串"
+                }
+              ],
+              "correctOptionId": "actions-required",
               "points": 10,
-              "message": "填写证据来源。"
+              "explanation": "契约要锁定可检查的下一步，而不是口吻或外部写入字段。"
             },
             {
-              "id": "request",
-              "type": "json-pointer-present",
-              "path": "model-run.json",
-              "rule": "/requestId",
-              "required": true,
+              "id": "refusal-branch",
+              "prompt": "林舟要求“把明早的会推掉并通知组里”时，Schema 应如何表达？",
+              "options": [
+                {
+                  "id": "empty-success",
+                  "label": "返回空的 actions，假装成功"
+                },
+                {
+                  "id": "explicit-refusal",
+                  "label": "走显式 refusal 字段，不生成假建议"
+                },
+                {
+                  "id": "fake-three",
+                  "label": "仍返回 3 条听起来很懂的建议"
+                },
+                {
+                  "id": "chinese-only",
+                  "label": "HTTP 200，只在中文里说做不到"
+                }
+              ],
+              "correctOptionId": "explicit-refusal",
               "points": 10,
-              "message": "填写请求标识。"
+              "explanation": "做不到的请求必须是显式拒绝分支，不能伪装成成功或散文道歉。"
             },
             {
-              "id": "latency",
-              "type": "json-number-range",
-              "path": "model-run.json",
-              "rule": "/latencyMs:1:600000",
-              "required": true,
+              "id": "three-failures",
+              "prompt": "缺字段 JSON、安全拒绝、5 秒超时，应如何区分？",
+              "options": [
+                {
+                  "id": "all-model",
+                  "label": "都当成模型坏了，换一个更大的模型"
+                },
+                {
+                  "id": "parse-refuse-transport",
+                  "label": "分别走解析失败、模型拒绝和传输失败"
+                },
+                {
+                  "id": "retry-all",
+                  "label": "三种情况都立刻原样重试"
+                },
+                {
+                  "id": "status-200",
+                  "label": "一律 200，再凭感觉看正文"
+                }
+              ],
+              "correctOptionId": "parse-refuse-transport",
               "points": 10,
-              "message": "填写毫秒延迟。"
+              "explanation": "三类失败的下一步完全不同：补 Schema、遵守拒绝、按幂等处理超时。混在一起就无法修复。"
             },
             {
-              "id": "tokens-in",
-              "type": "json-number-range",
-              "path": "model-run.json",
-              "rule": "/inputTokens:1:10000000",
-              "required": true,
+              "id": "schema-not-truth",
+              "prompt": "输出通过 Schema 校验，意味着什么？",
+              "options": [
+                {
+                  "id": "true-facts",
+                  "label": "三条建议一定真实可执行"
+                },
+                {
+                  "id": "shape-only",
+                  "label": "只保证形状合法，不保证内容真实"
+                },
+                {
+                  "id": "no-tokens",
+                  "label": "这次调用不会消耗 token"
+                },
+                {
+                  "id": "no-timeout",
+                  "label": "以后不会再超时"
+                }
+              ],
+              "correctOptionId": "shape-only",
               "points": 10,
-              "message": "填写输入 token。"
+              "explanation": "Schema 管形状。内容是否可执行、是否越权，还要靠业务规则和评测。"
             },
             {
-              "id": "tokens-out",
-              "type": "json-number-range",
-              "path": "model-run.json",
-              "rule": "/outputTokens:1:10000000",
-              "required": true,
+              "id": "sampling-variance",
+              "prompt": "同一段待办调用两次，JSON 字段都在但措辞不同。正确理解是？",
+              "options": [
+                {
+                  "id": "gateway-bug",
+                  "label": "一定是网关把两次请求弄乱了"
+                },
+                {
+                  "id": "distribution",
+                  "label": "模型是抽样，契约要校验波动，而不是假设唯一答案"
+                },
+                {
+                  "id": "drop-json",
+                  "label": "所以不该用 JSON，改回散文更稳"
+                },
+                {
+                  "id": "max-temp",
+                  "label": "把 temperature 调到最高会更稳定"
+                }
+              ],
+              "correctOptionId": "distribution",
               "points": 10,
-              "message": "填写输出 token."
+              "explanation": "同一输入本就可能得到不同输出。契约检查的是必填形状和拒绝，不是逐字相同。"
             },
             {
-              "id": "parsed",
-              "type": "json-pointer-present",
-              "path": "model-run.json",
-              "rule": "/parsedResult",
-              "required": true,
-              "points": 5,
-              "message": "保存解析结果。"
+              "id": "run-metadata",
+              "prompt": "一次可追踪的模型运行记录必须包含什么？",
+              "options": [
+                {
+                  "id": "prose-log",
+                  "label": "一段“今天调用还行”"
+                },
+                {
+                  "id": "ids-numbers",
+                  "label": "model、requestId、latencyMs、inputTokens、outputTokens"
+                },
+                {
+                  "id": "full-secret",
+                  "label": "完整 Prompt 和 API key"
+                },
+                {
+                  "id": "screenshot",
+                  "label": "一张聊天窗口截图"
+                }
+              ],
+              "correctOptionId": "ids-numbers",
+              "points": 10,
+              "explanation": "定位问题靠模型标识、请求 ID 和数值化的延迟/token，而不是截图或密钥。"
             },
             {
-              "id": "captured-at",
-              "type": "json-pointer-present",
-              "path": "model-run.json",
-              "rule": "/capturedAt",
-              "required": true,
-              "points": 5,
-              "message": "填写证据采集时间。"
+              "id": "numeric-fields",
+              "prompt": "延迟和 token 应如何记录？",
+              "options": [
+                {
+                  "id": "with-units",
+                  "label": "写成 \"320ms\" 和 \"1.2k tokens\""
+                },
+                {
+                  "id": "plain-numbers",
+                  "label": "用数字记录毫秒和 token，不要带单位字符串"
+                },
+                {
+                  "id": "omit-ok",
+                  "label": "只要解析成功就不用记"
+                },
+                {
+                  "id": "in-path",
+                  "label": "放进 URL 路径里方便检索"
+                }
+              ],
+              "correctOptionId": "plain-numbers",
+              "points": 10,
+              "explanation": "token 与延迟必须是可比较的数字。带单位的字符串无法排序、告警或设门禁。"
             },
             {
-              "id": "model",
-              "type": "json-pointer-present",
-              "path": "model-run.json",
-              "rule": "/model",
-              "required": true,
-              "points": 5,
-              "message": "填写实际模型标识。"
+              "id": "parsed-result",
+              "prompt": "parsedResult 应该保存什么？",
+              "options": [
+                {
+                  "id": "raw-prose",
+                  "label": "只保存模型吐出的原始散文"
+                },
+                {
+                  "id": "structured",
+                  "label": "按 Schema 解析后的对象，或明确的拒绝结果"
+                },
+                {
+                  "id": "auth-header",
+                  "label": "Authorization 头，方便下次重放"
+                },
+                {
+                  "id": "phone",
+                  "label": "林舟的手机号，方便回访"
+                }
+              ],
+              "correctOptionId": "structured",
+              "points": 10,
+              "explanation": "解析结果要对照契约：成功就是结构化对象，失败就是拒绝，而不是密钥或散文。"
+            },
+            {
+              "id": "secret-prompt",
+              "prompt": "保存这次运行证据时，正确做法是？",
+              "options": [
+                {
+                  "id": "keep-key",
+                  "label": "留下 API key，同事才能复现"
+                },
+                {
+                  "id": "redact-run",
+                  "label": "保留 model、requestId、数值和脱敏解析结果，去掉密钥和完整敏感 Prompt"
+                },
+                {
+                  "id": "dump-todo",
+                  "label": "把林舟待办原文提交到公共仓库当样例"
+                },
+                {
+                  "id": "skip-schema",
+                  "label": "有运行记录就不用 Schema 了"
+                }
+              ],
+              "correctOptionId": "redact-run",
+              "points": 10,
+              "explanation": "可追踪不等于保存秘密。元数据和形状要留下，密钥与完整敏感 Prompt 必须去掉。"
             }
           ]
         }

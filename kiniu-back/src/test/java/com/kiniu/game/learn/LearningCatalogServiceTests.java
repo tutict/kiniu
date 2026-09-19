@@ -191,6 +191,23 @@ class LearningCatalogServiceTests {
                         "secret-boundary"),
                 httpJson.quizQuestions().stream().map(LearningQuizQuestion::id).toList());
         assertEquals("post-plan", httpJson.quizQuestions().get(0).correctOptionId());
+        LearningTaskDefinition modelContract = taskById(tasks, "model-response-contract");
+        assertEquals("quiz", modelContract.evidenceMode());
+        assertEquals(10, modelContract.quizQuestions().size());
+        assertEquals(
+                List.of(
+                        "why-schema",
+                        "required-fields",
+                        "refusal-branch",
+                        "three-failures",
+                        "schema-not-truth",
+                        "sampling-variance",
+                        "run-metadata",
+                        "numeric-fields",
+                        "parsed-result",
+                        "secret-prompt"),
+                modelContract.quizQuestions().stream().map(LearningQuizQuestion::id).toList());
+        assertEquals("shared-contract", modelContract.quizQuestions().get(0).correctOptionId());
         assertTrue(tasks.stream()
                 .filter(task -> "import".equals(task.evidenceMode()))
                 .allMatch(task -> List.of("/source", "/capturedAt", "/requestId").stream()
