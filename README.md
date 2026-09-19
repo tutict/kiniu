@@ -120,7 +120,7 @@ http://localhost:8080
 | Workflow、工具与 Agent | `workflow-agent-decision`、`tool-contract`、`agent-skill-authoring`、`agent-trace-recovery` | 架构选型判断、工具契约判断、Skill 判断、轨迹恢复判断 |
 | 评测与 Agent 项目 | `evaluation-suite`、`companion-agent` | 评测门禁判断、陪伴 Agent 判断并可发布 |
 | RAG 检索增强 | `rag-pipeline`、`rag-evaluation` | RAG 管道判断、召回与 groundedness 判断 |
-| GenAI 安全 | `genai-red-team`、`access-concurrency` | 红队防御判断、服务安全契约 |
+| GenAI 安全 | `genai-red-team`、`access-concurrency` | 红队防御判断、权限并发判断 |
 | 协议互操作 | `mcp-integration`、`a2a-collaboration` | MCP 服务、A2A Agent Card 与委派轨迹 |
 | 生产与综合项目 | `observability-runbook`、`release-safety`、`architecture-collaboration` | 可观测样本、发布门禁、最终架构决策 |
 
@@ -263,6 +263,14 @@ http://localhost:8080
 1. 阅读目标、不可信内容场景和讲义。
 2. 完成 10 道判断题，覆盖 prompt 不够、直接/间接注入、泄露、输出编码、过度权限、投毒、消耗预算、回归用例和残余风险所有者。
 3. 运行确定性检查；全部选对后解锁 `access-concurrency`。
+
+### 实验十六怎么学
+
+第十六项任务 `access-concurrency` 是场景判断，不再手写 `service-safety.json`。两人同时保存配置、超时自动重试、能不能用管理员身份替所有用户调下游，都要判断。正确流程：
+
+1. 阅读目标、并发发布场景和讲义。
+2. 完成 10 道判断题，覆盖认证授权、禁止升权、API key≠ACL、下游身份、幂等、乐观锁、锁≠幂等、限流加预算、确认和审计。
+3. 运行确定性检查；全部选对后解锁 `mcp-integration`。
 
 ### 请求安全边界
 

@@ -4490,13 +4490,13 @@
           ]
         },
         {
-          "level": "中级",
+          "level": "初级",
           "mentorAgentId": "project-agent",
           "id": "access-concurrency",
           "title": "设计权限、并发与滥用边界",
-          "summary": "定义角色、权限、幂等、并发冲突、下游授权和敏感操作确认。",
+          "summary": "围绕晚间计划助手被多人同时改配置、客户端和模型自动重试，用场景判断分清角色、幂等、乐观锁、限流和下游授权。",
           "kind": "service-safety",
-          "estimatedMinutes": 55,
+          "estimatedMinutes": 25,
           "skills": [
             "授权",
             "并发",
@@ -4505,15 +4505,16 @@
             "审计"
           ],
           "objective": "让多用户和自动重试场景下的业务动作保持可预测、最小权限且可审计。",
-          "scenario": "Agent 发布接口开放给团队成员，多人可能同时更新同一版本，客户端和模型也会自动重试。",
-          "lesson": "## 核心概念\n认证确认是谁，授权决定能做什么；Agent 自己不能扩大调用者权限。并发更新需要版本或锁语义，重复写入需要幂等键和结果缓存。速率、并发、token 与工具步数预算共同防止无限消耗；高风险动作要在执行前向用户展示具体影响。\n\n## 算法思想\n令牌桶限流：桶以固定速率补充令牌，请求取到才放行，既限平均速率又容忍短突发；乐观锁是比较并交换——带版本号写入，版本不符说明有并发修改，重读再试而不是加锁死等。\n\n## 完成步骤\n定义至少两个角色和三条权限；说明幂等键、重复响应和过期；选择乐观锁、租约或串行化策略；配置速率、并发与成本限制；定义确认流程和下游按用户身份授权；记录审计字段。 留下可复现记录，提交前移除密钥和个人信息。\n\n## 常见误区\n不要把 API key 当作细粒度权限，也不要让后台服务用管理员身份代替所有用户。锁不能解决重复请求，限流也不能替代总成本和超时预算。\n\n## 完成标准\n服务安全契约包含角色、权限、幂等、并发、滥用控制、确认和下游授权，且结构可由服务实现直接采用。",
+          "scenario": "晚间计划助手的发布接口开放给团队。产品经理和开发可能同时保存同一版配置；前端和模型超时后都会自动重试。有人想用一把管理员 API key 替所有用户调日历只读接口，敏感操作也不想弹确认。",
+          "lesson": "## 核心概念\n认证确认是谁，授权决定能做什么。Agent 不能扩大调用者权限。并发更新需要版本或锁，重复写入需要幂等键。速率、并发、token 与工具步数预算防止无限消耗；高风险动作执行前要向用户展示具体影响。\n\n## 算法思想\n令牌桶限流：既限平均速率又容忍短突发。乐观锁是比较并交换——版本不符就重读再试。锁解决不了重复请求。\n\n## 完成步骤\n结合晚间计划助手判断：两人同时改配置、客户端自动重试、能不能用管理员身份替所有用户调下游、敏感操作要不要确认。\n\n## 常见误区\n不要把 API key 当作细粒度权限。限流也不能替代总成本和超时预算。\n\n## 完成标准\n十道场景判断全部选对，并能说明错误选项会让越权、重复写入或静默覆盖发生。",
           "deliverables": [
-            "service-safety.json：服务安全与并发契约"
+            "场景判断：完成十道题，覆盖角色权限、幂等、并发、限流、确认、下游授权和审计"
           ],
           "prerequisiteTaskIds": [
             "genai-red-team"
           ],
-          "evidenceMode": "document",
+          "evidenceMode": "quiz",
+          "passingScore": 100,
           "references": [
             {
               "title": "MCP Authorization",
@@ -4530,75 +4531,258 @@
               "accessedAt": "2026-07-23"
             }
           ],
-          "starterFiles": [
+          "starterFiles": [],
+          "checks": [],
+          "quizQuestions": [
             {
-              "path": "service-safety.json",
-              "content": "{\n  \"roles\": [],\n  \"permissions\": [],\n  \"idempotency\": {},\n  \"concurrencyControl\": {},\n  \"abuseControls\": [],\n  \"confirmation\": \"\",\n  \"downstreamAuthorization\": \"\"\n}"
-            }
-          ],
-          "checks": [
-            {
-              "id": "roles",
-              "type": "json-array-min",
-              "path": "service-safety.json",
-              "rule": "roles:2",
-              "required": true,
-              "points": 15,
-              "message": "至少定义两个角色。"
+              "id": "authn-authz",
+              "prompt": "认证和授权分别管什么？",
+              "options": [
+                {
+                  "id": "same",
+                  "label": "一回事，有 API key 就能做任何事"
+                },
+                {
+                  "id": "who-what",
+                  "label": "认证确认是谁，授权决定这个身份能做什么"
+                },
+                {
+                  "id": "model-authz",
+                  "label": "模型自己决定谁能做什么更灵活"
+                },
+                {
+                  "id": "no-authz",
+                  "label": "本地服务不需要授权"
+                }
+              ],
+              "correctOptionId": "who-what",
+              "points": 10,
+              "explanation": "认证和授权是两步。有身份不等于有写配置或写日历的权限。"
             },
             {
-              "id": "permissions",
-              "type": "json-array-min",
-              "path": "service-safety.json",
-              "rule": "permissions:3",
-              "required": true,
-              "points": 20,
-              "message": "至少定义三条权限。"
+              "id": "no-escalate",
+              "prompt": "调用者以普通成员身份请求助手去改团队配置。Agent 能否自己升权？",
+              "options": [
+                {
+                  "id": "yes-help",
+                  "label": "能，Agent 帮忙升权才叫智能"
+                },
+                {
+                  "id": "no-expand",
+                  "label": "不能。Agent 不得扩大调用者权限"
+                },
+                {
+                  "id": "if-prompt",
+                  "label": "system 里写了“尽量帮忙”就可以升权"
+                },
+                {
+                  "id": "weekend",
+                  "label": "非工作时间可以升权"
+                }
+              ],
+              "correctOptionId": "no-expand",
+              "points": 10,
+              "explanation": "Agent 自己不能扩大调用者权限。下游必须按用户身份授权。"
             },
             {
-              "id": "idempotency",
-              "type": "json-pointer-present",
-              "path": "service-safety.json",
-              "rule": "/idempotency",
-              "required": true,
-              "points": 15,
-              "message": "定义幂等策略。"
+              "id": "api-key-not-acl",
+              "prompt": "一把共享管理员 API key 能不能当细粒度权限用？",
+              "options": [
+                {
+                  "id": "yes-simple",
+                  "label": "能，一把钥匙最好管"
+                },
+                {
+                  "id": "no-roles",
+                  "label": "不能。要角色和权限列表，不能把 key 当 ACL"
+                },
+                {
+                  "id": "rotate-enough",
+                  "label": "只要定期换 key 就等于细粒度授权"
+                },
+                {
+                  "id": "hide-key",
+                  "label": "把 key 藏在 Prompt 里就安全了"
+                }
+              ],
+              "correctOptionId": "no-roles",
+              "points": 10,
+              "explanation": "不要把 API key 当作细粒度权限。角色和权限必须分开建模。"
             },
             {
-              "id": "concurrency",
-              "type": "json-pointer-present",
-              "path": "service-safety.json",
-              "rule": "/concurrencyControl",
-              "required": true,
-              "points": 15,
-              "message": "定义并发冲突处理。"
+              "id": "downstream-identity",
+              "prompt": "助手去调日历只读接口时，该用谁的身份？",
+              "options": [
+                {
+                  "id": "admin",
+                  "label": "后台管理员身份，省得逐个授权"
+                },
+                {
+                  "id": "caller",
+                  "label": "传播调用者身份，下游按该用户权限放行"
+                },
+                {
+                  "id": "anonymous",
+                  "label": "匿名调用，更快"
+                },
+                {
+                  "id": "model-sa",
+                  "label": "用模型服务账号读写所有日历"
+                }
+              ],
+              "correctOptionId": "caller",
+              "points": 10,
+              "explanation": "不要让后台服务用管理员身份代替所有用户。下游授权要传播调用者身份。"
             },
             {
-              "id": "abuse",
-              "type": "json-array-min",
-              "path": "service-safety.json",
-              "rule": "abuseControls:2",
-              "required": true,
-              "points": 15,
-              "message": "至少两类滥用控制。"
+              "id": "idempotency-retry",
+              "prompt": "保存配置时前端超时自动重试，正确做法是？",
+              "options": [
+                {
+                  "id": "two-writes",
+                  "label": "当成两次保存，版本跳两格"
+                },
+                {
+                  "id": "same-key",
+                  "label": "带幂等键，重复请求返回同一结果"
+                },
+                {
+                  "id": "lock-forever",
+                  "label": "加一把永不释放的锁"
+                },
+                {
+                  "id": "drop-retry",
+                  "label": "禁止一切重试"
+                }
+              ],
+              "correctOptionId": "same-key",
+              "points": 10,
+              "explanation": "重复写入需要幂等键和结果缓存。锁解决不了重复请求。"
+            },
+            {
+              "id": "optimistic-lock",
+              "prompt": "两个人同时保存同一版配置，该怎样？",
+              "options": [
+                {
+                  "id": "last-wins",
+                  "label": "后到的覆盖先到的，不提示"
+                },
+                {
+                  "id": "version-cas",
+                  "label": "带版本号比较并交换，版本不符就重读再试"
+                },
+                {
+                  "id": "merge-silent",
+                  "label": "静默合并两边字段"
+                },
+                {
+                  "id": "block-team",
+                  "label": "禁止两人使用产品"
+                }
+              ],
+              "correctOptionId": "version-cas",
+              "points": 10,
+              "explanation": "并发更新需要版本或锁语义。乐观锁是比较并交换，不是静默覆盖。"
+            },
+            {
+              "id": "lock-not-idempotent",
+              "prompt": "只加互斥锁，不带幂等键，够不够防自动重试？",
+              "options": [
+                {
+                  "id": "enough",
+                  "label": "够，锁住就不会重复"
+                },
+                {
+                  "id": "not-enough",
+                  "label": "不够。锁管并发冲突，重复请求仍要靠幂等键"
+                },
+                {
+                  "id": "lock-forever",
+                  "label": "把锁超时调成无限即可"
+                },
+                {
+                  "id": "db-unique",
+                  "label": "数据库有主键就等于幂等"
+                }
+              ],
+              "correctOptionId": "not-enough",
+              "points": 10,
+              "explanation": "锁不能解决重复请求。并发控制和幂等是两件事。"
+            },
+            {
+              "id": "rate-and-budget",
+              "prompt": "防止助手被打爆，只做 QPS 限流够不够？",
+              "options": [
+                {
+                  "id": "qps-only",
+                  "label": "够，限住每秒请求就安全"
+                },
+                {
+                  "id": "rate-plus-cost",
+                  "label": "不够。还要并发、token 和工具步数预算，限流不能替代总成本"
+                },
+                {
+                  "id": "no-limit",
+                  "label": "本地无限资源，不必限"
+                },
+                {
+                  "id": "slow-model",
+                  "label": "换更慢的模型自然限流"
+                }
+              ],
+              "correctOptionId": "rate-plus-cost",
+              "points": 10,
+              "explanation": "速率、并发、token 与工具步数预算要一起设。限流替代不了成本上限。"
             },
             {
               "id": "confirmation",
-              "type": "json-pointer-present",
-              "path": "service-safety.json",
-              "rule": "/confirmation",
-              "required": true,
+              "prompt": "发布会改动全员可见的助手配置。执行前该怎样？",
+              "options": [
+                {
+                  "id": "silent",
+                  "label": "直接发布，确认会打断体验"
+                },
+                {
+                  "id": "show-impact",
+                  "label": "先向操作者展示具体影响，确认后再执行并审计"
+                },
+                {
+                  "id": "model-ok",
+                  "label": "模型说可以就发"
+                },
+                {
+                  "id": "after-fact",
+                  "label": "先发，被投诉再回滚"
+                }
+              ],
+              "correctOptionId": "show-impact",
               "points": 10,
-              "message": "定义敏感操作确认。"
+              "explanation": "高风险动作要在执行前向用户展示具体影响，并留下审计。"
             },
             {
-              "id": "downstream",
-              "type": "json-pointer-present",
-              "path": "service-safety.json",
-              "rule": "/downstreamAuthorization",
-              "required": true,
+              "id": "audit",
+              "prompt": "一次配置保存，审计至少该记下什么？",
+              "options": [
+                {
+                  "id": "nothing",
+                  "label": "成功就不记，以免占空间"
+                },
+                {
+                  "id": "who-what-when",
+                  "label": "谁、对哪个资源、做了什么、何时、幂等键和结果"
+                },
+                {
+                  "id": "full-key",
+                  "label": "把 API key 明文写进审计"
+                },
+                {
+                  "id": "chat-only",
+                  "label": "只在聊天里口头说一声"
+                }
+              ],
+              "correctOptionId": "who-what-when",
               "points": 10,
-              "message": "定义下游授权传播。"
+              "explanation": "可审计才能在并发和重试后复盘。密钥不能进审计原文。"
             }
           ]
         }

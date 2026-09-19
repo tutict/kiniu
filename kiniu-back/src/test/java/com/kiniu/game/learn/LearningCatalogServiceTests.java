@@ -413,6 +413,23 @@ class LearningCatalogServiceTests {
                         "residual-owner"),
                 redTeam.quizQuestions().stream().map(LearningQuizQuestion::id).toList());
         assertEquals("not-enough", redTeam.quizQuestions().get(0).correctOptionId());
+        LearningTaskDefinition accessConcurrency = taskById(tasks, "access-concurrency");
+        assertEquals("quiz", accessConcurrency.evidenceMode());
+        assertEquals(10, accessConcurrency.quizQuestions().size());
+        assertEquals(
+                List.of(
+                        "authn-authz",
+                        "no-escalate",
+                        "api-key-not-acl",
+                        "downstream-identity",
+                        "idempotency-retry",
+                        "optimistic-lock",
+                        "lock-not-idempotent",
+                        "rate-and-budget",
+                        "confirmation",
+                        "audit"),
+                accessConcurrency.quizQuestions().stream().map(LearningQuizQuestion::id).toList());
+        assertEquals("who-what", accessConcurrency.quizQuestions().get(0).correctOptionId());
         assertTrue(tasks.stream()
                 .filter(task -> "import".equals(task.evidenceMode()))
                 .allMatch(task -> List.of("/source", "/capturedAt", "/requestId").stream()

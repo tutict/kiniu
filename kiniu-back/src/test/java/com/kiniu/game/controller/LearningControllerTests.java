@@ -429,5 +429,27 @@ class LearningControllerTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.passed").value(true))
                 .andExpect(jsonPath("$.progress.currentTaskId").value("access-concurrency"));
+
+        mockMvc.perform(post("/learn/tasks/access-concurrency/check")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "answers": {
+                                    "authn-authz": "who-what",
+                                    "no-escalate": "no-expand",
+                                    "api-key-not-acl": "no-roles",
+                                    "downstream-identity": "caller",
+                                    "idempotency-retry": "same-key",
+                                    "optimistic-lock": "version-cas",
+                                    "lock-not-idempotent": "not-enough",
+                                    "rate-and-budget": "rate-plus-cost",
+                                    "confirmation": "show-impact",
+                                    "audit": "who-what-when"
+                                  }
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.passed").value(true))
+                .andExpect(jsonPath("$.progress.currentTaskId").value("mcp-integration"));
     }
 }
