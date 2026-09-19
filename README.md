@@ -119,7 +119,7 @@ http://localhost:8080
 | Prompt、Context 与数据 | `prompt-context-design`、`data-lifecycle`、`context-memory-budget` | 上下文判断、数据生命周期判断、记忆预算判断 |
 | Workflow、工具与 Agent | `workflow-agent-decision`、`tool-contract`、`agent-skill-authoring`、`agent-trace-recovery` | 架构选型判断、工具契约判断、Skill 判断、轨迹恢复判断 |
 | 评测与 Agent 项目 | `evaluation-suite`、`companion-agent` | 评测门禁判断、陪伴 Agent 判断并可发布 |
-| RAG 检索增强 | `rag-pipeline`、`rag-evaluation` | RAG 管道判断、召回与 groundedness 证据 |
+| RAG 检索增强 | `rag-pipeline`、`rag-evaluation` | RAG 管道判断、召回与 groundedness 判断 |
 | GenAI 安全 | `genai-red-team`、`access-concurrency` | 威胁模型、攻击结果、服务安全契约 |
 | 协议互操作 | `mcp-integration`、`a2a-collaboration` | MCP 服务、A2A Agent Card 与委派轨迹 |
 | 生产与综合项目 | `observability-runbook`、`release-safety`、`architecture-collaboration` | 可观测样本、发布门禁、最终架构决策 |
@@ -247,6 +247,14 @@ http://localhost:8080
 1. 阅读目标、串租户检索场景和讲义。
 2. 完成 10 道判断题，覆盖来源可信度、租户隔离、切分、元数据、混合检索、重排、引用、空召回、证据冲突和运行记录。
 3. 运行确定性检查；全部选对后解锁 `rag-evaluation`。
+
+### 实验十四怎么学
+
+第十四项任务 `rag-evaluation` 是场景判断，不再导入评测运行 JSON。回答很流畅却漏了“全员会已取消”时，要分清是没召回、没用证据还是引用错了。正确流程：
+
+1. 阅读目标、漏条款场景和讲义。
+2. 完成 10 道判断题，覆盖三类指标、流畅≠有据、recall@k、nDCG、查询类别、无答案可拒、跨租户严重失败、禁止循环标注、上线阈值和逐 query 记录。
+3. 运行确定性检查；全部选对后解锁 `genai-red-team`。
 
 ### 请求安全边界
 

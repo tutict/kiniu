@@ -379,6 +379,23 @@ class LearningCatalogServiceTests {
                         "run-record"),
                 ragPipeline.quizQuestions().stream().map(LearningQuizQuestion::id).toList());
         assertEquals("source-trust", ragPipeline.quizQuestions().get(0).correctOptionId());
+        LearningTaskDefinition ragEval = taskById(tasks, "rag-evaluation");
+        assertEquals("quiz", ragEval.evidenceMode());
+        assertEquals(10, ragEval.quizQuestions().size());
+        assertEquals(
+                List.of(
+                        "three-metrics",
+                        "fluency-not-grounded",
+                        "recall-at-k",
+                        "ndcg-position",
+                        "query-mix",
+                        "no-answer",
+                        "cross-tenant-fail",
+                        "no-circular-label",
+                        "thresholds",
+                        "per-query"),
+                ragEval.quizQuestions().stream().map(LearningQuizQuestion::id).toList());
+        assertEquals("hit-ground-cite", ragEval.quizQuestions().get(0).correctOptionId());
         assertTrue(tasks.stream()
                 .filter(task -> "import".equals(task.evidenceMode()))
                 .allMatch(task -> List.of("/source", "/capturedAt", "/requestId").stream()

@@ -3887,13 +3887,13 @@
           ]
         },
         {
-          "level": "中级",
+          "level": "初级",
           "mentorAgentId": "project-agent",
           "id": "rag-evaluation",
           "title": "评测召回与 groundedness",
-          "summary": "用查询集分别衡量召回、答案依据、引用和租户边界。",
+          "summary": "围绕晚间计划助手回答流畅却漏掉关键条款，用场景判断分清召回命中、答案依据、引用正确和租户隔离。",
           "kind": "rag-evaluation",
-          "estimatedMinutes": 65,
+          "estimatedMinutes": 25,
           "skills": [
             "Recall",
             "Groundedness",
@@ -3901,17 +3901,17 @@
             "数据集"
           ],
           "objective": "把 RAG 的检索命中和回答有据可依拆成可观察指标，并设置上线门槛。",
-          "scenario": "RAG 回答看似流畅却漏掉关键条款，团队需要知道是没召回、没使用证据还是引用错误。",
-          "lesson": "## 核心概念\nRAG 评测至少区分 retrieval hit、答案 groundedness 和 citation correctness。查询应覆盖常规、边界、跨文档、无答案和权限隔离；相关文档列表可用于代码评分，答案与证据关系可用模型或人工评分，并要保留失败样例。\n\n## 算法思想\nrecall@k 衡量前 k 条召回了多少应命中的证据；nDCG 再按位置打折——同样命中，排第一和排第十不该同分，位置越靠后价值折扣越大。\n\n## 完成步骤\n准备至少十个 query、相关文档和期望答案；定义 recall@k、groundedness、citation 和隔离指标及阈值；导入一次包含十条结果的运行记录；比较不同切分、检索或重排版本的变化。 留下可复现记录，提交前移除密钥和个人信息。\n\n## 常见误区\n不要把语言流畅度当 groundedness，也不要用生成答案反推相关文档。无答案查询必须允许拒答，跨租户命中应视为严重失败而不是平均分中的小扣分。\n\n## 完成标准\n评测查询达到十例，指标和阈值齐全，运行结果逐 query 标记命中、依据和引用，并注明来源。",
+          "scenario": "晚间计划助手根据公告回答“明天有全员会”，话很顺，但漏掉了同租户另一篇“全员会已取消”。有人觉得流畅就够了，有人想用模型自己的回答去标哪些文档相关，还有人把串到 B 租户文档只当平均分里扣一点点。",
+          "lesson": "## 核心概念\nRAG 评测至少区分 retrieval hit、答案 groundedness 和 citation correctness。查询要覆盖常规、边界、无答案和权限隔离。流畅不等于有据。跨租户命中是严重失败，不是平均分里的小扣分。\n\n## 算法思想\nrecall@k 看前 k 条有没有该命中的证据；nDCG 按位置打折，排第十不该和排第一同分。\n\n## 完成步骤\n结合晚间计划助手判断：回答很顺但漏了“全员会已取消”，究竟是没召回、没用证据还是引用错了；无答案查询能不能拒答；串租户该一票否决还是微调分数。\n\n## 常见误区\n不要把语言流畅当 groundedness，也不要用生成答案反推相关文档。\n\n## 完成标准\n十道场景判断全部选对，并能说明错误选项会让漏召回或越权命中被平均分掩盖。",
           "deliverables": [
-            "rag-eval.json：RAG 评测集与阈值",
-            "rag-eval-run.json：一次 RAG 评测运行"
+            "场景判断：完成十道题，覆盖 hit/groundedness/citation、recall@k、无答案查询、跨租户严重失败和上线阈值"
           ],
           "prerequisiteTaskIds": [
             "rag-pipeline",
             "evaluation-suite"
           ],
-          "evidenceMode": "import",
+          "evidenceMode": "quiz",
+          "passingScore": 100,
           "references": [
             {
               "title": "Retrieval",
@@ -3928,79 +3928,258 @@
               "accessedAt": "2026-07-23"
             }
           ],
-          "starterFiles": [
+          "starterFiles": [],
+          "checks": [],
+          "quizQuestions": [
             {
-              "path": "rag-eval.json",
-              "content": "{\n  \"queries\": [],\n  \"metrics\": [],\n  \"thresholds\": {}\n}"
+              "id": "three-metrics",
+              "prompt": "这次“漏掉取消公告”至少该拆成哪几类指标？",
+              "options": [
+                {
+                  "id": "fluency-only",
+                  "label": "只看回答是否流畅"
+                },
+                {
+                  "id": "hit-ground-cite",
+                  "label": "retrieval hit、答案 groundedness、citation correctness 分开记"
+                },
+                {
+                  "id": "one-score",
+                  "label": "合成一个 0-100 的 RAG 分就够"
+                },
+                {
+                  "id": "latency-only",
+                  "label": "只看检索延迟"
+                }
+              ],
+              "correctOptionId": "hit-ground-cite",
+              "points": 10,
+              "explanation": "没召回、召回了没用、引用指错，是三种不同故障，不能揉成流畅分。"
             },
             {
-              "path": "rag-eval-run.json",
-              "content": "{\n  \"source\": \"\",\n  \"capturedAt\": \"\",\n  \"requestId\": \"\",\n  \"results\": []\n}"
-            }
-          ],
-          "checks": [
-            {
-              "id": "queries",
-              "type": "json-array-shape",
-              "path": "rag-eval.json",
-              "rule": "/queries:10:id,query,relevantIds,expectedAnswer",
-              "required": true,
-              "points": 30,
-              "message": "至少十个带相关文档的查询。"
+              "id": "fluency-not-grounded",
+              "prompt": "回答很顺口但没依据取消公告，算 grounded 吗？",
+              "options": [
+                {
+                  "id": "yes-fluent",
+                  "label": "算，用户读着舒服就是有据"
+                },
+                {
+                  "id": "no-evidence",
+                  "label": "不算。groundedness 看有没有使用应依据的证据"
+                },
+                {
+                  "id": "half",
+                  "label": "流畅就给一半分"
+                },
+                {
+                  "id": "model-says",
+                  "label": "让生成模型自己声明有据即可"
+                }
+              ],
+              "correctOptionId": "no-evidence",
+              "points": 10,
+              "explanation": "不要把语言流畅度当 groundedness。漏关键条款就是无据。"
             },
             {
-              "id": "metrics",
-              "type": "json-array-min",
-              "path": "rag-eval.json",
-              "rule": "metrics:3",
-              "required": true,
-              "points": 15,
-              "message": "定义至少三类指标。"
+              "id": "recall-at-k",
+              "prompt": "取消公告在知识库里，但 top-5 没召到。这首先是什么问题？",
+              "options": [
+                {
+                  "id": "writer",
+                  "label": "写作风格不好"
+                },
+                {
+                  "id": "retrieval-miss",
+                  "label": "retrieval miss：recall@k 失败，后面 grounded 再高也补不回这条证据"
+                },
+                {
+                  "id": "user-query",
+                  "label": "都是林舟问法不对"
+                },
+                {
+                  "id": "ok-if-fluent",
+                  "label": "只要最终话说圆了就算命中"
+                }
+              ],
+              "correctOptionId": "retrieval-miss",
+              "points": 10,
+              "explanation": "recall@k 衡量前 k 条有没有应命中的证据。没召回就不是生成问题。"
+            },
+            {
+              "id": "ndcg-position",
+              "prompt": "取消公告排在第 1 条和第 10 条，评测上该不该同分？",
+              "options": [
+                {
+                  "id": "same",
+                  "label": "同分，反正都召回来了"
+                },
+                {
+                  "id": "discount",
+                  "label": "不该。nDCG 按位置打折，排越后越不值钱"
+                },
+                {
+                  "id": "tenth-better",
+                  "label": "排第十更好，显得谦虚"
+                },
+                {
+                  "id": "ignore-rank",
+                  "label": "排序是产品细节，评测不用管"
+                }
+              ],
+              "correctOptionId": "discount",
+              "points": 10,
+              "explanation": "同样命中，排第一和排第十不该同分。位置越靠后折扣越大。"
+            },
+            {
+              "id": "query-mix",
+              "prompt": "RAG 查询集至少该包含哪些类型？",
+              "options": [
+                {
+                  "id": "happy-only",
+                  "label": "只要“明天有会吗”这种常规问法"
+                },
+                {
+                  "id": "full-mix",
+                  "label": "常规、边界、无答案、以及跨租户/权限隔离"
+                },
+                {
+                  "id": "long-only",
+                  "label": "越长越好，复制公告当查询"
+                },
+                {
+                  "id": "random",
+                  "label": "随机十句闲聊"
+                }
+              ],
+              "correctOptionId": "full-mix",
+              "points": 10,
+              "explanation": "查询应覆盖常规、边界、跨文档、无答案和权限隔离。"
+            },
+            {
+              "id": "no-answer",
+              "prompt": "库里没有“周末团建”公告时，评测应允许什么？",
+              "options": [
+                {
+                  "id": "must-answer",
+                  "label": "必须编一个团建，否则算失败"
+                },
+                {
+                  "id": "allow-refuse",
+                  "label": "允许拒答或说证据不足，这才是正确行为"
+                },
+                {
+                  "id": "borrow",
+                  "label": "借用其他公司的团建公告"
+                },
+                {
+                  "id": "old-event",
+                  "label": "把去年团当今年的"
+                }
+              ],
+              "correctOptionId": "allow-refuse",
+              "points": 10,
+              "explanation": "无答案查询必须允许拒答。硬编会把 groundedness 带坏。"
+            },
+            {
+              "id": "cross-tenant-fail",
+              "prompt": "召回了 B 租户的取消公告来答林舟，应如何记分？",
+              "options": [
+                {
+                  "id": "small-penalty",
+                  "label": "平均分里扣一点点，流畅还能加分"
+                },
+                {
+                  "id": "critical-fail",
+                  "label": "视为严重失败/隔离指标未过，不能被平均分稀释"
+                },
+                {
+                  "id": "bonus",
+                  "label": "证据更全，应该加分"
+                },
+                {
+                  "id": "ignore",
+                  "label": "评测只看文本对不对，不管租户"
+                }
+              ],
+              "correctOptionId": "critical-fail",
+              "points": 10,
+              "explanation": "跨租户命中是严重失败，不是平均分中的小扣分。"
+            },
+            {
+              "id": "no-circular-label",
+              "prompt": "能不能用模型生成的回答，反过来标注哪些文档算相关？",
+              "options": [
+                {
+                  "id": "yes-fast",
+                  "label": "能，省得人工标"
+                },
+                {
+                  "id": "no-circular",
+                  "label": "不能。相关文档列表要独立于生成答案，否则会自我循环"
+                },
+                {
+                  "id": "sometimes",
+                  "label": "分数低时可以"
+                },
+                {
+                  "id": "always",
+                  "label": "生成答案就是金标准"
+                }
+              ],
+              "correctOptionId": "no-circular",
+              "points": 10,
+              "explanation": "不要用生成答案反推相关文档。相关文档列表用于代码评分，必须事先独立。"
             },
             {
               "id": "thresholds",
-              "type": "json-pointer-present",
-              "path": "rag-eval.json",
-              "rule": "/thresholds",
-              "required": true,
-              "points": 15,
-              "message": "定义上线阈值。"
+              "prompt": "上线门槛该怎么设？",
+              "options": [
+                {
+                  "id": "no-gate",
+                  "label": "有评测日志就行，不必设阈值"
+                },
+                {
+                  "id": "ship-bar",
+                  "label": "为 recall@k、groundedness、citation 和隔离分别设阈值，未过不能发"
+                },
+                {
+                  "id": "fluency-bar",
+                  "label": "流畅度超过 90 分就能发"
+                },
+                {
+                  "id": "one-query",
+                  "label": "随便一条查询过了就过"
+                }
+              ],
+              "correctOptionId": "ship-bar",
+              "points": 10,
+              "explanation": "指标和阈值齐全，才能把“看起来流畅”拦在门外。"
             },
             {
-              "id": "source",
-              "type": "json-pointer-present",
-              "path": "rag-eval-run.json",
-              "rule": "/source",
-              "required": true,
-              "points": 5,
-              "message": "填写运行来源。"
-            },
-            {
-              "id": "request",
-              "type": "json-pointer-present",
-              "path": "rag-eval-run.json",
-              "rule": "/requestId",
-              "required": true,
-              "points": 5,
-              "message": "填写请求标识。"
-            },
-            {
-              "id": "results",
-              "type": "json-array-shape",
-              "path": "rag-eval-run.json",
-              "rule": "/results:10:queryId,retrievalHit,grounded,cited",
-              "required": true,
-              "points": 25,
-              "message": "逐查询记录命中、依据和引用。"
-            },
-            {
-              "id": "captured-at",
-              "type": "json-pointer-present",
-              "path": "rag-eval-run.json",
-              "rule": "/capturedAt",
-              "required": true,
-              "points": 5,
-              "message": "填写证据采集时间。"
+              "id": "per-query",
+              "prompt": "一次 rag-eval-run 应如何记录结果？",
+              "options": [
+                {
+                  "id": "one-number",
+                  "label": "只留一个总分"
+                },
+                {
+                  "id": "per-query-flags",
+                  "label": "逐 query 标记 retrievalHit、grounded、cited，并留下 source/requestId"
+                },
+                {
+                  "id": "final-prose",
+                  "label": "只保存模型最终回答"
+                },
+                {
+                  "id": "dump-index",
+                  "label": "把整个索引 dump 进附件"
+                }
+              ],
+              "correctOptionId": "per-query-flags",
+              "points": 10,
+              "explanation": "运行结果要逐 query 标记命中、依据和引用，才能定位是没召回还是没用证据。"
             }
           ]
         }

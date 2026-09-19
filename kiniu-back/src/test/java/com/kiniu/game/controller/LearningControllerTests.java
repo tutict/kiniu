@@ -385,5 +385,27 @@ class LearningControllerTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.passed").value(true))
                 .andExpect(jsonPath("$.progress.currentTaskId").value("rag-evaluation"));
+
+        mockMvc.perform(post("/learn/tasks/rag-evaluation/check")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "answers": {
+                                    "three-metrics": "hit-ground-cite",
+                                    "fluency-not-grounded": "no-evidence",
+                                    "recall-at-k": "retrieval-miss",
+                                    "ndcg-position": "discount",
+                                    "query-mix": "full-mix",
+                                    "no-answer": "allow-refuse",
+                                    "cross-tenant-fail": "critical-fail",
+                                    "no-circular-label": "no-circular",
+                                    "thresholds": "ship-bar",
+                                    "per-query": "per-query-flags"
+                                  }
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.passed").value(true))
+                .andExpect(jsonPath("$.progress.currentTaskId").value("genai-red-team"));
     }
 }
