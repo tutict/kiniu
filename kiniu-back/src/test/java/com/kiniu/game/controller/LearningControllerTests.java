@@ -187,5 +187,27 @@ class LearningControllerTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.passed").value(true))
                 .andExpect(jsonPath("$.progress.currentTaskId").value("data-lifecycle"));
+
+        mockMvc.perform(post("/learn/tasks/data-lifecycle/check")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "answers": {
+                                    "minimize": "needed-entities",
+                                    "entities": "user-plan",
+                                    "pii-paste": "mark-pii",
+                                    "embeddings": "still-sensitive",
+                                    "retention": "purpose-limit",
+                                    "delete-propagate": "graph-delete",
+                                    "versioning": "trace-compat",
+                                    "rename-not-migration": "need-window",
+                                    "migration-fail": "rollback",
+                                    "eval-samples": "redact-or-synthetic"
+                                  }
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.passed").value(true))
+                .andExpect(jsonPath("$.progress.currentTaskId").value("context-memory-budget"));
     }
 }

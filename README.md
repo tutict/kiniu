@@ -116,7 +116,7 @@ http://localhost:8080
 | 模块 | 任务 ID | 核心交付 |
 |---|---|---|
 | 基础与模型契约 | `requirements-contract`、`http-json-basics`、`model-response-contract` | 场景判断契约、HTTP 判断、结构化输出判断 |
-| Prompt、Context 与数据 | `prompt-context-design`、`data-lifecycle`、`context-memory-budget` | 上下文判断、数据生命周期、记忆预算 |
+| Prompt、Context 与数据 | `prompt-context-design`、`data-lifecycle`、`context-memory-budget` | 上下文判断、数据生命周期判断、记忆预算 |
 | Workflow、工具与 Agent | `workflow-agent-decision`、`tool-contract`、`agent-skill-authoring`、`agent-trace-recovery` | 架构选型、工具契约、Skill 设计、Agent 轨迹与恢复 |
 | 评测与 Agent 项目 | `evaluation-suite`、`companion-agent` | 持续评测集、完整 Agent 项目 |
 | RAG 检索增强 | `rag-pipeline`、`rag-evaluation` | RAG 设计、召回与 groundedness 证据 |
@@ -175,6 +175,14 @@ http://localhost:8080
 1. 阅读目标、多来源上下文场景和讲义。
 2. 完成 10 道判断题，覆盖指令层级、优先级、不可信数据、冲突、注入、口头防注入是否够用、token 预算、历史裁剪、证据不足和隔离方式。
 3. 运行确定性检查；全部选对后解锁 `data-lifecycle`。
+
+### 实验五怎么学
+
+第五项任务 `data-lifecycle` 是场景判断，不再手写 `data-contract.json`。偏好、摘要、embedding 和评测样本都要放进晚间计划助手的数据契约里判断。正确流程：
+
+1. 阅读目标、PII 与升级场景和讲义。
+2. 完成 10 道判断题，覆盖最小化收集、实体、敏感字段、向量、保留期、删除传播、版本、迁移窗口、失败回滚和评测样本。
+3. 运行确定性检查；全部选对后解锁 `context-memory-budget`。
 
 ### 请求安全边界
 

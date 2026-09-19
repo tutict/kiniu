@@ -1196,28 +1196,29 @@
           ]
         },
         {
-          "level": "初级 / 中级",
+          "level": "初级",
           "mentorAgentId": "project-agent",
           "id": "data-lifecycle",
           "title": "设计可演进的数据契约",
-          "summary": "定义实体、敏感字段、保留周期与版本迁移策略。",
+          "summary": "围绕晚间计划助手要不要存偏好和摘要，用场景判断分清实体、PII、保留、删除传播和版本迁移。",
           "kind": "data-contract",
-          "estimatedMinutes": 45,
+          "estimatedMinutes": 25,
           "skills": [
             "数据建模",
             "隐私",
             "版本迁移"
           ],
           "objective": "让 Agent 数据最小化收集、可删除、可迁移，并能在接口升级后保持兼容。",
-          "scenario": "陪伴 Agent 需要保存偏好和摘要，但团队必须处理 PII、撤回请求和旧版本数据。",
-          "lesson": "## 核心概念\n数据生命周期覆盖采集、使用、共享、保留、删除和迁移。契约不仅描述字段，还要标记用途、敏感级别、所有者和保存期限。AI 系统中的 Prompt、Embedding、评测样本与日志都可能包含个人信息，删除策略必须考虑派生数据和备份。\n\n## 算法思想\n去重靠哈希指纹：内容相同指纹必同，但指纹相同仍可能碰撞，弱哈希需再比对原文；增量迁移是集合求差，只搬运新旧版本的差异；删除传播是图遍历——沿派生关系把缓存、索引、备份里的副本都找出来。\n\n## 完成步骤\n定义至少两个业务实体及关键字段；列出 PII 字段和处理方式；为每类数据写保留与删除规则；给契约设置版本；设计旧版本读取、迁移失败和回滚方案。 留下可复现记录，提交前移除密钥和个人信息。\n\n## 常见误区\n不要假设向量不可逆就不敏感，也不要无限期保留所有对话以便未来使用。字段改名不是完整迁移，读写兼容窗口和失败恢复同样重要。\n\n## 完成标准\n数据契约可以解析，包含版本、实体、PII、保留和迁移信息，且能回答用户删除请求如何传播到缓存、索引和日志。",
+          "scenario": "晚间计划助手开始保存林舟的偏好和待办摘要。有人想把全部对话做成 embedding 永久留下“以后训练用”，评测集也想直接用真实待办。粘贴文本里可能有同事姓名和手机号；林舟也可能要求删除自己的数据。接口还要从 v1 升到 v2。",
+          "lesson": "## 核心概念\n数据生命周期覆盖采集、使用、共享、保留、删除和迁移。契约要标明用途、敏感级别和保存期限。Prompt、摘要、Embedding、评测样本和日志都可能含个人信息，删除必须传到缓存、索引和备份。\n\n## 算法思想\n删除是图遍历：沿派生关系找出副本。迁移是带兼容窗口的集合求差，失败要能回滚。向量不是匿名，弱哈希也不能当脱敏。\n\n## 完成步骤\n结合晚间计划助手判断：最少该存哪些实体、粘贴文本里的姓名怎么标、对话能不能永久embedding、用户删除如何传播、v1 升 v2 失败怎么办。\n\n## 常见误区\n不要假设向量不可逆就不敏感，也不要为了未来训练无限期留对话。字段改名不是完整迁移。\n\n## 完成标准\n十道场景判断全部选对，并能说明错误选项会让 PII、派生数据和旧版本数据失去控制。",
           "deliverables": [
-            "data-contract.json：数据生命周期契约"
+            "场景判断：完成十道题，覆盖实体、PII、保留、删除传播和迁移回滚"
           ],
           "prerequisiteTaskIds": [
             "http-json-basics"
           ],
-          "evidenceMode": "document",
+          "evidenceMode": "quiz",
+          "passingScore": 100,
           "references": [
             {
               "title": "AI RMF Generative AI Profile",
@@ -1234,57 +1235,258 @@
               "accessedAt": "2026-07-23"
             }
           ],
-          "starterFiles": [
+          "starterFiles": [],
+          "checks": [],
+          "quizQuestions": [
             {
-              "path": "data-contract.json",
-              "content": "{\n  \"schemaVersion\": \"\",\n  \"entities\": [],\n  \"piiFields\": [],\n  \"retentionPolicy\": \"\",\n  \"migration\": {}\n}"
-            }
-          ],
-          "checks": [
-            {
-              "id": "version",
-              "type": "regex",
-              "path": "data-contract.json",
-              "rule": "\"schemaVersion\"\\s*:\\s*\"v[0-9]+",
-              "required": true,
-              "points": 15,
-              "message": "数据契约必须有可追踪版本。"
+              "id": "minimize",
+              "prompt": "本版晚间计划助手最少该持久化什么？",
+              "options": [
+                {
+                  "id": "everything",
+                  "label": "全部原始对话、邮箱和日历，以后一定用得上"
+                },
+                {
+                  "id": "needed-entities",
+                  "label": "只存完成本次建议所需的偏好和待办摘要，并写明用途"
+                },
+                {
+                  "id": "raw-paste-forever",
+                  "label": "把每次粘贴原文永久保存，方便复盘"
+                },
+                {
+                  "id": "no-store",
+                  "label": "什么都不存，连当次待办也不在内存里"
+                }
+              ],
+              "correctOptionId": "needed-entities",
+              "points": 10,
+              "explanation": "最小化收集：只留有明确用途的字段。既不是来者不拒，也不是连当次任务数据都不要。"
             },
             {
               "id": "entities",
-              "type": "json-array-min",
-              "path": "data-contract.json",
-              "rule": "entities:2",
-              "required": true,
-              "points": 20,
-              "message": "至少定义两个业务实体。"
+              "prompt": "哪组业务实体更适合进入本版数据契约？",
+              "options": [
+                {
+                  "id": "model-vendor",
+                  "label": "ModelVendor 和 PromptTemplate，因为那是技术实现"
+                },
+                {
+                  "id": "user-plan",
+                  "label": "UserProfile 和 PlanSuggestion，对应使用者和当次建议"
+                },
+                {
+                  "id": "all-employees",
+                  "label": "CompanyDirectory，预先同步全公司通讯录"
+                },
+                {
+                  "id": "payment-card",
+                  "label": "PaymentCard，方便以后代下单"
+                }
+              ],
+              "correctOptionId": "user-plan",
+              "points": 10,
+              "explanation": "实体要跟业务契约对齐：使用者和建议。通讯录和支付卡超出本版范围。"
             },
             {
-              "id": "pii",
-              "type": "json-array-min",
-              "path": "data-contract.json",
-              "rule": "piiFields:1",
-              "required": true,
-              "points": 20,
-              "message": "至少标记一个敏感字段。"
+              "id": "pii-paste",
+              "prompt": "林舟粘贴里出现同事姓名和手机号，应如何标记？",
+              "options": [
+                {
+                  "id": "not-pii",
+                  "label": "这是待办内容，不算个人信息"
+                },
+                {
+                  "id": "mark-pii",
+                  "label": "标成 PII：限制用途、缩短保留，并不进公开样例"
+                },
+                {
+                  "id": "train-now",
+                  "label": "正好拿去微调，让模型更懂职场"
+                },
+                {
+                  "id": "hash-ok",
+                  "label": "随便做一个短哈希就等于脱敏"
+                }
+              ],
+              "correctOptionId": "mark-pii",
+              "points": 10,
+              "explanation": "待办原文里的姓名和手机号仍是敏感字段，必须标记处理方式，不能当普通文本。"
+            },
+            {
+              "id": "embeddings",
+              "prompt": "把对话做成 embedding 长期保存，是否就不敏感了？",
+              "options": [
+                {
+                  "id": "safe-vector",
+                  "label": "向量不可逆，可以当匿名数据永久留着"
+                },
+                {
+                  "id": "still-sensitive",
+                  "label": "仍然敏感：派生数据也要纳入保留和删除"
+                },
+                {
+                  "id": "better-than-text",
+                  "label": "比原文更安全，所以可以公开给评测集"
+                },
+                {
+                  "id": "no-need-policy",
+                  "label": "embedding 不是数据，不用写进契约"
+                }
+              ],
+              "correctOptionId": "still-sensitive",
+              "points": 10,
+              "explanation": "不要假设向量不可逆就不敏感。Embedding、摘要和评测样本都是派生数据。"
             },
             {
               "id": "retention",
-              "type": "json-pointer-present",
-              "path": "data-contract.json",
-              "rule": "/retentionPolicy",
-              "required": true,
-              "points": 20,
-              "message": "定义保留与删除策略。"
+              "prompt": "团队想无限期保留所有对话“以后训练用”。正确策略是？",
+              "options": [
+                {
+                  "id": "keep-forever",
+                  "label": "可以，未来模型会感谢我们"
+                },
+                {
+                  "id": "purpose-limit",
+                  "label": "按用途设保留期，到期删除或明确再征得同意"
+                },
+                {
+                  "id": "keep-pii-only",
+                  "label": "只永久留手机号，其他可删"
+                },
+                {
+                  "id": "user-never",
+                  "label": "用户没提删除就等于永久授权"
+                }
+              ],
+              "correctOptionId": "purpose-limit",
+              "points": 10,
+              "explanation": "保留必须绑定用途和期限。为未定义的未来训练而无限期留对话，不是最小化。"
             },
             {
-              "id": "migration",
-              "type": "json-pointer-present",
-              "path": "data-contract.json",
-              "rule": "/migration",
-              "required": true,
-              "points": 25,
-              "message": "定义迁移和回滚。"
+              "id": "delete-propagate",
+              "prompt": "林舟要求删除自己的数据，怎样才算做完？",
+              "options": [
+                {
+                  "id": "ui-hide",
+                  "label": "界面上不显示就算删除"
+                },
+                {
+                  "id": "graph-delete",
+                  "label": "沿派生关系清理主库、缓存、索引、日志和 embedding"
+                },
+                {
+                  "id": "keep-backup",
+                  "label": "生产库删了，备份可以永久留着复盘"
+                },
+                {
+                  "id": "delay-year",
+                  "label": "先记一笔，明年再说"
+                }
+              ],
+              "correctOptionId": "graph-delete",
+              "points": 10,
+              "explanation": "删除是图遍历。只藏 UI 或只清主库，派生副本仍在。"
+            },
+            {
+              "id": "versioning",
+              "prompt": "数据契约为什么要有 schemaVersion？",
+              "options": [
+                {
+                  "id": "decoration",
+                  "label": "写个 v1 好看，没有实际作用"
+                },
+                {
+                  "id": "trace-compat",
+                  "label": "用来追踪兼容窗口：旧数据怎么读、何时迁移"
+                },
+                {
+                  "id": "model-name",
+                  "label": "它应该等于模型名称"
+                },
+                {
+                  "id": "daily",
+                  "label": "每天改一个版本号，表示勤奋"
+                }
+              ],
+              "correctOptionId": "trace-compat",
+              "points": 10,
+              "explanation": "版本是迁移和回滚的锚点，不是装饰。"
+            },
+            {
+              "id": "rename-not-migration",
+              "prompt": "把字段 preference 改名为 prefs，算不算完成迁移？",
+              "options": [
+                {
+                  "id": "done",
+                  "label": "改名就完成了，旧数据会自己跟上"
+                },
+                {
+                  "id": "need-window",
+                  "label": "不够：还要读写兼容窗口、失败处理和回滚"
+                },
+                {
+                  "id": "drop-old",
+                  "label": "直接丢掉旧记录最干净"
+                },
+                {
+                  "id": "user-fix",
+                  "label": "让林舟重新填一遍偏好"
+                }
+              ],
+              "correctOptionId": "need-window",
+              "points": 10,
+              "explanation": "字段改名不是完整迁移。还要能读旧版、迁失败可回滚。"
+            },
+            {
+              "id": "migration-fail",
+              "prompt": "v1 升 v2 做到一半失败了，正确做法是？",
+              "options": [
+                {
+                  "id": "leave-half",
+                  "label": "一半新一半旧也行，模型会猜"
+                },
+                {
+                  "id": "rollback",
+                  "label": "停止迁移并回滚到已知完好的 v1"
+                },
+                {
+                  "id": "force-prod",
+                  "label": "强制切到 v2，坏数据以后再说"
+                },
+                {
+                  "id": "hide-error",
+                  "label": "对用户显示成功，日志里再修"
+                }
+              ],
+              "correctOptionId": "rollback",
+              "points": 10,
+              "explanation": "迁移失败必须有回滚。带着半新半旧数据继续跑，契约已经裂了。"
+            },
+            {
+              "id": "eval-samples",
+              "prompt": "评测集里能不能直接放林舟的真实待办原文？",
+              "options": [
+                {
+                  "id": "yes-real",
+                  "label": "真实数据评测最准，应该原样放入"
+                },
+                {
+                  "id": "redact-or-synthetic",
+                  "label": "要脱敏或改用合成样本，并写入保留规则"
+                },
+                {
+                  "id": "public-github",
+                  "label": "放到公开仓库，方便社区一起评"
+                },
+                {
+                  "id": "no-eval",
+                  "label": "有 PII 就永远不要评测"
+                }
+              ],
+              "correctOptionId": "redact-or-synthetic",
+              "points": 10,
+              "explanation": "评测样本也在生命周期里。真实 PII 不能当公开样例，但可以用脱敏或合成数据继续评测。"
             }
           ]
         },

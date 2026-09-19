@@ -225,6 +225,23 @@ class LearningCatalogServiceTests {
                         "separator"),
                 contextDesign.quizQuestions().stream().map(LearningQuizQuestion::id).toList());
         assertEquals("stable-split", contextDesign.quizQuestions().get(0).correctOptionId());
+        LearningTaskDefinition dataLifecycle = taskById(tasks, "data-lifecycle");
+        assertEquals("quiz", dataLifecycle.evidenceMode());
+        assertEquals(10, dataLifecycle.quizQuestions().size());
+        assertEquals(
+                List.of(
+                        "minimize",
+                        "entities",
+                        "pii-paste",
+                        "embeddings",
+                        "retention",
+                        "delete-propagate",
+                        "versioning",
+                        "rename-not-migration",
+                        "migration-fail",
+                        "eval-samples"),
+                dataLifecycle.quizQuestions().stream().map(LearningQuizQuestion::id).toList());
+        assertEquals("needed-entities", dataLifecycle.quizQuestions().get(0).correctOptionId());
         assertTrue(tasks.stream()
                 .filter(task -> "import".equals(task.evidenceMode()))
                 .allMatch(task -> List.of("/source", "/capturedAt", "/requestId").stream()
