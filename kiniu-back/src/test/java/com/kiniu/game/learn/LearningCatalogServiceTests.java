@@ -208,6 +208,23 @@ class LearningCatalogServiceTests {
                         "secret-prompt"),
                 modelContract.quizQuestions().stream().map(LearningQuizQuestion::id).toList());
         assertEquals("shared-contract", modelContract.quizQuestions().get(0).correctOptionId());
+        LearningTaskDefinition contextDesign = taskById(tasks, "prompt-context-design");
+        assertEquals("quiz", contextDesign.evidenceMode());
+        assertEquals(10, contextDesign.quizQuestions().size());
+        assertEquals(
+                List.of(
+                        "layer-roles",
+                        "priority",
+                        "untrusted-data",
+                        "conflict-calendar",
+                        "injection",
+                        "ignore-phrase",
+                        "token-budget",
+                        "dump-history",
+                        "insufficient-evidence",
+                        "separator"),
+                contextDesign.quizQuestions().stream().map(LearningQuizQuestion::id).toList());
+        assertEquals("stable-split", contextDesign.quizQuestions().get(0).correctOptionId());
         assertTrue(tasks.stream()
                 .filter(task -> "import".equals(task.evidenceMode()))
                 .allMatch(task -> List.of("/source", "/capturedAt", "/requestId").stream()

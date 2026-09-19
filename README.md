@@ -116,7 +116,7 @@ http://localhost:8080
 | 模块 | 任务 ID | 核心交付 |
 |---|---|---|
 | 基础与模型契约 | `requirements-contract`、`http-json-basics`、`model-response-contract` | 场景判断契约、HTTP 判断、结构化输出判断 |
-| Prompt、Context 与数据 | `prompt-context-design`、`data-lifecycle`、`context-memory-budget` | Context 方案、数据生命周期、记忆预算 |
+| Prompt、Context 与数据 | `prompt-context-design`、`data-lifecycle`、`context-memory-budget` | 上下文判断、数据生命周期、记忆预算 |
 | Workflow、工具与 Agent | `workflow-agent-decision`、`tool-contract`、`agent-skill-authoring`、`agent-trace-recovery` | 架构选型、工具契约、Skill 设计、Agent 轨迹与恢复 |
 | 评测与 Agent 项目 | `evaluation-suite`、`companion-agent` | 持续评测集、完整 Agent 项目 |
 | RAG 检索增强 | `rag-pipeline`、`rag-evaluation` | RAG 设计、召回与 groundedness 证据 |
@@ -167,6 +167,14 @@ http://localhost:8080
 1. 阅读目标、缺字段/拒绝/超时场景和讲义。
 2. 完成 10 道判断题，覆盖 Schema、必填字段、拒绝分支、三类失败、抽样波动、运行元数据、数值字段和脱敏。
 3. 运行确定性检查；全部选对后解锁下一模块 `prompt-context-design`。
+
+### 实验四怎么学
+
+第四项任务 `prompt-context-design` 是场景判断，不再手写 `context-plan.md`。公告里的“忽略以上规则”和一周聊天记录，都要放进晚间计划助手的窗口里判断。正确流程：
+
+1. 阅读目标、多来源上下文场景和讲义。
+2. 完成 10 道判断题，覆盖指令层级、优先级、不可信数据、冲突、注入、口头防注入是否够用、token 预算、历史裁剪、证据不足和隔离方式。
+3. 运行确定性检查；全部选对后解锁 `data-lifecycle`。
 
 ### 请求安全边界
 

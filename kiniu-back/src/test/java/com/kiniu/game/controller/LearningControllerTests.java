@@ -165,5 +165,27 @@ class LearningControllerTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.passed").value(true))
                 .andExpect(jsonPath("$.progress.currentTaskId").value("prompt-context-design"));
+
+        mockMvc.perform(post("/learn/tasks/prompt-context-design/check")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "answers": {
+                                    "layer-roles": "stable-split",
+                                    "priority": "system-wins",
+                                    "untrusted-data": "untrusted",
+                                    "conflict-calendar": "keep-contract",
+                                    "injection": "quoted-data",
+                                    "ignore-phrase": "not-enough",
+                                    "token-budget": "split-trim",
+                                    "dump-history": "dilute",
+                                    "insufficient-evidence": "mark-limit",
+                                    "separator": "quoted-block"
+                                  }
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.passed").value(true))
+                .andExpect(jsonPath("$.progress.currentTaskId").value("data-lifecycle"));
     }
 }
