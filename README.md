@@ -103,7 +103,7 @@ http://localhost:8080
 - `/agent/export/{sessionId}`
 - `/learn/catalog`
 - `/learn/progress`
-- `/learn/tasks/{taskId}/check`
+- `/learn/tasks/{taskId}/check`（`document`/`import` 提交 `files`，`quiz` 提交 `answers`）
 - `/learn/tasks/{taskId}/feedback`
 - `/learn/tasks/{taskId}/publish-agent`
 
@@ -115,7 +115,7 @@ http://localhost:8080
 
 | 模块 | 任务 ID | 核心交付 |
 |---|---|---|
-| 基础与模型契约 | `requirements-contract`、`http-json-basics`、`model-response-contract` | 需求契约、HTTP 交换、结构化模型响应 |
+| 基础与模型契约 | `requirements-contract`、`http-json-basics`、`model-response-contract` | 场景判断契约、HTTP 交换、结构化模型响应 |
 | Prompt、Context 与数据 | `prompt-context-design`、`data-lifecycle`、`context-memory-budget` | Context 方案、数据生命周期、记忆预算 |
 | Workflow、工具与 Agent | `workflow-agent-decision`、`tool-contract`、`agent-skill-authoring`、`agent-trace-recovery` | 架构选型、工具契约、Skill 设计、Agent 轨迹与恢复 |
 | 评测与 Agent 项目 | `evaluation-suite`、`companion-agent` | 持续评测集、完整 Agent 项目 |
@@ -135,9 +135,22 @@ http://localhost:8080
 - `json-array-shape`：验证数组最小数量以及每个对象必须包含的字段。
 - `json-number-range`：验证延迟、token、预算等数值位于允许区间。
 
-`document` 任务直接在工作区编辑；`import` 任务只接受当前任务声明的文件名和 JSON、Markdown、文本内容。导入前会展示文件名与字节数并等待确认，单文件不超过 100 KB、一次提交总量不超过 500 KB。所有导入证据必须包含 `source`、`capturedAt`、`requestId` 或等价来源信息。
+任务按 `evidenceMode` 提交证据：
 
-确定性检查验证的是工程证据的结构、完整性和范围，不会声称能够密码学证明外部 trace、模型响应或攻击结果的真实性。
+- `quiz`：在工作台完成场景判断题。目录和任务接口不返回正确答案或解析；`POST /learn/tasks/{taskId}/check` 提交 `answers` 后，由服务端对照选项判分。
+- `document`：直接在工作区编辑课程交付物。
+- `import`：只接受当前任务声明的文件名和 JSON、Markdown、文本内容。导入前会展示文件名与字节数并等待确认，单文件不超过 100 KB、一次提交总量不超过 500 KB。所有导入证据必须包含 `source`、`capturedAt`、`requestId` 或等价来源信息。
+
+确定性检查验证的是工程证据的结构、完整性和范围，不会声称能够密码学证明外部 trace、模型响应或攻击结果的真实性。本地进度和尝试记录写在 `kiniu-back/data/learning-progress.json` 与 `kiniu-back/data/learning-attempts.json`，这两份文件不入库。
+
+### 实验一怎么学
+
+第一项任务 `requirements-contract` 是场景判断，不再手写 `requirements.md`。正确流程：
+
+1. 阅读上方的目标、晚间计划助手场景和讲义。
+2. 完成 10 道判断题，覆盖用户、范围外需求、可观察目标、含糊输入、数据边界、风险、不可逆写入、缺失负责人和验收标准。
+3. 点击“运行确定性检查”，查看右侧逐项对错和解释。
+4. 首次检查后“请求证据解释”才会启用；10 题全部选对后解锁实验二 `http-json-basics`。
 
 ### 请求安全边界
 
