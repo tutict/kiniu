@@ -3590,13 +3590,13 @@
       "level": "中级",
       "tasks": [
         {
-          "level": "中级",
+          "level": "初级",
           "mentorAgentId": "project-agent",
           "id": "rag-pipeline",
           "title": "设计可追溯的 RAG 管道",
-          "summary": "建立来源可信度、切分、元数据隔离、检索、重排与引用策略。",
+          "summary": "围绕晚间计划助手检索多租户公司公告，用场景判断分清来源、切分、隔离、重排、引用和证据不足时的降级。",
           "kind": "rag-design",
-          "estimatedMinutes": 70,
+          "estimatedMinutes": 25,
           "skills": [
             "RAG",
             "检索",
@@ -3604,17 +3604,17 @@
             "多租户"
           ],
           "objective": "让回答只依赖可追踪、可过滤、可引用的证据，并在召回不足时明确降级。",
-          "scenario": "知识库同时服务多个租户，文档质量不一；回答必须展示来源，不能把相邻租户内容混在一起。",
-          "lesson": "## 核心概念\nRAG 质量由数据和检索共同决定。来源可信度、切分粒度、元数据和租户过滤先于向量相似度；混合检索可以结合关键词与语义，重排用于精细排序，引用让用户验证证据。检索为空或证据冲突时应拒答、追问或转人工。\n\n## 算法思想\n语义检索把文本映射成向量，用余弦相似度量夹角远近；近似最近邻索引沿分层图跳跃逼近，用少量精度换数量级加速；RRF 按名次而非分数融合两路排序，重排是先粗召回再精排的两阶段策略。\n\n## 完成步骤\n登记来源和可信度；定义 chunk 大小、重叠和版本；为每段附租户、权限、时间等元数据；设计混合检索和 rerank；规定引用格式、去重、证据不足和索引失败的 fallback；导入一次 retrieval-run。 留下可复现记录，提交前移除密钥和个人信息。\n\n## 常见误区\n不要把 top-k 当作准确率，也不要只看向量分数。切分会破坏表格和上下文，缺少租户过滤会造成越权泄露，引用链接也必须指向实际证据。\n\n## 完成标准\n设计文件覆盖来源、切分、元数据、隔离、检索、重排、引用和 fallback；运行记录有来源标识、至少三条结果、分数和引用。",
+          "scenario": "晚间计划助手开始检索“今日公司公告”来补全林舟的下一步。知识库里混着 A 租户和 B 租户的文档，质量不一。有人主张只按向量分数取 top-3 拼进回答，没召回就让模型编。林舟问的是自己公司明天有没有全员会。",
+          "lesson": "## 核心概念\nRAG 质量由数据和检索共同决定。来源可信度、切分、元数据和租户过滤先于向量相似度。混合检索结合关键词与语义，重排做精排，引用让用户核验。检索为空或证据冲突时应拒答、追问或转人工。\n\n## 算法思想\n语义检索用向量夹角找近邻；粗召回再精排是两阶段策略。RRF 按名次融合两路排序。top-k 不是准确率。\n\n## 完成步骤\n结合晚间计划助手检索“公司公告”判断：不同租户文档能不能混、切分会不会拆表、没召回时能不能编、引用必须指向哪条证据。\n\n## 常见误区\n不要只看向量分数，也不要把相邻租户内容拼进回答。引用链接必须指向实际检索到的片段。\n\n## 完成标准\n十道场景判断全部选对，并能说明错误选项会造成越权泄露或无证据编造。",
           "deliverables": [
-            "rag-design.json：RAG 管道设计",
-            "retrieval-run.json：一次脱敏检索运行"
+            "场景判断：完成十道题，覆盖来源、切分、租户隔离、混合检索、重排、引用和 fallback"
           ],
           "prerequisiteTaskIds": [
             "data-lifecycle",
             "prompt-context-design"
           ],
-          "evidenceMode": "import",
+          "evidenceMode": "quiz",
+          "passingScore": 100,
           "references": [
             {
               "title": "Retrieval",
@@ -3631,124 +3631,258 @@
               "accessedAt": "2026-07-23"
             }
           ],
-          "starterFiles": [
+          "starterFiles": [],
+          "checks": [],
+          "quizQuestions": [
             {
-              "path": "rag-design.json",
-              "content": "{\n  \"sources\": [],\n  \"chunking\": {},\n  \"metadata\": [],\n  \"tenantIsolation\": \"\",\n  \"retrieval\": {},\n  \"reranking\": {},\n  \"citations\": {},\n  \"fallback\": \"\"\n}"
+              "id": "trust-before-similarity",
+              "prompt": "决定用哪篇公告之前，应先看什么？",
+              "options": [
+                {
+                  "id": "score-only",
+                  "label": "只看向量分数，最高的一定最好"
+                },
+                {
+                  "id": "source-trust",
+                  "label": "先看来源可信度、权限和时效，再看相似度"
+                },
+                {
+                  "id": "longest",
+                  "label": "文档越长越权威"
+                },
+                {
+                  "id": "any-hit",
+                  "label": "检索到就用，节省时间"
+                }
+              ],
+              "correctOptionId": "source-trust",
+              "points": 10,
+              "explanation": "来源可信度先于向量相似度。top-k 不是准确率。"
             },
             {
-              "path": "retrieval-run.json",
-              "content": "{\n  \"source\": \"\",\n  \"capturedAt\": \"\",\n  \"requestId\": \"\",\n  \"query\": \"\",\n  \"results\": []\n}"
-            }
-          ],
-          "checks": [
-            {
-              "id": "sources",
-              "type": "json-array-min",
-              "path": "rag-design.json",
-              "rule": "sources:1",
-              "required": true,
+              "id": "tenant-isolation",
+              "prompt": "检索到 B 租户的全员会公告，能否用来回答林舟（A 租户）？",
+              "options": [
+                {
+                  "id": "yes-similar",
+                  "label": "内容相似就可以用，用户不会知道"
+                },
+                {
+                  "id": "filter-tenant",
+                  "label": "不能。必须按租户/权限元数据过滤，否则是越权泄露"
+                },
+                {
+                  "id": "mix-better",
+                  "label": "混在一起证据更多，回答更全"
+                },
+                {
+                  "id": "ask-model",
+                  "label": "让模型自己判断能不能用"
+                }
+              ],
+              "correctOptionId": "filter-tenant",
               "points": 10,
-              "message": "登记可信来源。"
+              "explanation": "缺少租户过滤会造成越权泄露。相邻租户内容不能进回答。"
             },
             {
               "id": "chunking",
-              "type": "json-pointer-present",
-              "path": "rag-design.json",
-              "rule": "/chunking",
-              "required": true,
+              "prompt": "切分公告时，哪项正确？",
+              "options": [
+                {
+                  "id": "one-token",
+                  "label": "切得越碎越好，方便向量检索"
+                },
+                {
+                  "id": "size-overlap",
+                  "label": "规定 chunk 大小和重叠，避免把表格和标题拆散到无法引用"
+                },
+                {
+                  "id": "whole-corpus",
+                  "label": "整库当一个 chunk，最完整"
+                },
+                {
+                  "id": "random",
+                  "label": "随机切，增加多样性"
+                }
+              ],
+              "correctOptionId": "size-overlap",
               "points": 10,
-              "message": "定义切分策略。"
+              "explanation": "切分会破坏表格和上下文。要有大小、重叠和版本，才能被引用。"
             },
             {
               "id": "metadata",
-              "type": "json-array-min",
-              "path": "rag-design.json",
-              "rule": "metadata:2",
-              "required": true,
+              "prompt": "每段公告至少该附哪些元数据？",
+              "options": [
+                {
+                  "id": "none",
+                  "label": "只要向量，元数据浪费空间"
+                },
+                {
+                  "id": "tenant-acl-time",
+                  "label": "租户、权限和时间，便于过滤和过期"
+                },
+                {
+                  "id": "author-mood",
+                  "label": "作者心情和字体"
+                },
+                {
+                  "id": "embedding-only",
+                  "label": "只存 embedding id"
+                }
+              ],
+              "correctOptionId": "tenant-acl-time",
               "points": 10,
-              "message": "定义元数据字段。"
+              "explanation": "元数据让过滤发生在相似度之前。租户、权限、时间是最低配置。"
             },
             {
-              "id": "tenant",
-              "type": "json-pointer-present",
-              "path": "rag-design.json",
-              "rule": "/tenantIsolation",
-              "required": true,
+              "id": "hybrid",
+              "prompt": "林舟搜“全员会 明天”，只用向量检索有什么问题？",
+              "options": [
+                {
+                  "id": "enough",
+                  "label": "语义检索已经能懂同义词，够了"
+                },
+                {
+                  "id": "hybrid-rrf",
+                  "label": "关键词能钉住“全员会/明天”，应与语义检索混合，再用名次融合"
+                },
+                {
+                  "id": "keyword-only",
+                  "label": "从此只用关键词，不要向量"
+                },
+                {
+                  "id": "topk-acc",
+                  "label": "取更大的 top-k 就等于更准"
+                }
+              ],
+              "correctOptionId": "hybrid-rrf",
               "points": 10,
-              "message": "定义租户隔离。"
-            },
-            {
-              "id": "retrieval",
-              "type": "json-pointer-present",
-              "path": "rag-design.json",
-              "rule": "/retrieval",
-              "required": true,
-              "points": 10,
-              "message": "定义检索策略。"
+              "explanation": "混合检索结合关键词与语义。不要把 top-k 当成准确率。"
             },
             {
               "id": "rerank",
-              "type": "json-pointer-present",
-              "path": "rag-design.json",
-              "rule": "/reranking",
-              "required": true,
+              "prompt": "重排在管道里扮演什么角色？",
+              "options": [
+                {
+                  "id": "skip",
+                  "label": "有向量分数就不用重排"
+                },
+                {
+                  "id": "two-stage",
+                  "label": "先粗召回再精排，把真正相关的片段顶到前面"
+                },
+                {
+                  "id": "replace-filter",
+                  "label": "重排可以代替租户过滤"
+                },
+                {
+                  "id": "randomize",
+                  "label": "打乱顺序，避免偏见"
+                }
+              ],
+              "correctOptionId": "two-stage",
               "points": 10,
-              "message": "定义重排。"
+              "explanation": "重排是两阶段策略：粗召回后精细排序。它不能替代权限过滤。"
             },
             {
               "id": "citations",
-              "type": "json-pointer-present",
-              "path": "rag-design.json",
-              "rule": "/citations",
-              "required": true,
+              "prompt": "回答里写“据公司公告”，怎样才算合格引用？",
+              "options": [
+                {
+                  "id": "vague",
+                  "label": "这句话就够了，用户会信"
+                },
+                {
+                  "id": "point-to-chunk",
+                  "label": "引用必须指向实际检索到的 documentId/片段，用户能点开核验"
+                },
+                {
+                  "id": "fake-url",
+                  "label": "编一个看起来像内部链接的 URL"
+                },
+                {
+                  "id": "no-cite",
+                  "label": "有检索就不必引用，以免啰嗦"
+                }
+              ],
+              "correctOptionId": "point-to-chunk",
               "points": 10,
-              "message": "定义引用。"
+              "explanation": "引用链接必须指向实际证据，否则只是装有出处。"
             },
             {
-              "id": "fallback",
-              "type": "json-pointer-present",
-              "path": "rag-design.json",
-              "rule": "/fallback",
-              "required": true,
+              "id": "empty-fallback",
+              "prompt": "过滤租户后一条公告都没召回，正确做法是？",
+              "options": [
+                {
+                  "id": "invent",
+                  "label": "让模型编一场全员会，保持流畅"
+                },
+                {
+                  "id": "refuse-or-ask",
+                  "label": "明确说证据不足：拒答、追问或转人工"
+                },
+                {
+                  "id": "other-tenant",
+                  "label": "借用 B 租户的公告凑数"
+                },
+                {
+                  "id": "old-cache",
+                  "label": "把去年的全员会拿来当明天的"
+                }
+              ],
+              "correctOptionId": "refuse-or-ask",
               "points": 10,
-              "message": "定义证据不足时的 fallback。"
+              "explanation": "检索为空必须降级。编造和串租户都比说不知道更糟。"
             },
             {
-              "id": "run-source",
-              "type": "json-pointer-present",
-              "path": "retrieval-run.json",
-              "rule": "/source",
-              "required": true,
-              "points": 5,
-              "message": "填写检索来源。"
+              "id": "conflict",
+              "prompt": "两篇同租户公告，一篇说明天全员会，一篇说取消。该怎样？",
+              "options": [
+                {
+                  "id": "merge",
+                  "label": "各摘一句拼成“可能有也可能没有”糊弄过去"
+                },
+                {
+                  "id": "surface-conflict",
+                  "label": "标明冲突，引用两边，或追问/转人工，不静默合并"
+                },
+                {
+                  "id": "newer-vector",
+                  "label": "向量分数高的那篇说了算，不提另一篇"
+                },
+                {
+                  "id": "ignore-both",
+                  "label": "有冲突就当没检索到，直接编"
+                }
+              ],
+              "correctOptionId": "surface-conflict",
+              "points": 10,
+              "explanation": "证据冲突要展示给用户或升级处理，不能静默合并。"
             },
             {
-              "id": "run-request",
-              "type": "json-pointer-present",
-              "path": "retrieval-run.json",
-              "rule": "/requestId",
-              "required": true,
-              "points": 5,
-              "message": "填写请求标识。"
-            },
-            {
-              "id": "run-results",
-              "type": "json-array-shape",
-              "path": "retrieval-run.json",
-              "rule": "/results:3:documentId,score,citation",
-              "required": true,
-              "points": 5,
-              "message": "至少三条带分数和引用的结果。"
-            },
-            {
-              "id": "captured-at",
-              "type": "json-pointer-present",
-              "path": "retrieval-run.json",
-              "rule": "/capturedAt",
-              "required": true,
-              "points": 5,
-              "message": "填写证据采集时间。"
+              "id": "run-record",
+              "prompt": "一次可复盘的 retrieval-run 应包含什么？",
+              "options": [
+                {
+                  "id": "final-answer",
+                  "label": "只要最终回答文本"
+                },
+                {
+                  "id": "ids-results",
+                  "label": "source、requestId、capturedAt，以及至少三条带 documentId、分数和引用的结果"
+                },
+                {
+                  "id": "raw-corpus",
+                  "label": "把整个知识库 dump 进日志"
+                },
+                {
+                  "id": "api-key",
+                  "label": "检索密钥，方便同事重跑"
+                }
+              ],
+              "correctOptionId": "ids-results",
+              "points": 10,
+              "explanation": "运行记录要能核对召回来源和引用，而不是只留下一句回答。"
             }
           ]
         },

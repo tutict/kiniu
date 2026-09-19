@@ -363,5 +363,27 @@ class LearningControllerTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.passed").value(true))
                 .andExpect(jsonPath("$.progress.currentTaskId").value("rag-pipeline"));
+
+        mockMvc.perform(post("/learn/tasks/rag-pipeline/check")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "answers": {
+                                    "trust-before-similarity": "source-trust",
+                                    "tenant-isolation": "filter-tenant",
+                                    "chunking": "size-overlap",
+                                    "metadata": "tenant-acl-time",
+                                    "hybrid": "hybrid-rrf",
+                                    "rerank": "two-stage",
+                                    "citations": "point-to-chunk",
+                                    "empty-fallback": "refuse-or-ask",
+                                    "conflict": "surface-conflict",
+                                    "run-record": "ids-results"
+                                  }
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.passed").value(true))
+                .andExpect(jsonPath("$.progress.currentTaskId").value("rag-evaluation"));
     }
 }

@@ -362,6 +362,23 @@ class LearningCatalogServiceTests {
                         "high-risk"),
                 companion.quizQuestions().stream().map(LearningQuizQuestion::id).toList());
         assertEquals("evening-planner", companion.quizQuestions().get(0).correctOptionId());
+        LearningTaskDefinition ragPipeline = taskById(tasks, "rag-pipeline");
+        assertEquals("quiz", ragPipeline.evidenceMode());
+        assertEquals(10, ragPipeline.quizQuestions().size());
+        assertEquals(
+                List.of(
+                        "trust-before-similarity",
+                        "tenant-isolation",
+                        "chunking",
+                        "metadata",
+                        "hybrid",
+                        "rerank",
+                        "citations",
+                        "empty-fallback",
+                        "conflict",
+                        "run-record"),
+                ragPipeline.quizQuestions().stream().map(LearningQuizQuestion::id).toList());
+        assertEquals("source-trust", ragPipeline.quizQuestions().get(0).correctOptionId());
         assertTrue(tasks.stream()
                 .filter(task -> "import".equals(task.evidenceMode()))
                 .allMatch(task -> List.of("/source", "/capturedAt", "/requestId").stream()
