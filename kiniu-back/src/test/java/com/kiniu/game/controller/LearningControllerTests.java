@@ -275,5 +275,27 @@ class LearningControllerTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.passed").value(true))
                 .andExpect(jsonPath("$.progress.currentTaskId").value("agent-skill-authoring"));
+
+        mockMvc.perform(post("/learn/tasks/agent-skill-authoring/check")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "answers": {
+                                    "what-is-skill": "reusable-pack",
+                                    "name-format": "kebab",
+                                    "description-trigger": "what-and-when",
+                                    "progressive-disclosure": "meta-then-body",
+                                    "split-files": "sidecar",
+                                    "when-to-use": "on-calendar",
+                                    "workflow-steps": "validate-refuse-rank",
+                                    "boundaries": "no-write",
+                                    "third-party": "review-first",
+                                    "evaluation": "real-task"
+                                  }
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.passed").value(true))
+                .andExpect(jsonPath("$.progress.currentTaskId").value("agent-trace-recovery"));
     }
 }

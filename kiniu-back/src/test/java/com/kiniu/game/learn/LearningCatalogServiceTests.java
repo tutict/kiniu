@@ -293,6 +293,23 @@ class LearningCatalogServiceTests {
                         "compose"),
                 toolContract.quizQuestions().stream().map(LearningQuizQuestion::id).toList());
         assertEquals("stable", toolContract.quizQuestions().get(0).correctOptionId());
+        LearningTaskDefinition skillAuthoringQuiz = taskById(tasks, "agent-skill-authoring");
+        assertEquals("quiz", skillAuthoringQuiz.evidenceMode());
+        assertEquals(10, skillAuthoringQuiz.quizQuestions().size());
+        assertEquals(
+                List.of(
+                        "what-is-skill",
+                        "name-format",
+                        "description-trigger",
+                        "progressive-disclosure",
+                        "split-files",
+                        "when-to-use",
+                        "workflow-steps",
+                        "boundaries",
+                        "third-party",
+                        "evaluation"),
+                skillAuthoringQuiz.quizQuestions().stream().map(LearningQuizQuestion::id).toList());
+        assertEquals("reusable-pack", skillAuthoringQuiz.quizQuestions().get(0).correctOptionId());
         assertTrue(tasks.stream()
                 .filter(task -> "import".equals(task.evidenceMode()))
                 .allMatch(task -> List.of("/source", "/capturedAt", "/requestId").stream()
@@ -329,15 +346,9 @@ class LearningCatalogServiceTests {
 
         LearningTaskDefinition skillAuthoring = taskById(tasks, "agent-skill-authoring");
         assertEquals(List.of("tool-contract", "prompt-context-design"), skillAuthoring.prerequisiteTaskIds());
-        assertTrue(skillAuthoring.checks().stream().anyMatch(check -> "progressive-disclosure".equals(check.id())));
-        List<TaskCheckDefinition> metadataChecks = skillAuthoring.checks().stream()
-                .filter(check -> List.of("name", "description").contains(check.id()))
-                .toList();
-        assertEquals(2, metadataChecks.size());
-        assertTrue(metadataChecks.stream().allMatch(check -> "SKILL.md".equals(check.path())
-                        && "frontmatter-regex".equals(check.type())));
-        assertTrue(skillAuthoring.checks().stream()
-                .anyMatch(check -> "evaluation".equals(check.id()) && check.required()));
+        assertEquals("quiz", skillAuthoring.evidenceMode());
+        assertTrue(skillAuthoring.quizQuestions().stream().anyMatch(question -> "progressive-disclosure".equals(question.id())));
+        assertTrue(skillAuthoring.quizQuestions().stream().anyMatch(question -> "evaluation".equals(question.id())));
     }
 
     private LearningTaskDefinition taskById(List<LearningTaskDefinition> tasks, String taskId) {

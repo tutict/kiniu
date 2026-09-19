@@ -117,7 +117,7 @@ http://localhost:8080
 |---|---|---|
 | 基础与模型契约 | `requirements-contract`、`http-json-basics`、`model-response-contract` | 场景判断契约、HTTP 判断、结构化输出判断 |
 | Prompt、Context 与数据 | `prompt-context-design`、`data-lifecycle`、`context-memory-budget` | 上下文判断、数据生命周期判断、记忆预算判断 |
-| Workflow、工具与 Agent | `workflow-agent-decision`、`tool-contract`、`agent-skill-authoring`、`agent-trace-recovery` | 架构选型判断、工具契约判断、Skill 设计、Agent 轨迹与恢复 |
+| Workflow、工具与 Agent | `workflow-agent-decision`、`tool-contract`、`agent-skill-authoring`、`agent-trace-recovery` | 架构选型判断、工具契约判断、Skill 判断、Agent 轨迹与恢复 |
 | 评测与 Agent 项目 | `evaluation-suite`、`companion-agent` | 持续评测集、完整 Agent 项目 |
 | RAG 检索增强 | `rag-pipeline`、`rag-evaluation` | RAG 设计、召回与 groundedness 证据 |
 | GenAI 安全 | `genai-red-team`、`access-concurrency` | 威胁模型、攻击结果、服务安全契约 |
@@ -207,6 +207,14 @@ http://localhost:8080
 1. 阅读目标、工具契约场景和讲义。
 2. 完成 10 道判断题，覆盖命名空间、Schema、权限、超时、幂等、错误恢复、确认、写工具、描述和组合。
 3. 运行确定性检查；全部选对后解锁 `agent-skill-authoring`。
+
+### 实验九怎么学
+
+第九项任务 `agent-skill-authoring` 是场景判断，不再手写 `SKILL.md`。评审三条建议这套重复流程，该怎么命名、触发、分层披露和划边界，都要判断。正确流程：
+
+1. 阅读目标、重复流程场景和讲义。
+2. 完成 10 道判断题，覆盖 Skill 定义、kebab-case 命名、触发描述、渐进式披露、附属文件、不该触发改日历、工作流程、禁止写入、第三方审查和真实试跑。
+3. 运行确定性检查；全部选对后解锁 `agent-trace-recovery`。
 
 ### 请求安全边界
 

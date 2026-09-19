@@ -2386,12 +2386,13 @@
           ]
         },
         {
+          "level": "初级",
+          "mentorAgentId": "project-agent",
           "id": "agent-skill-authoring",
           "title": "构建可复用的 Agent Skill",
-          "summary": "把重复流程封装成 SKILL.md，设计触发描述与渐进式披露，控制上下文占用与安全边界。",
-          "level": "中级",
+          "summary": "围绕晚间计划助手的建议评审流程，用场景判断分清触发描述、渐进式披露和安全边界。",
           "kind": "skill-design",
-          "estimatedMinutes": 60,
+          "estimatedMinutes": 25,
           "skills": [
             "Skill 设计",
             "渐进式披露",
@@ -2399,102 +2400,17 @@
             "能力封装"
           ],
           "objective": "设计一个触发可预测、上下文占用可控、边界清晰的可复用 Skill，并用真实任务验证它会被正确调用。",
-          "scenario": "团队里总有人重复向 Agent 解释同一套评审流程，你要把这套流程沉淀成 Skill，让任何会话里的 Agent 都能按规范执行。",
-          "mentorAgentId": "project-agent",
-          "starterFiles": [
-            {
-              "path": "SKILL.md",
-              "content": "---\nname: \ndescription: \n---\n\n# Skill 名称\n\n## 使用时机\n\n## 工作流程\n\n## 边界与安全\n"
-            },
-            {
-              "path": "skill-design.md",
-              "content": "# Skill 设计\n\n## 触发设计\n\n## 渐进式披露\n\n## 评测记录\n"
-            }
-          ],
-          "checks": [
-            {
-              "id": "name",
-              "type": "frontmatter-regex",
-              "path": "SKILL.md",
-              "rule": "^name:[ \\t]*[a-z][a-z0-9-]{2,}[ \\t]*$",
-              "required": true,
-              "points": 15,
-              "message": "在 frontmatter 中用小写字母和连字符命名 Skill（至少 3 个字符）。"
-            },
-            {
-              "id": "description",
-              "type": "frontmatter-regex",
-              "path": "SKILL.md",
-              "rule": "^description:[ \\t]*\\S.{29,}",
-              "required": true,
-              "points": 20,
-              "message": "description 写成单行且至少 30 字，说明 Skill 能做什么、何时使用。"
-            },
-            {
-              "id": "when-to-use",
-              "type": "markdown-section",
-              "path": "SKILL.md",
-              "rule": "## 使用时机",
-              "required": true,
-              "points": 15,
-              "message": "写清触发场景与不该触发的场景。"
-            },
-            {
-              "id": "workflow",
-              "type": "markdown-section",
-              "path": "SKILL.md",
-              "rule": "## 工作流程",
-              "required": true,
-              "points": 15,
-              "message": "给出分步流程和每步的产出。"
-            },
-            {
-              "id": "boundaries",
-              "type": "markdown-section",
-              "path": "SKILL.md",
-              "rule": "## 边界与安全",
-              "required": true,
-              "points": 10,
-              "message": "声明工具权限、禁止行为与失败处理。"
-            },
-            {
-              "id": "trigger-design",
-              "type": "markdown-section",
-              "path": "skill-design.md",
-              "rule": "## 触发设计",
-              "required": true,
-              "points": 10,
-              "message": "解释 description 里的触发词是如何选定的。"
-            },
-            {
-              "id": "progressive-disclosure",
-              "type": "markdown-section",
-              "path": "skill-design.md",
-              "rule": "## 渐进式披露",
-              "required": true,
-              "points": 10,
-              "message": "说明元数据、正文、附属文件三层各放什么。"
-            },
-            {
-              "id": "evaluation",
-              "type": "markdown-section",
-              "path": "skill-design.md",
-              "rule": "## 评测记录",
-              "required": true,
-              "points": 5,
-              "message": "记录至少一次真实任务试跑的结论。"
-            }
-          ],
-          "lesson": "## 核心概念\nSkill 是把某类任务的流程、规范和工具用法打包成可复用能力的文件夹，核心是一份带 name 与 description 元数据的 SKILL.md。Agent 平时只加载元数据，判断任务匹配后才读取正文，需要时再打开附属脚本或参考文件，这就是渐进式披露：既节省上下文，又装得下完整领域知识。\n\n## 算法思想\n渐进式披露就是懒加载：先付几十 token 的元数据索引成本，命中才读完整正文，用一次按需读取的小开销守住上下文预算；description 里的触发词就是意图匹配的特征。\n\n## 完成步骤\n先选一个重复出现的任务场景，在 skill-design.md 中写清触发设计与分层披露方案；再撰写 SKILL.md：命名用小写连字符，description 说明能做什么和何时使用，正文给出使用时机、工作流程和边界；最后用真实任务试跑并记录评测结论。\n\n## 常见误区\ndescription 只写功能不写触发时机，Agent 就不会调用它；把所有细节塞进正文会浪费上下文，应拆到附属参考文件；Skill 的指令会被 Agent 执行，引入第三方 Skill 前必须审查内容与脚本，并声明工具权限边界。\n\n## 完成标准\nSKILL.md 元数据完整、三个章节都有实质内容，设计文档能解释触发与披露决策，评测记录说明真实试跑结果。必需检查全部通过。",
+          "scenario": "团队每次都要向晚间计划助手重复解释：如何把粘贴待办排成最多 3 条下一步、不确定要标明、禁止改日历。有人想把整本公司规章塞进 SKILL.md 正文，还有人想装一个来路不明、声称能“自动改会议”的第三方 Skill。description 只写了“生成计划”。",
+          "lesson": "## 核心概念\nSkill 把某类任务的流程、规范和工具用法打成可复用能力，核心是带 name 与 description 的 SKILL.md。Agent 平时只加载元数据，匹配后才读正文，需要时再打开附属文件，这就是渐进式披露。\n\n## 算法思想\n渐进式披露是懒加载：先付几十 token 的索引成本，命中才读全文。description 里的触发词就是意图匹配特征。\n\n## 完成步骤\n结合晚间计划助手判断：评审三条建议这套重复流程该不该做成 Skill、name 怎么写、description 要不要写触发时机、正文放什么、日历写入能不能进 Skill、第三方 Skill 要不要审查。\n\n## 常见误区\ndescription 只写功能不写何时用，Agent 就不会调用。把所有细节塞进正文会撑爆上下文。Skill 指令会被执行，引入前必须审查。\n\n## 完成标准\n十道场景判断全部选对，并能说明错误选项会让 Skill 不被触发、越权写日历或浪费上下文。",
           "deliverables": [
-            "SKILL.md：可复用的技能定义",
-            "skill-design.md：触发与披露设计"
+            "场景判断：完成十道题，覆盖 Skill 定义、命名、触发、披露、边界、审查和评测"
           ],
           "prerequisiteTaskIds": [
             "tool-contract",
             "prompt-context-design"
           ],
-          "evidenceMode": "document",
+          "evidenceMode": "quiz",
+          "passingScore": 100,
           "references": [
             {
               "title": "Agent Skills Overview",
@@ -2509,6 +2425,260 @@
               "publisher": "Anthropic",
               "version": "2025-10",
               "accessedAt": "2026-07-24"
+            }
+          ],
+          "starterFiles": [],
+          "checks": [],
+          "quizQuestions": [
+            {
+              "id": "what-is-skill",
+              "prompt": "为什么要把“评审三条下一步”做成 Skill，而不是每次把流程贴进对话？",
+              "options": [
+                {
+                  "id": "longer-prompt",
+                  "label": "每次把流程贴进 system，保证这次一定执行"
+                },
+                {
+                  "id": "reusable-pack",
+                  "label": "做成可复用 Skill：平时只加载元数据，匹配到评审任务才读正文"
+                },
+                {
+                  "id": "new-agent",
+                  "label": "为这个流程再训练一个新模型"
+                },
+                {
+                  "id": "no-process",
+                  "label": "流程会限制智能，不应该封装"
+                }
+              ],
+              "correctOptionId": "reusable-pack",
+              "points": 10,
+              "explanation": "Skill 是可复用能力包。重复流程应沉淀，而不是每次烧上下文重讲一遍。"
+            },
+            {
+              "id": "name-format",
+              "prompt": "这个 Skill 的 name 哪项符合规范？",
+              "options": [
+                {
+                  "id": "spaces",
+                  "label": "Evening Plan Review"
+                },
+                {
+                  "id": "kebab",
+                  "label": "evening-plan-review"
+                },
+                {
+                  "id": "caps",
+                  "label": "EVENING_PLAN"
+                },
+                {
+                  "id": "emoji",
+                  "label": "plan✨"
+                }
+              ],
+              "correctOptionId": "kebab",
+              "points": 10,
+              "explanation": "name 用小写字母和连字符，才能被稳定引用和匹配。"
+            },
+            {
+              "id": "description-trigger",
+              "prompt": "description 必须包含什么，Agent 才会在对的时候调用它？",
+              "options": [
+                {
+                  "id": "feature-only",
+                  "label": "只写“能生成计划”，不写何时用"
+                },
+                {
+                  "id": "what-and-when",
+                  "label": "写清能做什么，以及在用户粘贴待办、需要排下一步时触发"
+                },
+                {
+                  "id": "model-name",
+                  "label": "写上模型名称和作者"
+                },
+                {
+                  "id": "all-tasks",
+                  "label": "写成“任何任务都能用”"
+                }
+              ],
+              "correctOptionId": "what-and-when",
+              "points": 10,
+              "explanation": "description 既是功能说明也是触发特征。不写时机，Agent 就不会调用。"
+            },
+            {
+              "id": "progressive-disclosure",
+              "prompt": "渐进式披露正确的加载顺序是？",
+              "options": [
+                {
+                  "id": "dump-all",
+                  "label": "一上来把正文、脚本、公司规章全部塞进上下文"
+                },
+                {
+                  "id": "meta-then-body",
+                  "label": "平时只加载 name/description，匹配后再读正文，必要时才打开附属文件"
+                },
+                {
+                  "id": "body-only",
+                  "label": "不写元数据，直接让 Agent 猜有没有这个 Skill"
+                },
+                {
+                  "id": "never-load",
+                  "label": "永远不加载正文，以免占 token"
+                }
+              ],
+              "correctOptionId": "meta-then-body",
+              "points": 10,
+              "explanation": "先付元数据索引成本，命中才读全文。这是用小开销守住上下文预算。"
+            },
+            {
+              "id": "split-files",
+              "prompt": "几十个正反例和脚本，应该放哪？",
+              "options": [
+                {
+                  "id": "in-body",
+                  "label": "全部写进 SKILL.md 正文，一次看完"
+                },
+                {
+                  "id": "sidecar",
+                  "label": "正文只留流程，例子和脚本放到附属文件按需打开"
+                },
+                {
+                  "id": "system-prompt",
+                  "label": "塞进全局 system，所有会话共享"
+                },
+                {
+                  "id": "user-chat",
+                  "label": "每次让林舟自己贴例子"
+                }
+              ],
+              "correctOptionId": "sidecar",
+              "points": 10,
+              "explanation": "把所有细节塞进正文会浪费上下文。例子和脚本应渐进披露。"
+            },
+            {
+              "id": "when-to-use",
+              "prompt": "这个评审 Skill 何时不该触发？",
+              "options": [
+                {
+                  "id": "on-paste",
+                  "label": "林舟粘贴待办、要最多 3 条下一步时不该触发"
+                },
+                {
+                  "id": "on-calendar",
+                  "label": "用户要求改日历或群发时不该触发，应走拒绝规则"
+                },
+                {
+                  "id": "never",
+                  "label": "任何提到“明天”的话都该触发"
+                },
+                {
+                  "id": "always",
+                  "label": "每个用户消息都先跑一遍 Skill"
+                }
+              ],
+              "correctOptionId": "on-calendar",
+              "points": 10,
+              "explanation": "使用时机要同时写清该触发和不该触发。改日历是契约禁止项，不是评审流程。"
+            },
+            {
+              "id": "workflow-steps",
+              "prompt": "Skill 正文里的工作流程，哪项正确？",
+              "options": [
+                {
+                  "id": "improvise",
+                  "label": "让模型自由发挥，流程会限制智能"
+                },
+                {
+                  "id": "validate-refuse-rank",
+                  "label": "校验输入 → 拒绝外部写入 → 生成最多 3 条建议 → 标明不确定项"
+                },
+                {
+                  "id": "write-calendar",
+                  "label": "先改日历，再补三条建议"
+                },
+                {
+                  "id": "one-sentence",
+                  "label": "只写“做得聪明一点”"
+                }
+              ],
+              "correctOptionId": "validate-refuse-rank",
+              "points": 10,
+              "explanation": "工作流程要分步且每步有产出，并接上已经写死的拒绝规则。"
+            },
+            {
+              "id": "boundaries",
+              "prompt": "Skill 的边界与安全应声明什么？",
+              "options": [
+                {
+                  "id": "all-tools",
+                  "label": "允许调用任何日历和支付工具"
+                },
+                {
+                  "id": "no-write",
+                  "label": "禁止改日历、群发和代下单；失败时拒绝或转人工"
+                },
+                {
+                  "id": "silent-fail",
+                  "label": "失败就当成功，以免打断体验"
+                },
+                {
+                  "id": "no-boundary",
+                  "label": "有 description 就不需要边界"
+                }
+              ],
+              "correctOptionId": "no-write",
+              "points": 10,
+              "explanation": "Skill 指令会被执行，必须声明工具权限、禁止行为和失败处理。"
+            },
+            {
+              "id": "third-party",
+              "prompt": "看到一个第三方 Skill，声称“自动改会议、一键懂你”，该怎么办？",
+              "options": [
+                {
+                  "id": "install",
+                  "label": "直接安装，能省事"
+                },
+                {
+                  "id": "review-first",
+                  "label": "先审查正文、脚本和权限边界，越权写入就拒绝"
+                },
+                {
+                  "id": "trust-stars",
+                  "label": "星星多就可以信"
+                },
+                {
+                  "id": "merge-system",
+                  "label": "把它的正文合并进全局 system"
+                }
+              ],
+              "correctOptionId": "review-first",
+              "points": 10,
+              "explanation": "Skill 会被 Agent 执行。第三方内容与脚本必须先审查。"
+            },
+            {
+              "id": "evaluation",
+              "prompt": "怎样验证这个 Skill 会被正确调用？",
+              "options": [
+                {
+                  "id": "readme-only",
+                  "label": "写完 SKILL.md 就算验证通过"
+                },
+                {
+                  "id": "real-task",
+                  "label": "用一条真实粘贴待办试跑，记录是否触发、是否拒绝改日历、建议是否≤3 条"
+                },
+                {
+                  "id": "longer-name",
+                  "label": "把 name 写长一点就会被调用"
+                },
+                {
+                  "id": "no-eval",
+                  "label": "Skill 无法评测"
+                }
+              ],
+              "correctOptionId": "real-task",
+              "points": 10,
+              "explanation": "要用真实任务试跑：该触发时触发，不该触发时拒绝，并留下评测结论。"
             }
           ]
         },
