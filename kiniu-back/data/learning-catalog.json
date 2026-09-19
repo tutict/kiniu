@@ -305,25 +305,26 @@
           "mentorAgentId": "project-agent",
           "id": "http-json-basics",
           "title": "读懂一次 HTTP/JSON 模型调用",
-          "summary": "记录请求、响应、错误与幂等语义，理解客户端和服务端的责任边界。",
+          "summary": "围绕晚间计划助手的网关调用，用场景判断分清方法、路径、状态码、错误分类、超时和幂等。",
           "kind": "api-basics",
-          "estimatedMinutes": 45,
+          "estimatedMinutes": 25,
           "skills": [
             "HTTP",
             "JSON",
             "错误处理",
             "幂等性"
           ],
-          "objective": "用结构化工件完整表达一次 API 交换，使请求方法、路径、状态码和失败行为可以被复现。",
-          "scenario": "前端调用模型网关时偶尔超时和重复提交，团队需要先统一如何描述一次网络交互。",
-          "lesson": "## 核心概念\nHTTP 描述资源上的请求与响应，JSON 只是常用的数据表示。方法、路径、请求头、状态码和响应体共同组成协议契约；网络超时不等于服务端没有执行，因此写操作还需要幂等键和重试边界。客户端应区分参数错误、鉴权失败、限流、服务错误与超时。\n\n## 算法思想\n调用是状态机：请求、响应、错误各有转移路径；重试前先分清幂等与非幂等——GET 重试无害，未加幂等键的 POST 重试会翻倍副作用。\n\n## 完成步骤\n选择一个模型或 Agent 接口，记录 method、path、request 和 response；为响应写出 statusCode；列出至少两个不同错误案例；说明相同幂等键的重复请求应得到什么结果。 留下可复现记录，提交前移除密钥和个人信息。\n\n## 常见误区\n不要把所有失败都表示为 200，也不要只保存自然语言错误。避免在日志或示例中放真实 API key；重试必须结合超时、退避和幂等设计。\n\n## 完成标准\nJSON 可解析，包含完整请求和响应，状态码在合法区间，错误案例结构一致，并明确幂等策略。",
+          "objective": "在继续接模型前，先能判断一次 HTTP/JSON 调用里方法、状态码、失败和重试各自意味着什么。",
+          "scenario": "晚间计划助手已定契约：只基于林舟粘贴的待办返回最多 3 条下一步。前端要通过 HTTPS 调用本机网关 POST /v1/plan/next，JSON 里放待办文本。联调时出现 5 秒超时、用户连点两次，还有人把网关 500 包成 200 以免“看起来失败”。需要先判断一次 HTTP/JSON 调用里，方法、路径、状态码、错误分类和重试该怎么表达。",
+          "lesson": "## 核心概念\nHTTP 描述对资源的请求与响应，JSON 只是请求体和响应体的数据表示。方法、路径、状态码和错误码一起构成可复现的协议契约。网络超时不等于服务端没有执行，写操作还要有幂等键。\n\n## 算法思想\n一次调用是状态机：发出、响应、超时和重试都是转移。GET 重试通常无害；没有幂等键的 POST 重试可能让副作用翻倍。\n\n## 完成步骤\n结合晚间计划助手判断该打什么方法与路径、失败时如何用状态码区分、超时后能不能原样重试、连点两次应返回什么。记录时去掉密钥。\n\n## 常见误区\n不要把所有失败都包成 200，也不要用一句话代替错误码。不要在示例里留下真实 API key。重试必须同时考虑超时、退避和幂等。\n\n## 完成标准\n十道场景判断全部选对，并能说明错误选项会让超时、重复提交或密钥泄漏变成不可复现的事故。",
           "deliverables": [
-            "api-exchange.json：一次完整 API 交换记录"
+            "场景判断：完成十道题，覆盖方法、路径、状态码、错误分类、超时与幂等"
           ],
           "prerequisiteTaskIds": [
             "requirements-contract"
           ],
-          "evidenceMode": "document",
+          "evidenceMode": "quiz",
+          "passingScore": 100,
           "references": [
             {
               "title": "HTTP Semantics",
@@ -340,57 +341,258 @@
               "accessedAt": "2026-07-23"
             }
           ],
-          "starterFiles": [
+          "starterFiles": [],
+          "checks": [],
+          "quizQuestions": [
             {
-              "path": "api-exchange.json",
-              "content": "{\n  \"method\": \"\",\n  \"path\": \"\",\n  \"request\": {\n    \"headers\": {},\n    \"body\": {}\n  },\n  \"response\": {\n    \"statusCode\": 0,\n    \"body\": {}\n  },\n  \"errorCases\": [],\n  \"idempotency\": \"\"\n}"
-            }
-          ],
-          "checks": [
-            {
-              "id": "method",
-              "type": "json-pointer-present",
-              "path": "api-exchange.json",
-              "rule": "/method",
-              "required": true,
-              "points": 15,
-              "message": "填写 HTTP 方法。"
+              "id": "method-choice",
+              "prompt": "前端请网关“根据粘贴待办生成下一步”，应使用哪类 HTTP 方法？",
+              "options": [
+                {
+                  "id": "get-resource",
+                  "label": "GET，因为只是问问模型，不会改任何东西"
+                },
+                {
+                  "id": "post-plan",
+                  "label": "POST /v1/plan/next，把待办放进 JSON 请求体"
+                },
+                {
+                  "id": "delete-todo",
+                  "label": "DELETE，先清掉林舟的待办再生成计划"
+                },
+                {
+                  "id": "put-calendar",
+                  "label": "PUT，直接覆盖明天的日历"
+                }
+              ],
+              "correctOptionId": "post-plan",
+              "points": 10,
+              "explanation": "生成计划会消耗额度、留下请求记录，应使用带 JSON 体的 POST，而不是把待办塞进 URL，更不能写日历。"
             },
             {
-              "id": "path",
-              "type": "json-pointer-present",
-              "path": "api-exchange.json",
-              "rule": "/path",
-              "required": true,
-              "points": 15,
-              "message": "填写请求路径。"
+              "id": "path-resource",
+              "prompt": "哪条路径才像可复现的资源，而不是一句自然语言？",
+              "options": [
+                {
+                  "id": "spoken-path",
+                  "label": "/帮我看看明天"
+                },
+                {
+                  "id": "smart-path",
+                  "label": "/smart"
+                },
+                {
+                  "id": "plan-next",
+                  "label": "/v1/plan/next"
+                },
+                {
+                  "id": "understand-path",
+                  "label": "/懂你"
+                }
+              ],
+              "correctOptionId": "plan-next",
+              "points": 10,
+              "explanation": "路径应稳定标识资源。口语和“更聪明”无法被客户端、日志和测试重复引用。"
             },
             {
-              "id": "status",
-              "type": "json-number-range",
-              "path": "api-exchange.json",
-              "rule": "/response/statusCode:100:599",
-              "required": true,
-              "points": 20,
-              "message": "状态码必须位于 HTTP 合法区间。"
+              "id": "json-role",
+              "prompt": "这次调用里，JSON 扮演什么角色？",
+              "options": [
+                {
+                  "id": "replace-http",
+                  "label": "JSON 可以替代 HTTP，有 body 就够了"
+                },
+                {
+                  "id": "query-only",
+                  "label": "JSON 必须全部放进 URL 查询参数"
+                },
+                {
+                  "id": "status-code",
+                  "label": "JSON 等于状态码，200 就表示成功"
+                },
+                {
+                  "id": "body-data",
+                  "label": "JSON 是请求体和响应体的数据表示，方法与状态码仍由 HTTP 表达"
+                }
+              ],
+              "correctOptionId": "body-data",
+              "points": 10,
+              "explanation": "JSON 只描述数据。方法、路径和状态码仍属于 HTTP 契约，不能靠一段 JSON 包办。"
             },
             {
-              "id": "errors",
-              "type": "json-array-shape",
-              "path": "api-exchange.json",
-              "rule": "/errorCases:2:statusCode,code,handling",
-              "required": true,
-              "points": 30,
-              "message": "至少记录两个带处理策略的错误案例。"
+              "id": "status-contract",
+              "prompt": "网关处理失败时，哪项才符合协议契约？",
+              "options": [
+                {
+                  "id": "always-200",
+                  "label": "一律返回 200，把失败写进中文句子，界面看起来没崩"
+                },
+                {
+                  "id": "http-classes",
+                  "label": "用 4xx/5xx 区分参数错误、鉴权失败和服务器错误"
+                },
+                {
+                  "id": "timeout-200",
+                  "label": "超时也返回 200，避免前端报错"
+                },
+                {
+                  "id": "hide-code",
+                  "label": "只返回“失败了”，不给 statusCode"
+                }
+              ],
+              "correctOptionId": "http-classes",
+              "points": 10,
+              "explanation": "状态码是可检查的契约。把所有失败包成 200，客户端就无法区分重试、改参数还是找人。"
             },
             {
-              "id": "idempotency",
-              "type": "json-pointer-present",
-              "path": "api-exchange.json",
-              "rule": "/idempotency",
-              "required": true,
-              "points": 20,
-              "message": "说明重复请求的幂等行为。"
+              "id": "timeout-semantics",
+              "prompt": "前端 5 秒超时后，对这次 POST 的正确理解是？",
+              "options": [
+                {
+                  "id": "server-idle",
+                  "label": "服务端一定没执行，可以当没发生过"
+                },
+                {
+                  "id": "unknown-effect",
+                  "label": "不知道服务端有没有执行，所以写操作需要幂等键"
+                },
+                {
+                  "id": "immediate-repost",
+                  "label": "立刻用同一请求再 POST 一次，直到成功"
+                },
+                {
+                  "id": "switch-get",
+                  "label": "说明模型不可用，改成 GET 就不会有副作用"
+                }
+              ],
+              "correctOptionId": "unknown-effect",
+              "points": 10,
+              "explanation": "超时只说明客户端没等到响应，不证明服务端没做事。没有幂等键就重试，可能生成两份计划、扣两次额度。"
+            },
+            {
+              "id": "client-error",
+              "prompt": "林舟没粘贴任何待办就点了生成，客户端应把它归为哪类失败？",
+              "options": [
+                {
+                  "id": "server-500",
+                  "label": "500，都是模型不好使"
+                },
+                {
+                  "id": "rate-429",
+                  "label": "429，先限流再说"
+                },
+                {
+                  "id": "param-400",
+                  "label": "400 参数错误，缺输入就不要打到模型"
+                },
+                {
+                  "id": "timeout",
+                  "label": "超时，再等 5 秒"
+                }
+              ],
+              "correctOptionId": "param-400",
+              "points": 10,
+              "explanation": "缺输入是客户端可判定的参数错误。把它当成 500 或超时，只会浪费重试和掩盖契约。"
+            },
+            {
+              "id": "auth-error",
+              "prompt": "本机访问令牌缺失时，正确处理是什么？",
+              "options": [
+                {
+                  "id": "friendly-200",
+                  "label": "返回 200 和一句很懂你的话，避免用户紧张"
+                },
+                {
+                  "id": "auth-401",
+                  "label": "返回 401/403，把它当鉴权失败而不是模型不会回答"
+                },
+                {
+                  "id": "retry-twenty",
+                  "label": "自动重试 20 次，也许令牌会自己出现"
+                },
+                {
+                  "id": "downgrade-get",
+                  "label": "改成 GET，不带令牌也能问"
+                }
+              ],
+              "correctOptionId": "auth-401",
+              "points": 10,
+              "explanation": "鉴权失败要显式标出。用 200 或疯狂重试会把安全问题伪装成体验问题。"
+            },
+            {
+              "id": "idempotency-key",
+              "prompt": "林舟连点两次提交同一段待办，正确的幂等策略是？",
+              "options": [
+                {
+                  "id": "two-plans",
+                  "label": "两次都生成新计划，各扣一次额度才公平"
+                },
+                {
+                  "id": "same-key",
+                  "label": "带幂等键，相同键返回同一结果"
+                },
+                {
+                  "id": "ban-retry",
+                  "label": "禁止任何重试，超时就让用户自己猜"
+                },
+                {
+                  "id": "second-get",
+                  "label": "第二次自动改成 GET"
+                }
+              ],
+              "correctOptionId": "same-key",
+              "points": 10,
+              "explanation": "重复点击和超时重试都需要幂等键。相同键应得到同一业务结果，而不是两份计划。"
+            },
+            {
+              "id": "retry-safety",
+              "prompt": "哪种重试方式是安全的？",
+              "options": [
+                {
+                  "id": "bare-post",
+                  "label": "未带幂等键的 POST 立即连打 3 次"
+                },
+                {
+                  "id": "keyed-backoff",
+                  "label": "GET 或带幂等键的 POST，配合超时和退避"
+                },
+                {
+                  "id": "switch-model",
+                  "label": "超时后立刻换更贵的模型再 POST"
+                },
+                {
+                  "id": "key-in-query",
+                  "label": "把 API key 放到查询参数里重试，方便网关认识你"
+                }
+              ],
+              "correctOptionId": "keyed-backoff",
+              "points": 10,
+              "explanation": "重试要同时满足幂等、超时和退避。把密钥放进 URL 或裸 POST 连打，都会制造新事故。"
+            },
+            {
+              "id": "secret-boundary",
+              "prompt": "留下可复现的调用记录时，正确做法是？",
+              "options": [
+                {
+                  "id": "keep-auth",
+                  "label": "把完整 Authorization 头存进仓库，方便同事复现"
+                },
+                {
+                  "id": "redact-record",
+                  "label": "记录 method、path、statusCode 和脱敏后的 JSON，移除密钥"
+                },
+                {
+                  "id": "natural-only",
+                  "label": "只保存自然语言说明，不保存状态码"
+                },
+                {
+                  "id": "share-todo",
+                  "label": "把林舟的真实待办原文发到群里当样例"
+                }
+              ],
+              "correctOptionId": "redact-record",
+              "points": 10,
+              "explanation": "可复现不等于保存秘密。状态码和结构要留下，密钥和个人待办必须去掉。"
             }
           ]
         },

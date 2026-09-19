@@ -174,6 +174,23 @@ class LearningCatalogServiceTests {
                         "acceptance-criteria"),
                 requirements.quizQuestions().stream().map(LearningQuizQuestion::id).toList());
         assertEquals("define-contract", requirements.quizQuestions().get(0).correctOptionId());
+        LearningTaskDefinition httpJson = taskById(tasks, "http-json-basics");
+        assertEquals("quiz", httpJson.evidenceMode());
+        assertEquals(10, httpJson.quizQuestions().size());
+        assertEquals(
+                List.of(
+                        "method-choice",
+                        "path-resource",
+                        "json-role",
+                        "status-contract",
+                        "timeout-semantics",
+                        "client-error",
+                        "auth-error",
+                        "idempotency-key",
+                        "retry-safety",
+                        "secret-boundary"),
+                httpJson.quizQuestions().stream().map(LearningQuizQuestion::id).toList());
+        assertEquals("post-plan", httpJson.quizQuestions().get(0).correctOptionId());
         assertTrue(tasks.stream()
                 .filter(task -> "import".equals(task.evidenceMode()))
                 .allMatch(task -> List.of("/source", "/capturedAt", "/requestId").stream()

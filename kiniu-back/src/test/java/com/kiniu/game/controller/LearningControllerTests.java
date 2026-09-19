@@ -110,5 +110,33 @@ class LearningControllerTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.feedback").isString())
                 .andExpect(jsonPath("$.feedback").value(org.hamcrest.Matchers.containsString("任务目标")));
+
+        mockMvc.perform(get("/learn/tasks/http-json-basics"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.evidenceMode").value("quiz"))
+                .andExpect(jsonPath("$.quizQuestions[0].correctOptionId").doesNotExist())
+                .andExpect(jsonPath("$.quizQuestions[0].explanation").doesNotExist());
+
+        mockMvc.perform(post("/learn/tasks/http-json-basics/check")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "answers": {
+                                    "method-choice": "post-plan",
+                                    "path-resource": "plan-next",
+                                    "json-role": "body-data",
+                                    "status-contract": "http-classes",
+                                    "timeout-semantics": "unknown-effect",
+                                    "client-error": "param-400",
+                                    "auth-error": "auth-401",
+                                    "idempotency-key": "same-key",
+                                    "retry-safety": "keyed-backoff",
+                                    "secret-boundary": "redact-record"
+                                  }
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.passed").value(true))
+                .andExpect(jsonPath("$.progress.currentTaskId").value("model-response-contract"));
     }
 }
