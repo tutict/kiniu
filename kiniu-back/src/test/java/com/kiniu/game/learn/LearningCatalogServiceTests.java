@@ -276,6 +276,23 @@ class LearningCatalogServiceTests {
                         "compose"),
                 workflowDecision.quizQuestions().stream().map(LearningQuizQuestion::id).toList());
         assertEquals("stable-rules", workflowDecision.quizQuestions().get(0).correctOptionId());
+        LearningTaskDefinition toolContract = taskById(tasks, "tool-contract");
+        assertEquals("quiz", toolContract.evidenceMode());
+        assertEquals(10, toolContract.quizQuestions().size());
+        assertEquals(
+                List.of(
+                        "namespace",
+                        "schema",
+                        "authorization",
+                        "timeout",
+                        "idempotency",
+                        "error-recovery",
+                        "confirmation",
+                        "write-tool",
+                        "tool-over",
+                        "compose"),
+                toolContract.quizQuestions().stream().map(LearningQuizQuestion::id).toList());
+        assertEquals("stable", toolContract.quizQuestions().get(0).correctOptionId());
         assertTrue(tasks.stream()
                 .filter(task -> "import".equals(task.evidenceMode()))
                 .allMatch(task -> List.of("/source", "/capturedAt", "/requestId").stream()

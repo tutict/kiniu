@@ -253,5 +253,27 @@ class LearningControllerTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.passed").value(true))
                 .andExpect(jsonPath("$.progress.currentTaskId").value("tool-contract"));
+
+        mockMvc.perform(post("/learn/tasks/tool-contract/check")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "answers": {
+                                    "namespace": "stable",
+                                    "schema": "full",
+                                    "authorization": "read-only",
+                                    "timeout": "3000",
+                                    "idempotency": "user-date",
+                                    "error-recovery": "exponential",
+                                    "confirmation": "start-end-summary",
+                                    "write-tool": "no-fixed-refuse",
+                                    "tool-over": "specific",
+                                    "compose": "workflow-first"
+                                  }
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.passed").value(true))
+                .andExpect(jsonPath("$.progress.currentTaskId").value("agent-skill-authoring"));
     }
 }

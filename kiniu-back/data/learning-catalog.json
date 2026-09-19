@@ -2090,13 +2090,13 @@
           ]
         },
         {
-          "level": "中级",
+          "level": "初级",
           "mentorAgentId": "project-agent",
           "id": "tool-contract",
           "title": "设计安全可靠的工具契约",
-          "summary": "用输入输出 Schema、授权、超时和幂等规则约束工具调用。",
+          "summary": "围绕晚间计划助手的日历和会议工具，用场景判断分清输入 Schema、授权、超时、幂等和确认。",
           "kind": "tool-design",
-          "estimatedMinutes": 60,
+          "estimatedMinutes": 25,
           "skills": [
             "Function Calling",
             "Schema",
@@ -2104,15 +2104,16 @@
             "故障恢复"
           ],
           "objective": "让 Agent 只能以可验证参数调用最小权限工具，并在失败和敏感操作时进入受控路径。",
-          "scenario": "Agent 可以查询日历和创建会议，读取与写入操作需要不同权限、确认和重试策略。",
-          "lesson": "## 核心概念\n工具契约是模型与真实系统之间的安全边界。每个工具需要清晰名称、用途、输入与结构化输出 Schema；执行层必须再次校验参数、权限和业务状态。超时、幂等性、错误恢复、用户确认与审计属于契约，而不是调用之后再补的实现细节。\n\n## 算法思想\n重试要用指数退避加抖动：失败后等 1、2、4 秒再试，并加随机偏移，避免所有客户端同时重试形成雪崩；幂等键让重试变安全——同一键的写操作执行多次效果等于一次。\n\n## 完成步骤\n定义命名空间和至少两个工具；为每个工具写 inputSchema 与 outputSchema；标注所需授权和最小 scope；设置超时；区分可重试与不可重试错误；为写入或高风险操作定义确认；说明幂等键。 留下可复现记录，提交前移除密钥和个人信息。\n\n## 常见误区\n不要相信模型已经校验参数，也不要向模型暴露万能管理工具。工具描述过于宽泛会导致误选，自动重试非幂等写操作会造成重复副作用。\n\n## 完成标准\n工具数组结构一致，所有工具都有权限、超时、幂等、错误恢复和确认策略，数值超时位于合理范围。",
+          "scenario": "Agent 可以查询日历和创建会议。查询是只读，写入需要确认。演示会上有人想直接让 Agent 改日历，还想拿掉停止条件和人工接管。",
+          "lesson": "## 核心概念\n工具契约是模型与真实系统之间的安全边界。每个工具需要清晰名称、用途、输入与结构化输出 Schema；执行层必须再次校验参数、权限和业务状态。超时、幂等性、错误恢复、用户确认与审计属于契约，而不是调用之后再补的实现细节。\n\n## 算法思想\n重试要用指数退避加抖动：失败后等 1、2、4 秒再试，并加随机偏移，避免所有客户端同时重试形成雪崩；幂等键让重试变安全——同一键的写操作执行多次效果等于一次。\n\n## 完成步骤\n结合晚间计划助手判断：查询日历和创建会议的工具，该给什么输入 Schema、授权 scope、超时、幂等键、错误恢复和用户确认。\n\n## 常见误区\n不要相信模型已经校验参数，也不要向模型暴露万能管理工具。工具描述过于宽泛会导致误选，自动重试非幂等写操作会造成重复副作用。\n\n## 完成标准\n工具数组结构一致，所有工具都有权限、超时、幂等、错误恢复和确认策略，数值超时位于合理范围。\n",
           "deliverables": [
-            "tool-contract.json：工具接口与安全契约"
+            "场景判断：完成十道题，覆盖命名空间、工具 Schema、权限、超时、幂等、确认和错误恢复"
           ],
           "prerequisiteTaskIds": [
             "workflow-agent-decision"
           ],
-          "evidenceMode": "document",
+          "evidenceMode": "quiz",
+          "passingScore": 100,
           "references": [
             {
               "title": "Function calling",
@@ -2129,39 +2130,258 @@
               "accessedAt": "2026-07-23"
             }
           ],
-          "starterFiles": [
-            {
-              "path": "tool-contract.json",
-              "content": "{\n  \"namespace\": \"\",\n  \"tools\": []\n}"
-            }
-          ],
-          "checks": [
+          "starterFiles": [],
+          "checks": [],
+          "quizQuestions": [
             {
               "id": "namespace",
-              "type": "json-pointer-present",
-              "path": "tool-contract.json",
-              "rule": "/namespace",
-              "required": true,
+              "prompt": "工具契约里 namespace 应定义什么？",
+              "options": [
+                {
+                  "id": "model",
+                  "label": "模型名称"
+                },
+                {
+                  "id": "stable",
+                  "label": "稳定标识命名空间，方便客户端和日志"
+                },
+                {
+                  "id": "user",
+                  "label": "林舟的用户名"
+                },
+                {
+                  "id": "random",
+                  "label": "每次调用都生成新 namespace"
+                }
+              ],
+              "correctOptionId": "stable",
               "points": 10,
-              "message": "定义稳定命名空间。"
+              "explanation": "命名空间是可复现的契约标识。模型名称或用户名不稳定。"
             },
             {
-              "id": "tools",
-              "type": "json-array-shape",
-              "path": "tool-contract.json",
-              "rule": "/tools:2:name,inputSchema,outputSchema,authorization,timeoutMs,idempotency,errorRecovery,confirmation",
-              "required": true,
-              "points": 70,
-              "message": "至少定义两个完整工具契约。"
+              "id": "schema",
+              "prompt": "查询日历和创建会议的工具，inputSchema 应包含什么？",
+              "options": [
+                {
+                  "id": "date-only",
+                  "label": "只放 date"
+                },
+                {
+                  "id": "full",
+                  "label": "method、path、request body 的完整 JSON Schema，包含 date、start、end、summary"
+                },
+                {
+                  "id": "output",
+                  "label": "只放 outputSchema，不需要 input"
+                },
+                {
+                  "id": "model",
+                  "label": "放模型名字"
+                }
+              ],
+              "correctOptionId": "full",
+              "points": 10,
+              "explanation": "工具契约要完整描述输入。模型名字不是 Schema。"
+            },
+            {
+              "id": "authorization",
+              "prompt": "查询日历的工具，该给什么授权？",
+              "options": [
+                {
+                  "id": "any",
+                  "label": "给任何模型都行"
+                },
+                {
+                  "id": "read-only",
+                  "label": "只读日历，scope=calendar.read"
+                },
+                {
+                  "id": "calendar-write",
+                  "label": "既能读也能写日历"
+                },
+                {
+                  "id": "none",
+                  "label": "不给任何权限"
+                }
+              ],
+              "correctOptionId": "read-only",
+              "points": 10,
+              "explanation": "最小权限原则。写操作要单独标注。"
             },
             {
               "id": "timeout",
-              "type": "regex",
-              "path": "tool-contract.json",
-              "rule": "\"timeoutMs\"\\s*:\\s*[1-9][0-9]{1,5}",
-              "required": true,
-              "points": 20,
-              "message": "设置正数毫秒超时。"
+              "prompt": "查询日历工具，超时应设为多少毫秒？",
+              "options": [
+                {
+                  "id": "0",
+                  "label": "0 代表无限等待"
+                },
+                {
+                  "id": "3000",
+                  "label": "3 秒，足够快速返回"
+                },
+                {
+                  "id": "60000",
+                  "label": "1 分钟，安全但浪费"
+                },
+                {
+                  "id": "never",
+                  "label": "不设超时"
+                }
+              ],
+              "correctOptionId": "3000",
+              "points": 10,
+              "explanation": "超时要正数且合理。0 代表无限等待，写操作不能这样。"
+            },
+            {
+              "id": "idempotency",
+              "prompt": "创建会议的工具，需要带什么幂等键？",
+              "options": [
+                {
+                  "id": "none",
+                  "label": "不需要幂等键"
+                },
+                {
+                  "id": "user-date",
+                  "label": "带 userId+date 的复合键"
+                },
+                {
+                  "id": "any-key",
+                  "label": "模型生成任意字符串就行"
+                },
+                {
+                  "id": "calendar-id",
+                  "label": "用会议 ID 作为键"
+                }
+              ],
+              "correctOptionId": "user-date",
+              "points": 10,
+              "explanation": "幂等键要让重试变成安全。用户+日期最稳。"
+            },
+            {
+              "id": "error-recovery",
+              "prompt": "查询日历工具返回 500 时，正确恢复策略是？",
+              "options": [
+                {
+                  "id": "retry-immediate",
+                  "label": "立即重试 3 次"
+                },
+                {
+                  "id": "exponential",
+                  "label": "指数退避加抖动，1、2、4、8 秒"
+                },
+                {
+                  "id": "no-retry",
+                  "label": "不重试，直接返回错误"
+                },
+                {
+                  "id": "fake-success",
+                  "label": "返回假数据，显得成功"
+                }
+              ],
+              "correctOptionId": "exponential",
+              "points": 10,
+              "explanation": "重试要带退避和抖动。立即重试会形成雪崩。"
+            },
+            {
+              "id": "confirmation",
+              "prompt": "创建会议的工具，该要求用户确认什么？",
+              "options": [
+                {
+                  "id": "never",
+                  "label": "直接执行"
+                },
+                {
+                  "id": "start-end-summary",
+                  "label": "执行前让用户确认 start、end 和 summary"
+                },
+                {
+                  "id": "always",
+                  "label": "每次调用都弹出确认"
+                },
+                {
+                  "id": "no-confirm",
+                  "label": "确认是后端的事"
+                }
+              ],
+              "correctOptionId": "start-end-summary",
+              "points": 10,
+              "explanation": "高风险写操作必须有用户确认。start、end 和 summary 是关键。"
+            },
+            {
+              "id": "write-tool",
+              "prompt": "如果演示会上有人想直接让 Agent 改日历，哪项是安全的契约？",
+              "options": [
+                {
+                  "id": "yes-agent",
+                  "label": "让 Agent 改，日历是工具"
+                },
+                {
+                  "id": "no-fixed-refuse",
+                  "label": "在 Workflow 里写死拒绝，Agent 只能生成建议"
+                },
+                {
+                  "id": "yes-confirm",
+                  "label": "Agent 先确认，确认后改"
+                },
+                {
+                  "id": "yes-hidden",
+                  "label": "给一个隐藏工具，成功了就改"
+                }
+              ],
+              "correctOptionId": "no-fixed-refuse",
+              "points": 10,
+              "explanation": "高风险、规则明确的步骤不应自治。改日历是契约禁止项。"
+            },
+            {
+              "id": "tool-over",
+              "prompt": "工具描述应写成什么？",
+              "options": [
+                {
+                  "id": "broad",
+                  "label": "写得越宽越好，模型能自己选"
+                },
+                {
+                  "id": "specific",
+                  "label": "写得具体，模型不会误选"
+                },
+                {
+                  "id": "model-name",
+                  "label": "放模型名字"
+                },
+                {
+                  "id": "random",
+                  "label": "每次生成不同描述"
+                }
+              ],
+              "correctOptionId": "specific",
+              "points": 10,
+              "explanation": "描述太宽会导致模型误选。工具描述要具体到能被校验。"
+            },
+            {
+              "id": "compose",
+              "prompt": "工具契约和 Workflow 应如何组合？",
+              "options": [
+                {
+                  "id": "all-agent",
+                  "label": "工具也交给 Agent 自己选"
+                },
+                {
+                  "id": "workflow-first",
+                  "label": "Workflow 管校验和边界，模型只在不确定步骤里决策"
+                },
+                {
+                  "id": "parallel",
+                  "label": "校验、改日历、生成建议三路并行"
+                },
+                {
+                  "id": "user-picks",
+                  "label": "每次运行让林舟选"
+                }
+              ],
+              "correctOptionId": "workflow-first",
+              "points": 10,
+              "explanation": "二者可以组合。写得死的规则走 Workflow，不确定的步骤再给模型。"
             }
           ]
         },
