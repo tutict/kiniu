@@ -407,5 +407,27 @@ class LearningControllerTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.passed").value(true))
                 .andExpect(jsonPath("$.progress.currentTaskId").value("genai-red-team"));
+
+        mockMvc.perform(post("/learn/tasks/genai-red-team/check")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "answers": {
+                                    "prompt-not-enough": "not-enough",
+                                    "direct-injection": "refuse-fixed",
+                                    "indirect-injection": "untrusted-data",
+                                    "disclosure": "tenant-scope",
+                                    "output-injection": "encode",
+                                    "excessive-agency": "least-privilege",
+                                    "vector-poisoning": "provenance-filter",
+                                    "unbounded-consumption": "budget-stop",
+                                    "one-refusal": "regression-case",
+                                    "residual-owner": "named-owner"
+                                  }
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.passed").value(true))
+                .andExpect(jsonPath("$.progress.currentTaskId").value("access-concurrency"));
     }
 }

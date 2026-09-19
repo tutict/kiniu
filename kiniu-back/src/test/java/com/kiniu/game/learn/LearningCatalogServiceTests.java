@@ -396,6 +396,23 @@ class LearningCatalogServiceTests {
                         "per-query"),
                 ragEval.quizQuestions().stream().map(LearningQuizQuestion::id).toList());
         assertEquals("hit-ground-cite", ragEval.quizQuestions().get(0).correctOptionId());
+        LearningTaskDefinition redTeam = taskById(tasks, "genai-red-team");
+        assertEquals("quiz", redTeam.evidenceMode());
+        assertEquals(10, redTeam.quizQuestions().size());
+        assertEquals(
+                List.of(
+                        "prompt-not-enough",
+                        "direct-injection",
+                        "indirect-injection",
+                        "disclosure",
+                        "output-injection",
+                        "excessive-agency",
+                        "vector-poisoning",
+                        "unbounded-consumption",
+                        "one-refusal",
+                        "residual-owner"),
+                redTeam.quizQuestions().stream().map(LearningQuizQuestion::id).toList());
+        assertEquals("not-enough", redTeam.quizQuestions().get(0).correctOptionId());
         assertTrue(tasks.stream()
                 .filter(task -> "import".equals(task.evidenceMode()))
                 .allMatch(task -> List.of("/source", "/capturedAt", "/requestId").stream()
