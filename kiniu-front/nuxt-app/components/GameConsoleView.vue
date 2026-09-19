@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import UiButton from './ui/UiButton.vue'
 import { useUiI18n } from '../i18n'
 import type { BranchOptionView, ChatMessage, OrchestrationTraceView, SandboxPlanDraft, WorldState } from '../types/game'
 
@@ -213,9 +214,9 @@ function displayCode(value: string) {
           @input="emit('update:playerInput', ($event.target as HTMLTextAreaElement).value)"
         />
         <div class="composer-footer">
-          <button class="primary-button" type="submit" :disabled="isSending">
+          <UiButton variant="accent" size="md" type="submit" :disabled="isSending">
             {{ isSending ? t('actionSending') : t('actionSend') }}
-          </button>
+          </UiButton>
         </div>
       </form>
     </section>
@@ -268,8 +269,8 @@ function displayCode(value: string) {
             <span v-if="!previewFlags.added.length && !previewFlags.removed.length" class="token muted">{{ t('labelNoFlagChanges') }}</span>
           </div>
           <div class="sandbox-actions">
-            <button class="secondary-button primary" type="button" @click="addPreviewToSandbox">{{ t('actionAddSandbox') }}</button>
-            <button class="secondary-button" type="button" :disabled="!sandboxQueue.length" @click="saveSandbox">{{ t('actionSaveSandbox') }}</button>
+            <UiButton variant="primary" size="md" @click="addPreviewToSandbox">{{ t('actionAddSandbox') }}</UiButton>
+            <UiButton variant="secondary" size="md" :disabled="!sandboxQueue.length" @click="saveSandbox">{{ t('actionSaveSandbox') }}</UiButton>
           </div>
           <p v-if="sandboxStatus" class="hint">{{ sandboxStatus }}</p>
         </section>
@@ -300,9 +301,9 @@ function displayCode(value: string) {
               </div>
             </div>
             <div class="sandbox-actions">
-              <button class="secondary-button primary" type="button" @click="saveSandbox">{{ t('actionSaveSandbox') }}</button>
-              <button class="secondary-button" type="button" @click="removeLastSandboxStep">{{ t('actionUndoStep') }}</button>
-              <button class="secondary-button" type="button" @click="clearSandbox">{{ t('actionClear') }}</button>
+              <UiButton variant="primary" size="md" @click="saveSandbox">{{ t('actionSaveSandbox') }}</UiButton>
+              <UiButton variant="secondary" size="md" @click="removeLastSandboxStep">{{ t('actionUndoStep') }}</UiButton>
+              <UiButton variant="secondary" size="md" @click="clearSandbox">{{ t('actionClear') }}</UiButton>
             </div>
           </div>
         </details>
@@ -346,80 +347,477 @@ function displayCode(value: string) {
 </template>
 
 <style scoped>
-.game-view{display:grid;grid-template-columns:minmax(0,1fr) minmax(286px,340px);gap:10px;align-items:stretch;min-height:0}
-.game-view.context-collapsed{grid-template-columns:minmax(0,1fr) 64px}
-.dialogue-panel,.context-panel{border:1px solid var(--color-border);background:var(--color-surface-panel-strong);box-shadow:var(--shadow-card);border-radius:var(--radius)}
-.dialogue-panel{display:grid;grid-template-rows:auto minmax(240px,1fr) auto auto;gap:10px;min-height:calc(100dvh - 82px);padding:14px}
-.context-panel{display:grid;grid-template-rows:auto minmax(0,1fr);align-content:start;gap:12px;max-height:calc(100dvh - 82px);min-width:0;padding:14px;overflow:hidden}
-.context-panel.collapsed{padding:10px}
-.context-panel.collapsed .context-head{writing-mode:vertical-rl;align-items:center}
-.context-panel.collapsed .context-head h3,.context-panel.collapsed .eyebrow{display:none}
-.context-body{display:grid;gap:10px;min-height:0;overflow:auto;padding-right:4px;scrollbar-gutter:stable}
-.eyebrow{margin:0 0 5px;font-size:11px;letter-spacing:0;color:var(--color-primary-strong);font-weight:800;line-height:1.2}
-h2,h3,p{margin:0}
-h2{font-size:23px;line-height:1.15;color:var(--color-heading);overflow-wrap:anywhere}
-h3{font-size:16px;line-height:1.25;color:var(--color-heading-soft);overflow-wrap:anywhere}
-.session-bar,.context-head,.preview-head,.plan-head,.composer-footer{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
-.dialogue-feed{display:grid;gap:10px;align-content:start;min-height:0;overflow:auto;padding-right:4px;scrollbar-gutter:stable}
-.message{max-width:min(78%,840px);padding:12px 14px;border:1px solid var(--color-border-soft);border-radius:var(--radius);line-height:1.62;background:var(--color-surface);overflow-wrap:anywhere}
-.message.assistant,.message.system{background:var(--color-row)}
-.message.player{justify-self:end;background:var(--color-primary);border-color:var(--color-primary);color:var(--color-on-primary)}
-.speaker{margin-bottom:5px;font-size:11px;letter-spacing:0;opacity:.75;font-weight:800;line-height:1.2}
-.choice-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
-.choice-button,.primary-button,.secondary-button,.context-toggle{appearance:none;cursor:pointer;transition:background 180ms var(--ease),border-color 180ms var(--ease),opacity 180ms var(--ease),box-shadow 180ms var(--ease),transform 180ms var(--ease)}
-.choice-button{display:grid;gap:4px;min-height:82px;padding:10px 12px;border:1px solid var(--color-border-soft);border-radius:var(--radius);background:var(--color-surface);color:var(--color-text);text-align:left;overflow-wrap:anywhere}
-.choice-button:hover{border-color:var(--color-primary);background:var(--color-surface-muted);box-shadow:var(--shadow-active);transform:translateY(-1px)}
-.choice-button strong{line-height:1.25}
-.choice-button small,.choice-button span,.hint,.plan-copy{color:var(--color-muted);font-size:12px;line-height:1.45}
-.composer{display:grid;gap:9px}
-.composer-label{font-size:12px;letter-spacing:0;color:var(--color-primary-strong);font-weight:800}
-.composer-input{width:100%;resize:vertical;min-height:104px;padding:12px 14px;border:1px solid var(--color-border);border-radius:var(--radius);outline:none;color:var(--color-text);background:var(--color-input);font:inherit;line-height:1.6}
-.composer-input:focus{border-color:var(--color-primary);box-shadow:0 0 0 4px var(--color-focus-ring)}
-.composer-footer{align-items:center;justify-content:flex-end;flex-wrap:wrap}
-.primary-button,.secondary-button,.context-toggle{min-height:38px;padding:0 13px;border-radius:var(--radius);font-weight:800}
-.primary-button{border:0;background:var(--color-accent);color:var(--color-on-accent)}
-.secondary-button,.context-toggle{border:1px solid var(--color-border);background:var(--color-input);color:var(--color-primary-strong)}
-.secondary-button.primary{background:var(--color-primary);border-color:var(--color-primary);color:var(--color-on-primary)}
-.primary-button:hover{background:var(--color-accent-hover);box-shadow:var(--shadow-accent)}
-.secondary-button:hover,.context-toggle:hover{border-color:var(--color-border-strong);background:var(--color-hover)}
-.context-card,.context-section{border:1px solid var(--color-border-soft);border-radius:var(--radius);background:var(--color-surface);overflow:hidden}
-.context-card{display:grid;gap:10px;padding:12px}
-.context-card.featured{background:var(--color-bg-soft)}
-.context-section summary{cursor:pointer;display:flex;align-items:center;justify-content:space-between;min-height:42px;padding:0 12px;color:var(--color-heading-soft);font-weight:800;list-style:none}
-.context-section summary::-webkit-details-marker{display:none}
-.context-section summary::after{content:'+';color:var(--color-faint);font-weight:900}
-.context-section[open] summary{border-bottom:1px solid var(--color-border-soft)}
-.context-section[open] summary::after{content:'-'}
-.section-body{display:grid;gap:10px;padding:12px}
-.verification-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1px;border:1px solid var(--color-border-soft);border-radius:var(--radius);background:var(--color-border-soft);overflow:hidden}
-.verification-grid div{display:grid;gap:4px;min-width:0;padding:8px 9px;background:var(--color-surface)}
-.verification-grid span{color:var(--color-faint);font-size:10px;font-weight:700;line-height:1.2}
-.verification-grid strong{min-width:0;color:var(--color-text);font-size:12px;line-height:1.35;overflow-wrap:anywhere}
-.token-row{display:flex;flex-wrap:wrap;gap:6px}
-.token{padding:4px 7px;border-radius:var(--radius);background:var(--color-token-bg);color:var(--color-token-text);font-size:11px;font-weight:800;line-height:1.25;overflow-wrap:anywhere}
-.token.muted{background:var(--color-token-muted-bg);color:var(--color-faint)}
-.token.added{background:var(--color-success-bg);color:var(--color-success-text)}
-.token.removed{background:var(--color-danger-bg);color:var(--color-danger-text)}
-.plan-list{display:grid;gap:8px}
-.plan-head span{color:var(--color-faint);font-size:12px;line-height:1.35}
-.plan-head strong{min-width:0;color:var(--color-text);overflow-wrap:anywhere}
-.preview-risk{display:inline-flex;padding:4px 8px;border-radius:var(--radius);background:var(--color-warning-bg);color:var(--color-warning-text);font-size:11px;font-weight:800;white-space:nowrap}
-.plan-copy.strong{font-size:14px;font-weight:800;color:var(--color-heading-soft)}
-.plan-card{display:grid;gap:5px;padding:10px;border:1px solid var(--color-border-soft);border-radius:var(--radius);background:var(--color-surface);overflow-wrap:anywhere}
-.plan-card p{margin:0;color:var(--color-muted);font-size:12px;line-height:1.45}
-.sandbox-actions{display:flex;flex-wrap:wrap;gap:8px}
-.choice-button:disabled,.primary-button:disabled,.secondary-button:disabled{opacity:.46;cursor:not-allowed;box-shadow:none;transform:none}
-@media (max-width:1180px){.game-view{grid-template-columns:minmax(0,1fr) 300px}}
-@media (max-width:960px){
-  .game-view,.game-view.context-collapsed{grid-template-columns:1fr;min-height:auto}
-  .dialogue-panel,.context-panel{max-height:none;min-height:auto}
-  .context-panel.collapsed .context-head{writing-mode:horizontal-tb}
-  .context-panel.collapsed .eyebrow,.context-panel.collapsed .context-head h3{display:block}
-  .session-bar{display:grid}
-  .choice-row{grid-template-columns:1fr}
-  .message{max-width:100%}
-  .composer-footer .primary-button{width:100%}
+.game-view {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) minmax(286px,340px);
+  gap: 10px;
+  align-items: stretch;
+  min-height: 0;
 }
-@media (max-width:520px){.verification-grid{grid-template-columns:1fr}.context-head{align-items:center}.context-toggle{min-width:72px}}
-@media (prefers-reduced-motion:reduce){.choice-button,.primary-button,.secondary-button,.context-toggle{transition:none}.choice-button:hover{transform:none}}
+.game-view.context-collapsed {
+  grid-template-columns: minmax(0,1fr) 64px;
+}
+.dialogue-panel {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-panel-strong);
+  box-shadow: var(--shadow-card);
+  border-radius: var(--radius);
+  display: grid;
+  grid-template-rows: auto minmax(240px,1fr) auto auto;
+  gap: 10px;
+  min-height: calc(100dvh - 82px);
+  padding: 14px;
+}
+.context-panel {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-panel-strong);
+  box-shadow: var(--shadow-card);
+  border-radius: var(--radius);
+  display: grid;
+  grid-template-rows: auto minmax(0,1fr);
+  align-content: start;
+  gap: 12px;
+  max-height: calc(100dvh - 82px);
+  min-width: 0;
+  padding: 14px;
+  overflow: hidden;
+}
+.context-panel.collapsed {
+  padding: 10px;
+}
+.context-panel.collapsed .context-head {
+  writing-mode: vertical-rl;
+  align-items: center;
+}
+.context-panel.collapsed .context-head h3 {
+  display: none;
+}
+.context-panel.collapsed .eyebrow {
+  display: none;
+}
+.context-body {
+  display: grid;
+  gap: 10px;
+  min-height: 0;
+  overflow: auto;
+  padding-right: 4px;
+  scrollbar-gutter: stable;
+}
+.eyebrow {
+  margin: 0 0 5px;
+  font-size: 11px;
+  letter-spacing: 0;
+  color: var(--color-primary-strong);
+  font-weight: 800;
+  line-height: 1.2;
+}
+p {
+  margin: 0;
+}
+h2 {
+  margin: 0;
+  font-size: 23px;
+  line-height: 1.15;
+  color: var(--color-heading);
+  overflow-wrap: anywhere;
+}
+h3 {
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.25;
+  color: var(--color-heading-soft);
+  overflow-wrap: anywhere;
+}
+.session-bar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.context-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.preview-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.plan-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.composer-footer {
+  display: flex;
+  gap: 12px;
+}
+.dialogue-feed {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+  min-height: 0;
+  overflow: auto;
+  padding-right: 4px;
+  scrollbar-gutter: stable;
+}
+.message {
+  max-width: min(78%,840px);
+  padding: 12px 14px;
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius);
+  line-height: 1.62;
+  background: var(--color-surface);
+  overflow-wrap: anywhere;
+}
+.message.assistant {
+  background: var(--color-row);
+}
+.message.system {
+  background: var(--color-row);
+}
+.message.player {
+  justify-self: end;
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: var(--color-on-primary);
+}
+.speaker {
+  margin-bottom: 5px;
+  font-size: 11px;
+  letter-spacing: 0;
+  opacity: .75;
+  font-weight: 800;
+  line-height: 1.2;
+}
+.choice-row {
+  display: grid;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  gap: 8px;
+}
+.context-toggle {
+  appearance: none;
+  cursor: pointer;
+  transition: background 180ms var(--ease),border-color 180ms var(--ease),opacity 180ms var(--ease),box-shadow 180ms var(--ease),transform 180ms var(--ease);
+}
+.choice-button {
+  appearance: none;
+  cursor: pointer;
+  transition: background 180ms var(--ease),border-color 180ms var(--ease),opacity 180ms var(--ease),box-shadow 180ms var(--ease),transform 180ms var(--ease);
+  display: grid;
+  gap: 4px;
+  min-height: 82px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  color: var(--color-text);
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+.choice-button:hover {
+  border-color: var(--color-primary);
+  background: var(--color-surface-muted);
+  box-shadow: var(--shadow-active);
+  transform: translateY(-1px);
+}
+.choice-button strong {
+  line-height: 1.25;
+}
+.choice-button small {
+  color: var(--color-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.choice-button span {
+  color: var(--color-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.hint {
+  color: var(--color-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.plan-copy {
+  color: var(--color-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.composer {
+  display: grid;
+  gap: 9px;
+}
+.composer-label {
+  font-size: 12px;
+  letter-spacing: 0;
+  color: var(--color-primary-strong);
+  font-weight: 800;
+}
+.composer-input {
+  width: 100%;
+  resize: vertical;
+  min-height: 104px;
+  padding: 12px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  outline: none;
+  color: var(--color-text);
+  background: var(--color-input);
+  font: inherit;
+  line-height: 1.6;
+}
+.composer-input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 4px var(--color-focus-ring);
+}
+.composer-footer {
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+.context-toggle {
+  min-height: 38px;
+  padding: 0 13px;
+  border-radius: var(--radius);
+  font-weight: 800;
+}
+.context-toggle {
+  border: 1px solid var(--color-border);
+  background: var(--color-input);
+  color: var(--color-primary-strong);
+}
+.context-toggle:hover {
+  border-color: var(--color-border-strong);
+  background: var(--color-hover);
+}
+.context-section {
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  overflow: hidden;
+}
+.context-card {
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  overflow: hidden;
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+}
+.context-card.featured {
+  background: var(--color-bg-soft);
+}
+.context-section summary {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 42px;
+  padding: 0 12px;
+  color: var(--color-heading-soft);
+  font-weight: 800;
+  list-style: none;
+}
+.context-section summary::-webkit-details-marker {
+  display: none;
+}
+.context-section summary::after {
+  content: '+';
+  color: var(--color-faint);
+  font-weight: 900;
+}
+.context-section[open] summary {
+  border-bottom: 1px solid var(--color-border-soft);
+}
+.context-section[open] summary::after {
+  content: '-';
+}
+.section-body {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+}
+.verification-grid {
+  display: grid;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  gap: 1px;
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius);
+  background: var(--color-border-soft);
+  overflow: hidden;
+}
+.verification-grid div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 8px 9px;
+  background: var(--color-surface);
+}
+.verification-grid span {
+  color: var(--color-faint);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.verification-grid strong {
+  min-width: 0;
+  color: var(--color-text);
+  font-size: 12px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.token-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.token {
+  padding: 4px 7px;
+  border-radius: var(--radius);
+  background: var(--color-token-bg);
+  color: var(--color-token-text);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+.token.muted {
+  background: var(--color-token-muted-bg);
+  color: var(--color-faint);
+}
+.token.added {
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
+}
+.token.removed {
+  background: var(--color-danger-bg);
+  color: var(--color-danger-text);
+}
+.plan-list {
+  display: grid;
+  gap: 8px;
+}
+.plan-head span {
+  color: var(--color-faint);
+  font-size: 12px;
+  line-height: 1.35;
+}
+.plan-head strong {
+  min-width: 0;
+  color: var(--color-text);
+  overflow-wrap: anywhere;
+}
+.preview-risk {
+  display: inline-flex;
+  padding: 4px 8px;
+  border-radius: var(--radius);
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.plan-copy.strong {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--color-heading-soft);
+}
+.plan-card {
+  display: grid;
+  gap: 5px;
+  padding: 10px;
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  overflow-wrap: anywhere;
+}
+.plan-card p {
+  margin: 0;
+  color: var(--color-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+.sandbox-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.choice-button:disabled {
+  opacity: .46;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+@media (max-width:1180px) {
+  .game-view {
+    grid-template-columns: minmax(0,1fr) 300px;
+  }
+}
+@media (max-width:960px) {
+  .game-view {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+  .game-view.context-collapsed {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+  .dialogue-panel {
+    max-height: none;
+    min-height: auto;
+  }
+  .context-panel {
+    max-height: none;
+    min-height: auto;
+  }
+  .context-panel.collapsed .context-head {
+    writing-mode: horizontal-tb;
+  }
+  .context-panel.collapsed .eyebrow {
+    display: block;
+  }
+  .context-panel.collapsed .context-head h3 {
+    display: block;
+  }
+  .session-bar {
+    display: grid;
+  }
+  .choice-row {
+    grid-template-columns: 1fr;
+  }
+  .message {
+    max-width: 100%;
+  }
+  .composer-footer .ui-button {
+    width: 100%;
+  }
+}
+@media (max-width:520px) {
+  .verification-grid {
+    grid-template-columns: 1fr;
+  }
+  .context-head {
+    align-items: center;
+  }
+  .context-toggle {
+    min-width: 72px;
+  }
+}
+@media (prefers-reduced-motion:reduce) {
+  .choice-button {
+    transition: none;
+  }
+  .context-toggle {
+    transition: none;
+  }
+  .choice-button:hover {
+    transform: none;
+  }
+}
 </style>

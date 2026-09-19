@@ -12,22 +12,23 @@
           "mentorAgentId": "project-agent",
           "id": "requirements-contract",
           "title": "把模糊需求变成验收契约",
-          "summary": "明确用户、业务结果、非目标与可检查的完成标准。",
+          "summary": "围绕晚间计划助手，用十道场景判断钉死用户、目标、数据边界、失败出口和可检查标准。",
           "kind": "requirements",
-          "estimatedMinutes": 35,
+          "estimatedMinutes": 30,
           "skills": [
             "需求拆解",
             "验收标准",
             "风险边界"
           ],
           "objective": "在编写 Prompt 或选择模型前，把 AI 功能定义成可以讨论、测试和拒绝的工程契约。",
-          "scenario": "团队准备交付一个把用户想法转成下一步行动的陪伴 Agent，但产品描述仍停留在“更聪明、更懂我”。",
-          "lesson": "## 核心概念\n需求契约不是功能愿望清单，而是对使用者、业务结果、输入输出边界和失败责任的共同承诺。AI 输出具有概率性，因此必须把“体验好”改写成可观察的行为，把高风险动作、未知情况和人工接管写进非目标或限制。\n\n## 算法思想\n需求拆解是把模糊目标翻译成可判定断言：每条验收标准都能自动判真假，这正是测试断言与形式化规格的思想。\n\n## 完成步骤\n先描述一个具体用户及其场景，再写可度量的业务目标；列出本次明确不做的能力；最后用 Given/When/Then 或可检查条目写出正常、边界和失败条件。 留下可复现记录，提交前移除密钥和个人信息。\n\n## 常见误区\n不要把模型名称、Prompt 长度当成用户价值，也不要只写正常路径。避免使用“准确、友好、智能”等无法直接判定的形容词。\n\n## 完成标准\n文档四个章节均有实质内容，验收标准至少包含一条可执行检查，并能说明系统何时拒绝、降级或交给人工。",
+          "scenario": "晚间计划助手即将上线。林舟加班到 22:30 回家，对着手机说「明天有点乱，帮我看看」，有时会再粘贴几行待办。产品经理想要 5 秒内最多 3 条下一步并标出不确定项；演示会上有人主张直接改日历、给同事发消息甚至代下单；客服希望它始终显得“懂你”，不要说不知道。本版只允许读取用户本次粘贴的待办文本，不能访问邮箱、写入日历或调用支付。",
+          "lesson": "## 核心概念\n需求契约把使用者、可观察结果、数据边界和失败出口写成可拒绝的承诺。晚间计划助手不能靠“更懂你”上线：演示时改日历、群发或代下单，都必须先判成非目标。\n\n## 算法思想\n场景判断是把一句含糊输入翻译成可判定断言。用户是否具体、结果能否观察、不确定能否标出、不可逆动作能否拒绝，都要能自动判真假。\n\n## 完成步骤\n先钉死本版用户与粘贴文本边界，再判断空输入、缺失负责人和外部写入该如何降级。最后用 Given/When/Then 写出通过与失败。\n\n## 常见误区\n不要用更长 Prompt、更强模型或“用户觉得被理解”代替验收。也不要为了显得聪明而编造日程或负责人。\n\n## 完成标准\n十道场景判断全部选对，并能指出错误选项会把哪些风险带进契约。",
           "deliverables": [
-            "requirements.md：需求契约与验收清单"
+            "场景判断：完成十道题，覆盖用户、目标、边界、失败路径与验收标准"
           ],
           "prerequisiteTaskIds": [],
-          "evidenceMode": "document",
+          "evidenceMode": "quiz",
+          "passingScore": 100,
           "references": [
             {
               "title": "AI RMF Generative AI Profile",
@@ -44,48 +45,258 @@
               "accessedAt": "2026-07-23"
             }
           ],
-          "starterFiles": [
+          "starterFiles": [],
+          "checks": [],
+          "quizQuestions": [
             {
-              "path": "requirements.md",
-              "content": "# 需求契约\n\n## 用户\n\n## 业务目标\n\n## 非目标\n\n## 验收标准\n\n- "
-            }
-          ],
-          "checks": [
-            {
-              "id": "user",
-              "type": "markdown-section",
-              "path": "requirements.md",
-              "rule": "## 用户",
-              "required": true,
-              "points": 20,
-              "message": "明确实际使用者和具体场景。"
+              "id": "first-move",
+              "prompt": "产品描述还停留在“更聪明、更懂我”，团队的第一步应该做什么？",
+              "options": [
+                {
+                  "id": "write-prompt",
+                  "label": "马上写更长的 Prompt，让晚间计划助手显得更懂林舟"
+                },
+                {
+                  "id": "pick-model",
+                  "label": "先换一个更强的模型，再讨论能不能改日历"
+                },
+                {
+                  "id": "define-contract",
+                  "label": "先把用户、业务结果、非目标和可检查标准写成验收契约"
+                },
+                {
+                  "id": "add-features",
+                  "label": "先把改日历、群发和代下单都做进演示"
+                }
+              ],
+              "correctOptionId": "define-contract",
+              "points": 10,
+              "explanation": "演示冲动和模型选择都不能替代契约。先写成可讨论、可拒绝的验收标准，后续实验才有共同语言。"
             },
             {
-              "id": "goal",
-              "type": "markdown-section",
-              "path": "requirements.md",
-              "rule": "## 业务目标",
-              "required": true,
-              "points": 20,
-              "message": "把目标写成可观察的业务结果。"
+              "id": "user-scope",
+              "prompt": "哪位使用者能进入本版晚间计划助手的契约？",
+              "options": [
+                {
+                  "id": "all-users",
+                  "label": "所有希望被理解的用户"
+                },
+                {
+                  "id": "specific-scene",
+                  "label": "22:30 回家的林舟，想把「明天有点乱」变成自己的下一步"
+                },
+                {
+                  "id": "power-users",
+                  "label": "任何会使用 AI 的人"
+                },
+                {
+                  "id": "internal-team",
+                  "label": "产品经理和开发自己"
+                }
+              ],
+              "correctOptionId": "specific-scene",
+              "points": 10,
+              "explanation": "契约必须绑定具体使用者和那句含糊输入，而不是“所有用户”或内部团队的自我想象。"
             },
             {
-              "id": "boundary",
-              "type": "markdown-section",
-              "path": "requirements.md",
-              "rule": "## 非目标",
-              "required": true,
-              "points": 20,
-              "message": "写出本次不交付或必须拒绝的能力。"
+              "id": "out-of-scope-user",
+              "prompt": "下列哪类需求不应进入本版契约？",
+              "options": [
+                {
+                  "id": "pasted-todo",
+                  "label": "林舟粘贴一段明天待办，只要建议下一步"
+                },
+                {
+                  "id": "solo-plan",
+                  "label": "加班后回家、只处理自己待办的个人用户"
+                },
+                {
+                  "id": "team-coordinator",
+                  "label": "需要改全组日历并通知同事的项目协调人"
+                },
+                {
+                  "id": "ambiguous-night",
+                  "label": "对着手机说「明天有点乱，帮我看看」的人"
+                }
+              ],
+              "correctOptionId": "team-coordinator",
+              "points": 10,
+              "explanation": "本版只服务个人待办建议。改全组日历、通知同事属于外部写入，必须划出范围。"
             },
             {
-              "id": "acceptance",
-              "type": "regex",
-              "path": "requirements.md",
-              "rule": "(?ms)^## 验收标准\\s*\\n(?:.*\\n)*?[-*] \\S.+",
-              "required": true,
-              "points": 40,
-              "message": "验收标准至少包含一个非空检查条目."
+              "id": "business-outcome",
+              "prompt": "哪个业务目标是可观察、可验收的？",
+              "options": [
+                {
+                  "id": "smarter",
+                  "label": "让 Agent 更聪明、更懂林舟"
+                },
+                {
+                  "id": "friendly",
+                  "label": "回复更友好，客服听起来更有温度"
+                },
+                {
+                  "id": "observable-result",
+                  "label": "在 5 秒内返回最多 3 条可执行下一步，并标明不确定项"
+                },
+                {
+                  "id": "high-nps",
+                  "label": "提升用户满意度和口碑"
+                }
+              ],
+              "correctOptionId": "observable-result",
+              "points": 10,
+              "explanation": "业务目标要写成可观察结果。聪明、友好、口碑无法直接判定通过或失败。"
+            },
+            {
+              "id": "input-ambiguity",
+              "prompt": "林舟只说「明天有点乱，帮我看看」时，正确做法是什么？",
+              "options": [
+                {
+                  "id": "invent-day",
+                  "label": "直接编一份完整明日日程，显得很懂他"
+                },
+                {
+                  "id": "open-calendar",
+                  "label": "先连接日历再猜测他明天有哪些会"
+                },
+                {
+                  "id": "flag-and-bound",
+                  "label": "基于可见文本给出有限建议，并标明不确定项"
+                },
+                {
+                  "id": "refuse-all",
+                  "label": "因为不够清楚就返回空白，什么都不说"
+                }
+              ],
+              "correctOptionId": "flag-and-bound",
+              "points": 10,
+              "explanation": "含糊输入仍要给有边界的下一步，但不能编造日程或去读外部日历来假装确定。"
+            },
+            {
+              "id": "data-boundary",
+              "prompt": "本版晚间计划助手可以使用哪些数据？",
+              "options": [
+                {
+                  "id": "read-mail",
+                  "label": "读取全部邮箱和聊天记录，才能更懂你"
+                },
+                {
+                  "id": "pasted-only",
+                  "label": "只使用用户本次粘贴的待办文本"
+                },
+                {
+                  "id": "calendar-write",
+                  "label": "把建议写进日历当作长期记忆"
+                },
+                {
+                  "id": "purchase-history",
+                  "label": "结合历史订单猜测明天晚饭并代下单"
+                }
+              ],
+              "correctOptionId": "pasted-only",
+              "points": 10,
+              "explanation": "数据边界也是契约。本版只能看见用户粘贴的文本；邮箱、日历写入和订单都不在范围内。"
+            },
+            {
+              "id": "risk-boundary",
+              "prompt": "面对高风险动作，正确的非目标或边界是什么？",
+              "options": [
+                {
+                  "id": "do-everything",
+                  "label": "林舟提到的事都尽量帮他做完"
+                },
+                {
+                  "id": "auto-pay",
+                  "label": "直接代下单、改日历、给同事发消息"
+                },
+                {
+                  "id": "refuse-and-escalate",
+                  "label": "拒绝不可逆操作，未知情况降级或交给人工"
+                },
+                {
+                  "id": "hide-uncertainty",
+                  "label": "不确定时也给出肯定答案，避免打断体验"
+                }
+              ],
+              "correctOptionId": "refuse-and-escalate",
+              "points": 10,
+              "explanation": "非目标要写清何时拒绝、降级或人工接管。高风险动作不能靠“尽量帮忙”蒙混过去。"
+            },
+            {
+              "id": "irreversible-request",
+              "prompt": "林舟说「帮我把明早的会都推掉并告诉组里」，系统应如何处理？",
+              "options": [
+                {
+                  "id": "do-it",
+                  "label": "改日历并群发，完成才叫懂我"
+                },
+                {
+                  "id": "confirm-then-do",
+                  "label": "先让他确认，确认后自动改日历和发消息"
+                },
+                {
+                  "id": "silent-partial",
+                  "label": "只改日历，不发消息，降低影响面"
+                },
+                {
+                  "id": "refuse-external-write",
+                  "label": "拒绝改日历和群发，说明本版只基于粘贴文本给建议"
+                }
+              ],
+              "correctOptionId": "refuse-external-write",
+              "points": 10,
+              "explanation": "改日历和通知同事是不可逆外部写入。即使用户确认，本版契约也不包含这些动作。"
+            },
+            {
+              "id": "missing-owner",
+              "prompt": "待办文本里没有负责人或截止时间时，哪项符合契约？",
+              "options": [
+                {
+                  "id": "guess-owner",
+                  "label": "编一个负责人和时间，避免冷场"
+                },
+                {
+                  "id": "flag-or-refuse",
+                  "label": "标明缺失信息或拒绝执行，不编造关键字段"
+                },
+                {
+                  "id": "retry-until-sure",
+                  "label": "反复调用模型，直到看起来很确定"
+                },
+                {
+                  "id": "ask-calendar",
+                  "label": "去日历里找一个看起来像负责人的人"
+                }
+              ],
+              "correctOptionId": "flag-or-refuse",
+              "points": 10,
+              "explanation": "失败路径也要可检查。缺失负责人时必须标出或拒绝，不能靠编造来维持“懂你”的幻觉。"
+            },
+            {
+              "id": "acceptance-criteria",
+              "prompt": "哪条验收标准可以直接判定通过或失败？",
+              "options": [
+                {
+                  "id": "adjectives",
+                  "label": "Agent 应准确、友好、智能"
+                },
+                {
+                  "id": "vibe",
+                  "label": "林舟觉得被理解"
+                },
+                {
+                  "id": "given-when-then",
+                  "label": "Given 林舟粘贴一句待办，When 系统返回行动建议，Then 最多 3 条且每条有下一步，无法执行时明确拒绝"
+                },
+                {
+                  "id": "prompt-length",
+                  "label": "Prompt 超过 200 字"
+                }
+              ],
+              "correctOptionId": "given-when-then",
+              "points": 10,
+              "explanation": "验收标准必须是可执行检查。形容词、感觉和 Prompt 长度都不能当作完成定义。"
             }
           ]
         },

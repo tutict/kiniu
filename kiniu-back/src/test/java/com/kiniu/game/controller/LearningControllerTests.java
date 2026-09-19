@@ -34,16 +34,61 @@ class LearningControllerTests {
 
     @Test
     void shouldEnforceUnlocksPersistAttemptsAndExplainEvidence() throws Exception {
+        mockMvc.perform(get("/learn/catalog"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.modules[0].tasks[0].id").value("requirements-contract"))
+                .andExpect(jsonPath("$.modules[0].tasks[0].evidenceMode").value("quiz"))
+                .andExpect(jsonPath("$.modules[0].tasks[0].quizQuestions[0].correctOptionId").doesNotExist())
+                .andExpect(jsonPath("$.modules[0].tasks[0].quizQuestions[0].explanation").doesNotExist())
+                .andExpect(jsonPath("$.modules[0].tasks[0].quizQuestions[0].options").isArray());
+
+        mockMvc.perform(get("/learn/tasks/requirements-contract"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.evidenceMode").value("quiz"))
+                .andExpect(jsonPath("$.quizQuestions[0].correctOptionId").doesNotExist())
+                .andExpect(jsonPath("$.quizQuestions[0].explanation").doesNotExist());
+
         mockMvc.perform(post("/learn/tasks/data-lifecycle/check")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"files\":{\"data-contract.json\":\"{}\"}}"))
                 .andExpect(status().isConflict());
 
+        mockMvc.perform(post("/learn/tasks/requirements-contract/check")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "answers": {
+                                    "first-move": "write-prompt",
+                                    "user-scope": "specific-scene",
+                                    "out-of-scope-user": "team-coordinator",
+                                    "business-outcome": "observable-result",
+                                    "input-ambiguity": "flag-and-bound",
+                                    "data-boundary": "pasted-only",
+                                    "risk-boundary": "refuse-and-escalate",
+                                    "irreversible-request": "refuse-external-write",
+                                    "missing-owner": "flag-or-refuse",
+                                    "acceptance-criteria": "given-when-then"
+                                  }
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.passed").value(false))
+                .andExpect(jsonPath("$.progress.currentTaskId").value("requirements-contract"));
+
         String request = """
                 {
                   "notes": "first complete attempt",
-                  "files": {
-                    "requirements.md": "# Requirements\\n\\n## 用户\\n开发者\\n\\n## 业务目标\\n得到下一步行动\\n\\n## 非目标\\n不替用户做高风险决定\\n\\n## 验收标准\\n- 给出可追踪的下一步"
+                  "answers": {
+                    "first-move": "define-contract",
+                    "user-scope": "specific-scene",
+                    "out-of-scope-user": "team-coordinator",
+                    "business-outcome": "observable-result",
+                    "input-ambiguity": "flag-and-bound",
+                    "data-boundary": "pasted-only",
+                    "risk-boundary": "refuse-and-escalate",
+                    "irreversible-request": "refuse-external-write",
+                    "missing-owner": "flag-or-refuse",
+                    "acceptance-criteria": "given-when-then"
                   }
                 }
                 """;

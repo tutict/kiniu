@@ -2,9 +2,13 @@
 .output
 .data
 .nuxt
+.nuxt-*
 .nitro
 .cache
 dist
+
+# 本地样式整改备份（确认后可删）
+.style-backup
 
 # Node dependencies
 node_modules

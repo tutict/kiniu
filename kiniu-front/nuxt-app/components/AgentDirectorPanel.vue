@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import UiButton from './ui/UiButton.vue'
 import { useUiI18n } from '../i18n'
 import type { Agent, AgentCatalogResponse } from '../types/game'
 
@@ -158,8 +159,8 @@ function updateAgentField(field: keyof Agent, value: string) {
       </div>
 
       <div class="stage-actions">
-        <button class="secondary-button" type="button" @click="createAgentDraft">{{ t('actionCreateAgent') }}</button>
-        <button class="secondary-button" type="button" :disabled="!selectedAgent" @click="duplicateSelectedAgent">{{ t('actionDuplicateAgent') }}</button>
+        <UiButton variant="secondary" size="lg" @click="createAgentDraft">{{ t('actionCreateAgent') }}</UiButton>
+        <UiButton variant="secondary" size="lg" :disabled="!selectedAgent" @click="duplicateSelectedAgent">{{ t('actionDuplicateAgent') }}</UiButton>
       </div>
     </div>
 
@@ -167,9 +168,9 @@ function updateAgentField(field: keyof Agent, value: string) {
       <aside class="cast-column">
         <div class="cast-toolbar">
           <input v-model="agentSearch" class="search-input" type="text" :placeholder="t('labelAgentSearchPlaceholder')">
-          <button class="secondary-button" type="button" :disabled="isLoadingAgents" @click="emit('loadAgents')">
+          <UiButton variant="secondary" size="lg" :disabled="isLoadingAgents" @click="emit('loadAgents')">
             {{ isLoadingAgents ? t('actionLoading') : t('actionLoadBackend') }}
-          </button>
+          </UiButton>
         </div>
 
         <div class="cast-list">
@@ -391,12 +392,12 @@ function updateAgentField(field: keyof Agent, value: string) {
       </div>
       <aside class="footer-strip">
       <div class="footer-actions">
-        <button class="primary-button" type="button" @click="emit('persistAgents', t('statusManualAgentSaved'))">{{ t('actionSaveAgentDraft') }}</button>
-        <button class="primary-button" type="button" :disabled="isSavingAgents || !draft" @click="emit('publishAgents')">
+        <UiButton variant="accent" size="lg" @click="emit('persistAgents', t('statusManualAgentSaved'))">{{ t('actionSaveAgentDraft') }}</UiButton>
+        <UiButton variant="accent" size="lg" :disabled="isSavingAgents || !draft" @click="emit('publishAgents')">
           {{ isSavingAgents ? t('actionSaving') : t('actionSaveAgentsBackend') }}
-        </button>
-        <button class="secondary-button" type="button" :disabled="!draft" @click="emit('exportAgents')">{{ t('actionExportJson') }}</button>
-        <button class="secondary-button" type="button" @click="emit('resetAgents')">{{ t('actionClearAgentDraft') }}</button>
+        </UiButton>
+        <UiButton variant="secondary" size="lg" :disabled="!draft" @click="emit('exportAgents')">{{ t('actionExportJson') }}</UiButton>
+        <UiButton variant="secondary" size="lg" @click="emit('resetAgents')">{{ t('actionClearAgentDraft') }}</UiButton>
       </div>
 
       <div class="footer-status">
@@ -409,55 +410,396 @@ function updateAgentField(field: keyof Agent, value: string) {
 </template>
 
 <style scoped>
-.agent-stage{display:grid;gap:12px;min-height:calc(100dvh - 154px);padding:14px;border:1px solid var(--color-border);border-radius:var(--radius);background:var(--color-bg-soft)}
-.stage-head,.stage-actions,.panel-head,.hero-metrics,.trajectory-strip,.footer-actions{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
-.stage-grid{display:grid;grid-template-columns:300px minmax(0,1fr) 280px;gap:10px;min-width:0}
-.cast-column,.director-panel{border:1px solid var(--color-border-soft);background:var(--color-surface);border-radius:var(--radius)}
-.cast-column{display:grid;align-content:start;gap:12px;max-height:calc(100dvh - 232px);overflow:auto;padding:14px;scrollbar-gutter:stable}
-.cast-toolbar,.cast-list,.director-main,.editor-fields,.footer-status{display:grid;gap:12px}
-.cast-list{max-height:none;overflow:auto;padding-right:4px}
-.cast-item{appearance:none;border:1px solid var(--color-border-soft);border-radius:var(--radius);padding:14px;background:var(--color-surface);color:var(--color-text);text-align:left;cursor:pointer;transition:background 180ms var(--ease),border-color 180ms var(--ease),box-shadow 180ms var(--ease)}
-.cast-item.active{border-color:var(--color-primary);background:var(--color-surface-muted);box-shadow:var(--shadow-active)}
-.cast-item:hover{border-color:var(--color-primary);background:var(--color-hover)}
-.cast-top,.cast-scenes{display:flex;gap:8px;justify-content:space-between;align-items:center;flex-wrap:wrap}
-.cast-item p{margin:6px 0 0;color:var(--color-faint);font-size:13px}
-.cast-scenes span,.scene-ribbon span{display:inline-flex;padding:5px 9px;border-radius:var(--radius);background:var(--color-token-muted-bg);color:var(--color-faint);font-size:12px;font-weight:700}
-.director-main{grid-auto-rows:min-content;max-height:calc(100dvh - 232px);overflow:auto;scrollbar-gutter:stable}
-.director-panel{padding:14px}
-.hero-panel{background:var(--color-hero-surface)}
-.hero-metrics div,.trajectory-strip div{display:grid;gap:4px;min-width:92px}
-.hero-metrics span,.trajectory-strip span{color:var(--color-faint);font-size:12px;letter-spacing:0}
-.hero-metrics strong,.trajectory-strip strong{font-size:15px;color:var(--color-text)}
-.trajectory-strip{padding-top:18px;border-top:1px solid var(--color-border-soft)}
-.editor-fields{grid-template-columns:repeat(2,minmax(0,1fr))}
-.field{display:grid;gap:10px}
-.field.wide{grid-column:1/-1}
-.field span{font-size:13px;color:var(--color-text);letter-spacing:0;font-weight:800}
-.search-input,.field input,.editor-textarea{width:100%;min-height:44px;padding:10px 14px;border:1px solid var(--color-border);border-radius:var(--radius);outline:none;color:var(--color-text);background:var(--color-input);font:inherit}
-.editor-textarea{resize:vertical;min-height:124px}
-.search-input:focus,.field input:focus,.editor-textarea:focus{border-color:var(--color-primary);box-shadow:0 0 0 4px var(--color-focus-ring)}
-.dual-panel{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
-.orchestration-panel{display:grid;gap:16px}
-.scene-ribbon{display:flex;gap:8px;flex-wrap:wrap}
-.director-empty{display:grid;place-items:center;min-height:320px;border:1px dashed var(--color-border);border-radius:var(--radius);color:var(--color-faint);background:var(--color-surface)}
-.footer-strip{display:grid;align-content:start;gap:12px;max-height:calc(100dvh - 232px);overflow:auto;padding:14px;border:1px solid var(--color-border-soft);border-radius:var(--radius);background:var(--color-surface);scrollbar-gutter:stable}
-.footer-actions{display:grid;justify-content:stretch}
-.primary-button,.secondary-button,.text-button{appearance:none;border:0;cursor:pointer;transition:background 180ms var(--ease),border-color 180ms var(--ease),box-shadow 180ms var(--ease),opacity 180ms var(--ease)}
-.primary-button,.secondary-button{min-height:44px;padding:0 16px;border-radius:var(--radius);font-weight:800}
-.primary-button{background:var(--color-accent);color:var(--color-on-accent)}
-.secondary-button{border:1px solid var(--color-border);background:var(--color-input);color:var(--color-primary-strong)}
-.primary-button:hover{background:var(--color-accent-hover);box-shadow:var(--shadow-accent)}
-.secondary-button:hover{border-color:var(--color-primary);background:var(--color-hover)}
-.text-button{min-height:44px;padding:0;background:transparent;color:var(--color-danger-action);font-weight:800}
-.eyebrow{margin:0 0 6px;font-size:11px;letter-spacing:0;color:var(--color-primary-strong);font-weight:800;line-height:1.2}
-h3,h4,p{margin:0}
-h3{font-size:24px;line-height:1.15;color:var(--color-heading);overflow-wrap:anywhere}
-h4{font-size:18px;line-height:1.2;color:var(--color-heading-soft);overflow-wrap:anywhere}
-.status{display:inline-flex;align-items:center;min-height:44px;padding:10px 14px;border-radius:var(--radius);line-height:1.5}
-.status.success{color:var(--color-success-text);background:var(--color-success-bg);border:1px solid var(--color-success-border)}
-.status.error{color:var(--color-danger-text);background:var(--color-danger-bg);border:1px solid var(--color-danger-border)}
-.tight{margin-bottom:12px}
-@media (max-width:1280px){.stage-grid{grid-template-columns:280px minmax(0,1fr) 240px}}
-@media (max-width:1100px){.agent-stage{min-height:auto}.stage-grid{grid-template-columns:1fr}.cast-column,.director-main,.footer-strip{max-height:none;overflow:visible}.cast-list{max-height:none}}
-@media (max-width:860px){.editor-fields,.dual-panel{grid-template-columns:1fr}}
+.agent-stage {
+  display: grid;
+  gap: 12px;
+  min-height: calc(100dvh - 154px);
+  padding: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-bg-soft);
+}
+.stage-head {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+.stage-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+.panel-head {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+.hero-metrics {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+.trajectory-strip {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+.footer-actions {
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.stage-grid {
+  display: grid;
+  grid-template-columns: 300px minmax(0,1fr) 280px;
+  gap: 10px;
+  min-width: 0;
+}
+.director-panel {
+  border: 1px solid var(--color-border-soft);
+  background: var(--color-surface);
+  border-radius: var(--radius);
+}
+.cast-column {
+  border: 1px solid var(--color-border-soft);
+  background: var(--color-surface);
+  border-radius: var(--radius);
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  max-height: calc(100dvh - 232px);
+  overflow: auto;
+  padding: 14px;
+  scrollbar-gutter: stable;
+}
+.cast-toolbar {
+  display: grid;
+  gap: 12px;
+}
+.director-main {
+  display: grid;
+  gap: 12px;
+}
+.editor-fields {
+  display: grid;
+  gap: 12px;
+}
+.footer-status {
+  display: grid;
+  gap: 12px;
+}
+.cast-list {
+  display: grid;
+  gap: 12px;
+  max-height: none;
+  overflow: auto;
+  padding-right: 4px;
+}
+.cast-item {
+  appearance: none;
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius);
+  padding: 14px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  text-align: left;
+  cursor: pointer;
+  transition: background 180ms var(--ease),border-color 180ms var(--ease),box-shadow 180ms var(--ease);
+}
+.cast-item.active {
+  border-color: var(--color-primary);
+  background: var(--color-surface-muted);
+  box-shadow: var(--shadow-active);
+}
+.cast-item:hover {
+  border-color: var(--color-primary);
+  background: var(--color-hover);
+}
+.cast-top {
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.cast-scenes {
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.cast-item p {
+  margin: 6px 0 0;
+  color: var(--color-faint);
+  font-size: 13px;
+}
+.cast-scenes span {
+  display: inline-flex;
+  padding: 5px 9px;
+  border-radius: var(--radius);
+  background: var(--color-token-muted-bg);
+  color: var(--color-faint);
+  font-size: 12px;
+  font-weight: 700;
+}
+.scene-ribbon span {
+  display: inline-flex;
+  padding: 5px 9px;
+  border-radius: var(--radius);
+  background: var(--color-token-muted-bg);
+  color: var(--color-faint);
+  font-size: 12px;
+  font-weight: 700;
+}
+.director-main {
+  grid-auto-rows: min-content;
+  max-height: calc(100dvh - 232px);
+  overflow: auto;
+  scrollbar-gutter: stable;
+}
+.director-panel {
+  padding: 14px;
+}
+.hero-panel {
+  background: var(--color-hero-surface);
+}
+.hero-metrics div {
+  display: grid;
+  gap: 4px;
+  min-width: 92px;
+}
+.trajectory-strip div {
+  display: grid;
+  gap: 4px;
+  min-width: 92px;
+}
+.hero-metrics span {
+  color: var(--color-faint);
+  font-size: 12px;
+  letter-spacing: 0;
+}
+.trajectory-strip span {
+  color: var(--color-faint);
+  font-size: 12px;
+  letter-spacing: 0;
+}
+.hero-metrics strong {
+  font-size: 15px;
+  color: var(--color-text);
+}
+.trajectory-strip strong {
+  font-size: 15px;
+  color: var(--color-text);
+}
+.trajectory-strip {
+  padding-top: 18px;
+  border-top: 1px solid var(--color-border-soft);
+}
+.editor-fields {
+  grid-template-columns: repeat(2,minmax(0,1fr));
+}
+.field {
+  display: grid;
+  gap: 10px;
+}
+.field.wide {
+  grid-column: 1/-1;
+}
+.field span {
+  font-size: 13px;
+  color: var(--color-text);
+  letter-spacing: 0;
+  font-weight: 800;
+}
+.search-input {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  outline: none;
+  color: var(--color-text);
+  background: var(--color-input);
+  font: inherit;
+}
+.field input {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  outline: none;
+  color: var(--color-text);
+  background: var(--color-input);
+  font: inherit;
+}
+.editor-textarea {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  outline: none;
+  color: var(--color-text);
+  background: var(--color-input);
+  font: inherit;
+  resize: vertical;
+  min-height: 124px;
+}
+.search-input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 4px var(--color-focus-ring);
+}
+.field input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 4px var(--color-focus-ring);
+}
+.editor-textarea:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 4px var(--color-focus-ring);
+}
+.dual-panel {
+  display: grid;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  gap: 16px;
+}
+.orchestration-panel {
+  display: grid;
+  gap: 16px;
+}
+.scene-ribbon {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.director-empty {
+  display: grid;
+  place-items: center;
+  min-height: 320px;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius);
+  color: var(--color-faint);
+  background: var(--color-surface);
+}
+.footer-strip {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  max-height: calc(100dvh - 232px);
+  overflow: auto;
+  padding: 14px;
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+  scrollbar-gutter: stable;
+}
+.footer-actions {
+  display: grid;
+  justify-content: stretch;
+}
+.text-button {
+  appearance: none;
+  border: 0;
+  cursor: pointer;
+  transition: background 180ms var(--ease),border-color 180ms var(--ease),box-shadow 180ms var(--ease),opacity 180ms var(--ease);
+}
+.text-button {
+  min-height: 44px;
+  padding: 0;
+  background: transparent;
+  color: var(--color-danger-action);
+  font-weight: 800;
+}
+.eyebrow {
+  margin: 0 0 6px;
+  font-size: 11px;
+  letter-spacing: 0;
+  color: var(--color-primary-strong);
+  font-weight: 800;
+  line-height: 1.2;
+}
+p {
+  margin: 0;
+}
+h3 {
+  margin: 0;
+  font-size: 24px;
+  line-height: 1.15;
+  color: var(--color-heading);
+  overflow-wrap: anywhere;
+}
+h4 {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.2;
+  color: var(--color-heading-soft);
+  overflow-wrap: anywhere;
+}
+.status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  line-height: 1.5;
+}
+.status.success {
+  color: var(--color-success-text);
+  background: var(--color-success-bg);
+  border: 1px solid var(--color-success-border);
+}
+.status.error {
+  color: var(--color-danger-text);
+  background: var(--color-danger-bg);
+  border: 1px solid var(--color-danger-border);
+}
+.tight {
+  margin-bottom: 12px;
+}
+@media (max-width:1280px) {
+  .stage-grid {
+    grid-template-columns: 280px minmax(0,1fr) 240px;
+  }
+}
+@media (max-width:1100px) {
+  .agent-stage {
+    min-height: auto;
+  }
+  .stage-grid {
+    grid-template-columns: 1fr;
+  }
+  .cast-column {
+    max-height: none;
+    overflow: visible;
+  }
+  .director-main {
+    max-height: none;
+    overflow: visible;
+  }
+  .footer-strip {
+    max-height: none;
+    overflow: visible;
+  }
+  .cast-list {
+    max-height: none;
+  }
+}
+@media (max-width:860px) {
+  .editor-fields {
+    grid-template-columns: 1fr;
+  }
+  .dual-panel {
+    grid-template-columns: 1fr;
+  }
+}
 </style>

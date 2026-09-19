@@ -71,6 +71,11 @@ release.properties
 
 # Local learning submissions used for manual checks
 /kiniu-back/src/main/resources/learning-test.txt
+/kiniu-back/data/learning-attempts.json
+/kiniu-back/data/learning-progress.json
+
+# Local agent workspaces
+/.workbuddy/
 
 # Node, Nuxt, and test artifacts
 node_modules/

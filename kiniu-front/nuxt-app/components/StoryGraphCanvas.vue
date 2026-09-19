@@ -242,28 +242,125 @@ function shortLabel(value: string, length = 28) {
 </template>
 
 <style scoped>
-.graph-panel{display:grid;gap:16px}
-.graph-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
-.eyebrow{margin:0 0 8px;font-size:12px;letter-spacing:0;color:var(--color-primary-strong);font-weight:800}
-h3,p{margin:0}
-h3{font-size:15px;color:var(--color-heading-soft)}
-.graph-meta{display:flex;gap:8px;flex-wrap:wrap}
-.graph-meta span{padding:5px 9px;border-radius:var(--radius);background:var(--color-token-muted-bg);color:var(--color-faint);font-size:12px;font-weight:700}
-.graph-stage{overflow:auto;padding:8px;border:1px solid var(--color-border-soft);border-radius:var(--radius);background:var(--color-graph-bg);scrollbar-gutter:stable}
-.graph-svg{display:block}
-.graph-arrow{fill:var(--color-graph-arrow)}
-.graph-edge{fill:none;stroke:var(--color-graph-edge);stroke-width:2;opacity:.82}
-.graph-edge.selected{stroke:var(--color-primary);stroke-width:2.6;opacity:1}
-.graph-edge.dangling{stroke-dasharray:7 7;opacity:.5}
-.graph-node{cursor:pointer}
-.graph-node rect{fill:var(--color-graph-node);stroke:var(--color-graph-node-border);stroke-width:1.2;transition:fill 180ms var(--ease),stroke 180ms var(--ease)}
-.graph-node.selected rect{fill:var(--color-graph-node-selected);stroke:var(--color-primary);stroke-width:2}
-.graph-node.entry rect{stroke:var(--color-graph-entry)}
-.graph-node:hover rect{fill:var(--color-surface-muted)}
-.scene-text,.meta-text,.title-text{font-family:"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;pointer-events:none}
-.scene-text{font-size:11px;letter-spacing:0;fill:var(--color-primary-strong)}
-.title-text{font-size:16px;font-weight:700;fill:var(--color-heading-soft)}
-.meta-text{font-size:12px;fill:var(--color-muted)}
-.graph-hint{color:var(--color-faint);line-height:1.6}
-@media (prefers-reduced-motion:reduce){.graph-node rect{transition:none}}
+.graph-panel {
+  display: grid;
+  gap: 16px;
+}
+.graph-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.eyebrow {
+  margin: 0 0 8px;
+  font-size: 12px;
+  letter-spacing: 0;
+  color: var(--color-primary-strong);
+  font-weight: 800;
+}
+p {
+  margin: 0;
+}
+h3 {
+  margin: 0;
+  font-size: 15px;
+  color: var(--color-heading-soft);
+}
+.graph-meta {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.graph-meta span {
+  padding: 5px 9px;
+  border-radius: var(--radius);
+  background: var(--color-token-muted-bg);
+  color: var(--color-faint);
+  font-size: 12px;
+  font-weight: 700;
+}
+.graph-stage {
+  overflow: auto;
+  padding: 8px;
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius);
+  background: var(--color-graph-bg);
+  scrollbar-gutter: stable;
+}
+.graph-svg {
+  display: block;
+}
+.graph-arrow {
+  fill: var(--color-graph-arrow);
+}
+.graph-edge {
+  fill: none;
+  stroke: var(--color-graph-edge);
+  stroke-width: 2;
+  opacity: .82;
+}
+.graph-edge.selected {
+  stroke: var(--color-primary);
+  stroke-width: 2.6;
+  opacity: 1;
+}
+.graph-edge.dangling {
+  stroke-dasharray: 7 7;
+  opacity: .5;
+}
+.graph-node {
+  cursor: pointer;
+}
+.graph-node rect {
+  fill: var(--color-graph-node);
+  stroke: var(--color-graph-node-border);
+  stroke-width: 1.2;
+  transition: fill 180ms var(--ease),stroke 180ms var(--ease);
+}
+.graph-node.selected rect {
+  fill: var(--color-graph-node-selected);
+  stroke: var(--color-primary);
+  stroke-width: 2;
+}
+.graph-node.entry rect {
+  stroke: var(--color-graph-entry);
+}
+.graph-node:hover rect {
+  fill: var(--color-surface-muted);
+}
+.meta-text {
+  font-family: "Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  pointer-events: none;
+}
+.title-text {
+  font-family: "Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  pointer-events: none;
+}
+.scene-text {
+  font-family: "Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  pointer-events: none;
+  font-size: 11px;
+  letter-spacing: 0;
+  fill: var(--color-primary-strong);
+}
+.title-text {
+  font-size: 16px;
+  font-weight: 700;
+  fill: var(--color-heading-soft);
+}
+.meta-text {
+  font-size: 12px;
+  fill: var(--color-muted);
+}
+.graph-hint {
+  color: var(--color-faint);
+  line-height: 1.6;
+}
+@media (prefers-reduced-motion:reduce) {
+  .graph-node rect {
+    transition: none;
+  }
+}
 </style>

@@ -1,6 +1,8 @@
 export type LearningFile = { path: string; content: string }
 export type TaskCheckDefinition = { id: string; type: string; path: string; rule: string; required: boolean; points: number; message: string }
 export type LearningReference = { title: string; url: string; publisher: string; version: string; accessedAt: string }
+export type LearningQuizOption = { id: string; label: string }
+export type LearningQuizQuestion = { id: string; prompt: string; options: LearningQuizOption[]; points: number }
 export type LearningTask = {
   id: string
   title: string
@@ -17,8 +19,10 @@ export type LearningTask = {
   lesson: string
   deliverables: string[]
   prerequisiteTaskIds: string[]
-  evidenceMode: 'document' | 'import'
+  evidenceMode: 'document' | 'import' | 'quiz'
   references: LearningReference[]
+  quizQuestions?: LearningQuizQuestion[]
+  passingScore?: number
 }
 export type LearningModule = { id: string; title: string; summary: string; level: string; tasks: LearningTask[] }
 export type LearningCatalog = { version: number; modules: LearningModule[] }

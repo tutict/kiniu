@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import tools.jackson.databind.ObjectMapper;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -146,9 +147,33 @@ class LearningCatalogServiceTests {
                 catalog.modules().get(7).tasks().stream().map(LearningTaskDefinition::id).toList());
         assertTrue(tasks.stream().allMatch(task -> task.lesson().length() >= 300 && task.lesson().length() <= 600));
         assertTrue(tasks.stream().allMatch(task -> task.references().size() >= 1 && task.references().size() <= 3));
-        assertTrue(tasks.stream().allMatch(task -> task.checks().stream()
-                .mapToInt(TaskCheckDefinition::points)
-                .sum() == 100));
+        assertTrue(tasks.stream().allMatch(task -> task.passingScore() == 100));
+        assertTrue(tasks.stream().allMatch(task -> {
+            if ("quiz".equals(task.evidenceMode())) {
+                return task.checks().isEmpty()
+                        && task.starterFiles().isEmpty()
+                        && task.quizQuestions().stream().mapToInt(LearningQuizQuestion::points).sum() == 100;
+            }
+            return task.quizQuestions().isEmpty()
+                    && task.checks().stream().mapToInt(TaskCheckDefinition::points).sum() == 100;
+        }));
+        LearningTaskDefinition requirements = taskById(tasks, "requirements-contract");
+        assertEquals("quiz", requirements.evidenceMode());
+        assertEquals(10, requirements.quizQuestions().size());
+        assertEquals(
+                List.of(
+                        "first-move",
+                        "user-scope",
+                        "out-of-scope-user",
+                        "business-outcome",
+                        "input-ambiguity",
+                        "data-boundary",
+                        "risk-boundary",
+                        "irreversible-request",
+                        "missing-owner",
+                        "acceptance-criteria"),
+                requirements.quizQuestions().stream().map(LearningQuizQuestion::id).toList());
+        assertEquals("define-contract", requirements.quizQuestions().get(0).correctOptionId());
         assertTrue(tasks.stream()
                 .filter(task -> "import".equals(task.evidenceMode()))
                 .allMatch(task -> List.of("/source", "/capturedAt", "/requestId").stream()
@@ -260,6 +285,19 @@ class LearningCatalogServiceTests {
                 List.of(new TaskCheckDefinition("content", "min-length", "artifact.md", "3", true, 100, "Content")));
     }
 
+    @Test
+    void shouldAcceptQuizTasksWithoutStarterFiles() throws Exception {
+        LearningCatalogService service = serviceWithQuizCatalog("specific-scene");
+        assertEquals("quiz", service.getTask("first").evidenceMode());
+        assertTrue(service.getTask("first").starterFiles().isEmpty());
+        assertEquals("specific-scene", service.getTask("first").quizQuestions().get(0).correctOptionId());
+    }
+
+    @Test
+    void shouldRejectQuizTasksWithInvalidOptions() {
+        assertThrows(IllegalStateException.class, () -> serviceWithQuizCatalog("missing-option"));
+    }
+
     private LearningTaskDefinition taskWithPrerequisites(String id, List<String> prerequisiteTaskIds) {
         return new LearningTaskDefinition(
                 id,
@@ -286,5 +324,61 @@ class LearningCatalogServiceTests {
                 prerequisiteTaskIds,
                 "document",
                 List.of());
+    }
+
+    private LearningCatalogService serviceWithQuizCatalog(String correctOptionId) throws Exception {
+        Path path = tempDir.resolve("quiz-catalog-" + System.nanoTime() + ".json");
+        Files.writeString(path, """
+                {
+                  "version": 1,
+                  "modules": [
+                    {
+                      "id": "module",
+                      "title": "Module",
+                      "summary": "Summary",
+                      "level": "beginner",
+                      "tasks": [
+                        {
+                          "id": "first",
+                          "title": "first",
+                          "summary": "Summary",
+                          "level": "beginner",
+                          "kind": "requirements",
+                          "estimatedMinutes": 10,
+                          "skills": ["requirements"],
+                          "objective": "Objective",
+                          "scenario": "Scenario",
+                          "mentorAgentId": "project-agent",
+                          "starterFiles": [],
+                          "checks": [],
+                          "lesson": "Lesson",
+                          "deliverables": ["Complete the quiz"],
+                          "prerequisiteTaskIds": [],
+                          "evidenceMode": "quiz",
+                          "references": [],
+                          "passingScore": 100,
+                          "quizQuestions": [
+                            {
+                              "id": "user-scope",
+                              "prompt": "Which user is specific?",
+                              "options": [
+                                {"id": "all-users", "label": "All users"},
+                                {"id": "specific-scene", "label": "A specific user"}
+                              ],
+                              "correctOptionId": "%s",
+                              "points": 100,
+                              "explanation": "Need a concrete user."
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+                """.formatted(correctOptionId));
+        return new LearningCatalogService(
+                objectMapper,
+                path.toString(),
+                TaskCheckRegistryTestFactory.standard(objectMapper));
     }
 }

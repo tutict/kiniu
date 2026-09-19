@@ -18,6 +18,7 @@ import com.kiniu.game.learn.LearningCatalogService;
 import com.kiniu.game.learn.LearningProgress;
 import com.kiniu.game.learn.LearningProgressService;
 import com.kiniu.game.learn.LearningTaskDefinition;
+import com.kiniu.game.learn.QuizCheckService;
 import com.kiniu.game.learn.TaskCheckResult;
 import com.kiniu.game.learn.TaskCheckService;
 import com.kiniu.game.security.LocalAccessProperties;
@@ -43,6 +44,7 @@ public class LearningController {
     private final LearningAttemptService attemptService;
     private final LearningAgentPublisher agentPublisher;
     private final TaskCheckService checkService;
+    private final QuizCheckService quizCheckService;
     private final AIService aiService;
     private final AIRuntimeContext aiRuntimeContext;
     private final AITelemetryCollector aiTelemetryCollector;
@@ -55,6 +57,7 @@ public class LearningController {
             LearningAttemptService attemptService,
             LearningAgentPublisher agentPublisher,
             TaskCheckService checkService,
+            QuizCheckService quizCheckService,
             AIService aiService,
             AIRuntimeContext aiRuntimeContext,
             AITelemetryCollector aiTelemetryCollector,
@@ -65,6 +68,7 @@ public class LearningController {
         this.attemptService = attemptService;
         this.agentPublisher = agentPublisher;
         this.checkService = checkService;
+        this.quizCheckService = quizCheckService;
         this.aiService = aiService;
         this.aiRuntimeContext = aiRuntimeContext;
         this.aiTelemetryCollector = aiTelemetryCollector;
@@ -111,14 +115,18 @@ public class LearningController {
         }
 
         Map<String, String> files = request == null || request.files() == null ? Map.of() : request.files();
-        List<TaskCheckResult> results = checkService.check(task, files);
-        int score = checkService.score(results);
-        boolean passed = checkService.passed(results);
+        Map<String, String> answers = request == null || request.answers() == null ? Map.of() : request.answers();
+        boolean quiz = "quiz".equals(task.evidenceMode());
+        List<TaskCheckResult> results = quiz
+                ? quizCheckService.check(task, answers)
+                : checkService.check(task, files);
+        int score = quiz ? quizCheckService.score(results) : checkService.score(results);
+        boolean passed = quiz ? quizCheckService.passed(task, results) : checkService.passed(results);
         LearningAttempt attempt = attemptService.record(
                 taskId,
                 passed,
                 score,
-                files,
+                quiz ? answers : files,
                 results,
                 request == null ? "" : request.notes());
         LearningProgress progress = passed

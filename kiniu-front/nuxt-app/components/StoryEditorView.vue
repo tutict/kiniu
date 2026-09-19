@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import UiButton from './ui/UiButton.vue'
+import UiEmptyState from './ui/UiEmptyState.vue'
 import AgentDirectorPanel from './AgentDirectorPanel.vue'
 import SessionDebugPanel from './SessionDebugPanel.vue'
 import StoryGeneratorPanel from './StoryGeneratorPanel.vue'
@@ -340,14 +342,14 @@ function importSandboxPlan(planId: string) {
           <p class="eyebrow">{{ t('studioTaskFlow') }}</p>
           <h2>{{ t('studioTitle') }}</h2>
         </div>
-        <button class="primary-button" type="button" @click="createNodeDraft">{{ t('actionNewFlowNode') }}</button>
+        <UiButton variant="accent" size="lg" @click="createNodeDraft">{{ t('actionNewFlowNode') }}</UiButton>
       </div>
 
       <div class="editor-toolbar">
         <input v-model="storySearch" class="search-input" type="text" :placeholder="t('labelFlowSearchPlaceholder')">
-        <button class="secondary-button" type="button" :disabled="isLoadingStory" @click="emit('loadStory')">
+        <UiButton variant="secondary" size="lg" :disabled="isLoadingStory" @click="emit('loadStory')">
           {{ isLoadingStory ? t('actionLoading') : t('actionRefreshBackend') }}
-        </button>
+        </UiButton>
       </div>
 
       <div class="tag-cloud">
@@ -394,8 +396,8 @@ function importSandboxPlan(planId: string) {
               <h3>{{ selectedNode.title }}</h3>
             </div>
             <div class="inline-actions">
-              <button class="secondary-button" type="button" @click="duplicateSelectedNode">{{ t('actionDuplicate') }}</button>
-              <button class="secondary-button" type="button" @click="addChoiceToSelectedNode">{{ t('actionAddAction') }}</button>
+              <UiButton variant="secondary" size="lg" @click="duplicateSelectedNode">{{ t('actionDuplicate') }}</UiButton>
+              <UiButton variant="secondary" size="lg" @click="addChoiceToSelectedNode">{{ t('actionAddAction') }}</UiButton>
             </div>
           </div>
 
@@ -514,9 +516,7 @@ function importSandboxPlan(planId: string) {
         </section>
       </div>
 
-      <div v-else class="empty-state">
-        <p>{{ t('emptyNoFlowNode') }}</p>
-      </div>
+      <UiEmptyState v-else class="editor-empty-state" :title="t('emptyNoFlowNode')" />
 
     </section>
 
@@ -548,12 +548,12 @@ function importSandboxPlan(planId: string) {
       <div class="editor-panel compact">
         <p class="eyebrow">{{ t('labelDraftActions') }}</p>
         <div class="stack-actions">
-          <button class="primary-button" type="button" @click="emit('persistDraft', t('statusManualFlowSaved'))">{{ t('actionSaveDraft') }}</button>
-          <button class="primary-button" type="button" :disabled="isSavingStory || !draft" @click="emit('publishDraft')">
+          <UiButton variant="accent" size="lg" @click="emit('persistDraft', t('statusManualFlowSaved'))">{{ t('actionSaveDraft') }}</UiButton>
+          <UiButton variant="accent" size="lg" :disabled="isSavingStory || !draft" @click="emit('publishDraft')">
             {{ isSavingStory ? t('actionSaving') : t('actionPublishBackend') }}
-          </button>
-          <button class="secondary-button" type="button" @click="emit('exportDraft')">{{ t('actionCopyJson') }}</button>
-          <button class="secondary-button" type="button" @click="emit('resetDraft')">{{ t('actionClearLocalDraft') }}</button>
+          </UiButton>
+          <UiButton variant="secondary" size="lg" @click="emit('exportDraft')">{{ t('actionCopyJson') }}</UiButton>
+          <UiButton variant="secondary" size="lg" @click="emit('resetDraft')">{{ t('actionClearLocalDraft') }}</UiButton>
         </div>
       </div>
 
@@ -615,51 +615,406 @@ function importSandboxPlan(planId: string) {
 </template>
 
 <style scoped>
-.editor-view{display:grid;grid-template-columns:300px minmax(0,1fr) 300px;gap:10px;min-height:calc(100dvh - 154px);min-width:0}
-.tool-workspace{min-height:calc(100dvh - 154px);min-width:0}
-.editor-sidebar,.editor-inspector,.editor-panel{border:1px solid var(--color-border);background:var(--color-surface-panel);box-shadow:var(--shadow-card)}
-.editor-sidebar,.editor-inspector{display:grid;align-content:start;gap:12px;max-height:calc(100dvh - 154px);overflow:auto;padding:14px;border-radius:var(--radius);min-width:0;scrollbar-gutter:stable}
-.editor-main,.editor-main-grid,.editor-toolbar,.node-list,.editor-fields,.flow-list,.notes-list,.stack-actions{display:grid;gap:12px}
-.editor-main{min-width:0;max-height:calc(100dvh - 154px);overflow:auto;scrollbar-gutter:stable}
-.editor-panel{padding:14px;border-radius:var(--radius);min-width:0}
-.editor-panel.compact{background:var(--color-bg-soft);border-radius:var(--radius)}
-.editor-panel-wide{grid-column:1/-1}
-.editor-sidebar-head,.panel-head,.inline-actions,.node-card-top,.node-card-meta,.flow-card-top,.flow-target{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}
-.eyebrow{margin:0 0 6px;font-size:11px;letter-spacing:0;color:var(--color-primary-strong);font-weight:800;line-height:1.2}
-h2,h3,p{margin:0}
-h2{font-size:24px;line-height:1.15;color:var(--color-heading);overflow-wrap:anywhere}
-h3{font-size:18px;line-height:1.25;color:var(--color-heading-soft);overflow-wrap:anywhere}
-.search-input,.field input,.editor-textarea{width:100%;min-height:44px;padding:10px 14px;border:1px solid var(--color-border);border-radius:var(--radius);outline:none;color:var(--color-text);background:var(--color-input);font:inherit}
-.editor-textarea{resize:vertical;min-height:124px}
-.search-input:focus,.field input:focus,.editor-textarea:focus{border-color:var(--color-primary);box-shadow:0 0 0 4px var(--color-focus-ring)}
-.field{display:grid;gap:10px}
-.field.wide{grid-column:1/-1}
-.editor-fields{grid-template-columns:repeat(2,minmax(0,1fr))}
-.field span{font-size:13px;color:var(--color-text);font-weight:700;letter-spacing:0}
-.tag-cloud,.token-row{display:flex;flex-wrap:wrap;gap:8px}
-.token{padding:5px 10px;border-radius:var(--radius);background:var(--color-token-muted-bg);color:var(--color-faint);font-size:13px;cursor:pointer}
-.node-list{max-height:calc(100dvh - 380px);overflow:auto;padding-right:4px;scrollbar-gutter:stable}
-.node-card{appearance:none;border:1px solid var(--color-border-soft);border-radius:var(--radius);padding:12px;background:var(--color-surface);color:var(--color-text);text-align:left;cursor:pointer;transition:background 180ms var(--ease),border-color 180ms var(--ease),box-shadow 180ms var(--ease)}
-.node-card.active{border-color:var(--color-primary);background:var(--color-surface-muted);box-shadow:var(--shadow-active)}
-.node-card strong,.flow-card strong{overflow-wrap:anywhere}
-.node-card p,.node-card-meta span{color:var(--color-faint);font-size:13px;line-height:1.35;overflow-wrap:anywhere}
-.flow-card,.choice-editor{display:grid;gap:10px;padding:14px;border:1px solid var(--color-border-soft);border-radius:var(--radius);background:var(--color-surface)}
-.flow-card p,.notes-list p{color:var(--color-muted);line-height:1.6;overflow-wrap:anywhere}
-.metric-grid{display:grid;gap:14px}
-.metric-grid div{display:flex;justify-content:space-between;gap:12px;color:var(--color-text)}
-.metric-grid span,.flow-target span{color:var(--color-faint)}
-.metric-pill{padding:5px 10px;border-radius:var(--radius);background:var(--color-warning-bg);color:var(--color-warning-text);font-size:12px;font-weight:800}
-.primary-button,.secondary-button,.text-button{appearance:none;border:0;cursor:pointer;transition:background 180ms var(--ease),border-color 180ms var(--ease),box-shadow 180ms var(--ease)}
-.primary-button,.secondary-button{min-height:44px;padding:0 16px;border-radius:var(--radius);font-weight:800}
-.primary-button{background:var(--color-accent);color:var(--color-on-accent)}
-.secondary-button{border:1px solid var(--color-border);background:var(--color-input);color:var(--color-primary-strong)}
-.text-button{min-height:44px;padding:0;background:transparent;color:var(--color-danger-action);font-weight:800}
-.primary-button:hover{background:var(--color-accent-hover);box-shadow:var(--shadow-accent)}
-.secondary-button:hover,.node-card:hover{border-color:var(--color-primary);background:var(--color-hover)}
-.empty-state{display:grid;place-items:center;min-height:60vh;border:1px dashed var(--color-border);border-radius:var(--radius);color:var(--color-faint);background:var(--color-surface)}
-.status{display:inline-flex;align-items:center;min-height:44px;padding:10px 14px;border-radius:var(--radius);line-height:1.5}
-.status.success{color:var(--color-success-text);background:var(--color-success-bg);border:1px solid var(--color-success-border)}
-.status.error{color:var(--color-danger-text);background:var(--color-danger-bg);border:1px solid var(--color-danger-border)}
-@media (max-width:1200px){.editor-view{grid-template-columns:1fr;min-height:auto}.tool-workspace{min-height:auto}.editor-sidebar,.editor-inspector,.editor-main{max-height:none;overflow:visible}.node-list{max-height:none}}
-@media (max-width:960px){.editor-fields{grid-template-columns:1fr}}
+.editor-view {
+  display: grid;
+  grid-template-columns: 300px minmax(0,1fr) 300px;
+  gap: 10px;
+  min-height: calc(100dvh - 154px);
+  min-width: 0;
+}
+.tool-workspace {
+  min-height: calc(100dvh - 154px);
+  min-width: 0;
+}
+.editor-sidebar {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-panel);
+  box-shadow: var(--shadow-card);
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  max-height: calc(100dvh - 154px);
+  overflow: auto;
+  padding: 14px;
+  border-radius: var(--radius);
+  min-width: 0;
+  scrollbar-gutter: stable;
+}
+.editor-inspector {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-panel);
+  box-shadow: var(--shadow-card);
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  max-height: calc(100dvh - 154px);
+  overflow: auto;
+  padding: 14px;
+  border-radius: var(--radius);
+  min-width: 0;
+  scrollbar-gutter: stable;
+}
+.editor-main-grid {
+  display: grid;
+  gap: 12px;
+}
+.editor-toolbar {
+  display: grid;
+  gap: 12px;
+}
+.node-list {
+  display: grid;
+  gap: 12px;
+}
+.editor-fields {
+  display: grid;
+  gap: 12px;
+}
+.flow-list {
+  display: grid;
+  gap: 12px;
+}
+.notes-list {
+  display: grid;
+  gap: 12px;
+}
+.stack-actions {
+  display: grid;
+  gap: 12px;
+}
+.editor-main {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  max-height: calc(100dvh - 154px);
+  overflow: auto;
+  scrollbar-gutter: stable;
+}
+.editor-empty-state {
+  min-height: 60vh;
+  background: var(--color-surface);
+}
+.editor-panel {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-panel);
+  box-shadow: var(--shadow-card);
+  padding: 14px;
+  border-radius: var(--radius);
+  min-width: 0;
+}
+.editor-panel.compact {
+  background: var(--color-bg-soft);
+  border-radius: var(--radius);
+}
+.editor-panel-wide {
+  grid-column: 1/-1;
+}
+.editor-sidebar-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.panel-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.inline-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.node-card-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.node-card-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.flow-card-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.flow-target {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.eyebrow {
+  margin: 0 0 6px;
+  font-size: 11px;
+  letter-spacing: 0;
+  color: var(--color-primary-strong);
+  font-weight: 800;
+  line-height: 1.2;
+}
+p {
+  margin: 0;
+}
+h2 {
+  margin: 0;
+  font-size: 24px;
+  line-height: 1.15;
+  color: var(--color-heading);
+  overflow-wrap: anywhere;
+}
+h3 {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.25;
+  color: var(--color-heading-soft);
+  overflow-wrap: anywhere;
+}
+.search-input {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  outline: none;
+  color: var(--color-text);
+  background: var(--color-input);
+  font: inherit;
+}
+.field input {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  outline: none;
+  color: var(--color-text);
+  background: var(--color-input);
+  font: inherit;
+}
+.editor-textarea {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  outline: none;
+  color: var(--color-text);
+  background: var(--color-input);
+  font: inherit;
+  resize: vertical;
+  min-height: 124px;
+}
+.search-input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 4px var(--color-focus-ring);
+}
+.field input:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 4px var(--color-focus-ring);
+}
+.editor-textarea:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 4px var(--color-focus-ring);
+}
+.field {
+  display: grid;
+  gap: 10px;
+}
+.field.wide {
+  grid-column: 1/-1;
+}
+.editor-fields {
+  grid-template-columns: repeat(2,minmax(0,1fr));
+}
+.field span {
+  font-size: 13px;
+  color: var(--color-text);
+  font-weight: 700;
+  letter-spacing: 0;
+}
+.tag-cloud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.token-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.token {
+  padding: 5px 10px;
+  border-radius: var(--radius);
+  background: var(--color-token-muted-bg);
+  color: var(--color-faint);
+  font-size: 13px;
+  cursor: pointer;
+}
+.node-list {
+  max-height: calc(100dvh - 380px);
+  overflow: auto;
+  padding-right: 4px;
+  scrollbar-gutter: stable;
+}
+.node-card {
+  appearance: none;
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius);
+  padding: 12px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  text-align: left;
+  cursor: pointer;
+  transition: background 180ms var(--ease),border-color 180ms var(--ease),box-shadow 180ms var(--ease);
+}
+.node-card.active {
+  border-color: var(--color-primary);
+  background: var(--color-surface-muted);
+  box-shadow: var(--shadow-active);
+}
+.node-card strong {
+  overflow-wrap: anywhere;
+}
+.flow-card strong {
+  overflow-wrap: anywhere;
+}
+.node-card p {
+  color: var(--color-faint);
+  font-size: 13px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.node-card-meta span {
+  color: var(--color-faint);
+  font-size: 13px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.flow-card {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+}
+.choice-editor {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--color-border-soft);
+  border-radius: var(--radius);
+  background: var(--color-surface);
+}
+.flow-card p {
+  color: var(--color-muted);
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.notes-list p {
+  color: var(--color-muted);
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.metric-grid {
+  display: grid;
+  gap: 14px;
+}
+.metric-grid div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--color-text);
+}
+.metric-grid span {
+  color: var(--color-faint);
+}
+.flow-target span {
+  color: var(--color-faint);
+}
+.metric-pill {
+  padding: 5px 10px;
+  border-radius: var(--radius);
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
+  font-size: 12px;
+  font-weight: 800;
+}
+.text-button {
+  appearance: none;
+  border: 0;
+  cursor: pointer;
+  transition: background 180ms var(--ease),border-color 180ms var(--ease),box-shadow 180ms var(--ease);
+}
+.text-button {
+  min-height: 44px;
+  padding: 0;
+  background: transparent;
+  color: var(--color-danger-action);
+  font-weight: 800;
+}
+.node-card:hover {
+  border-color: var(--color-primary);
+  background: var(--color-hover);
+}
+.status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  line-height: 1.5;
+}
+.status.success {
+  color: var(--color-success-text);
+  background: var(--color-success-bg);
+  border: 1px solid var(--color-success-border);
+}
+.status.error {
+  color: var(--color-danger-text);
+  background: var(--color-danger-bg);
+  border: 1px solid var(--color-danger-border);
+}
+@media (max-width:1200px) {
+  .editor-view {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+  .tool-workspace {
+    min-height: auto;
+  }
+  .editor-sidebar {
+    max-height: none;
+    overflow: visible;
+  }
+  .editor-inspector {
+    max-height: none;
+    overflow: visible;
+  }
+  .editor-main {
+    max-height: none;
+    overflow: visible;
+  }
+  .node-list {
+    max-height: none;
+  }
+}
+@media (max-width:960px) {
+  .editor-fields {
+    grid-template-columns: 1fr;
+  }
+}
 </style>

@@ -20,7 +20,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class LearningCatalogService {
 
-    private static final Set<String> SUPPORTED_EVIDENCE_MODES = Set.of("document", "import");
+    private static final Set<String> SUPPORTED_EVIDENCE_MODES = Set.of("document", "import", "quiz");
 
     private final ObjectMapper objectMapper;
     private final Path catalogPath;
@@ -148,9 +148,9 @@ public class LearningCatalogService {
         requireText(task.objective(), "Learning task objective");
         requireText(task.scenario(), "Learning task scenario");
         requireText(task.mentorAgentId(), "Learning task mentor Agent id");
-        if (!taskIds.add(task.id()) || task.estimatedMinutes() <= 0 || task.starterFiles().isEmpty()
+        if (!taskIds.add(task.id()) || task.estimatedMinutes() <= 0
                 || task.skills().isEmpty() || task.skills().stream().anyMatch(skill -> skill == null || skill.isBlank())) {
-            throw new IllegalStateException("Learning task ids must be unique and tasks need starter files.");
+            throw new IllegalStateException("Learning task ids must be unique and tasks need skills and duration.");
         }
         if (!SUPPORTED_EVIDENCE_MODES.contains(task.evidenceMode())) {
             throw new IllegalStateException("Learning task evidence mode is unsupported: " + task.id());
@@ -162,6 +162,16 @@ public class LearningCatalogService {
                 throw new IllegalStateException("Learning tasks need non-blank deliverables.");
             }
             validateReferences(task);
+        }
+        if ("quiz".equals(task.evidenceMode())) {
+            validateQuizTask(task);
+            return;
+        }
+        if (!task.quizQuestions().isEmpty()) {
+            throw new IllegalStateException("Only quiz tasks may contain quiz questions.");
+        }
+        if (task.starterFiles().isEmpty()) {
+            throw new IllegalStateException("Learning task ids must be unique and tasks need starter files.");
         }
 
         Set<String> starterPaths = new HashSet<>();
@@ -256,6 +266,44 @@ public class LearningCatalogService {
                 .forEach(dependency -> visitDependency(dependency, dependencies, visiting, visited));
         visiting.remove(taskId);
         visited.add(taskId);
+    }
+
+    private void validateQuizTask(LearningTaskDefinition task) {
+        if (!task.starterFiles().isEmpty() || !task.checks().isEmpty()) {
+            throw new IllegalStateException("Quiz tasks must not include starter files or document checks.");
+        }
+        if (task.quizQuestions().isEmpty()) {
+            throw new IllegalStateException("Quiz tasks must contain questions.");
+        }
+        if (task.passingScore() < 1 || task.passingScore() > 100) {
+            throw new IllegalStateException("Quiz passing score must be between 1 and 100.");
+        }
+        Set<String> questionIds = new HashSet<>();
+        int points = 0;
+        for (LearningQuizQuestion question : task.quizQuestions()) {
+            requireText(question.id(), "Learning quiz question id");
+            requireText(question.prompt(), "Learning quiz question prompt");
+            requireText(question.correctOptionId(), "Learning quiz correct option");
+            requireText(question.explanation(), "Learning quiz explanation");
+            if (!questionIds.add(question.id()) || question.points() <= 0 || question.options().size() < 2) {
+                throw new IllegalStateException("Quiz questions must have unique ids, points, and at least two options.");
+            }
+            Set<String> optionIds = new HashSet<>();
+            question.options().forEach(option -> {
+                requireText(option.id(), "Learning quiz option id");
+                requireText(option.label(), "Learning quiz option label");
+                if (!optionIds.add(option.id())) {
+                    throw new IllegalStateException("Quiz options must have unique ids.");
+                }
+            });
+            if (!optionIds.contains(question.correctOptionId())) {
+                throw new IllegalStateException("Quiz correct option must match an available choice.");
+            }
+            points += question.points();
+        }
+        if (points != 100) {
+            throw new IllegalStateException("Quiz question points must total 100.");
+        }
     }
 
     private void requireText(String value, String label) {
