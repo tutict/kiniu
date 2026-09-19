@@ -231,5 +231,27 @@ class LearningControllerTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.passed").value(true))
                 .andExpect(jsonPath("$.progress.currentTaskId").value("workflow-agent-decision"));
+
+        mockMvc.perform(post("/learn/tasks/workflow-agent-decision/check")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "answers": {
+                                    "when-workflow": "stable-rules",
+                                    "when-agent": "unenumerable",
+                                    "plan-next-shape": "workflow-then-model",
+                                    "calendar-autonomy": "no-fixed-refuse",
+                                    "not-just-turns": "no-control-flow",
+                                    "no-demo-autonomy": "no-unneeded",
+                                    "stop-condition": "stop-budget",
+                                    "human-handoff": "high-risk-unknown",
+                                    "dag-vs-search": "dag-workflow",
+                                    "compose": "compose-both"
+                                  }
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.passed").value(true))
+                .andExpect(jsonPath("$.progress.currentTaskId").value("tool-contract"));
     }
 }

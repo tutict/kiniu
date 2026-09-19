@@ -117,7 +117,7 @@ http://localhost:8080
 |---|---|---|
 | 基础与模型契约 | `requirements-contract`、`http-json-basics`、`model-response-contract` | 场景判断契约、HTTP 判断、结构化输出判断 |
 | Prompt、Context 与数据 | `prompt-context-design`、`data-lifecycle`、`context-memory-budget` | 上下文判断、数据生命周期判断、记忆预算判断 |
-| Workflow、工具与 Agent | `workflow-agent-decision`、`tool-contract`、`agent-skill-authoring`、`agent-trace-recovery` | 架构选型、工具契约、Skill 设计、Agent 轨迹与恢复 |
+| Workflow、工具与 Agent | `workflow-agent-decision`、`tool-contract`、`agent-skill-authoring`、`agent-trace-recovery` | 架构选型判断、工具契约、Skill 设计、Agent 轨迹与恢复 |
 | 评测与 Agent 项目 | `evaluation-suite`、`companion-agent` | 持续评测集、完整 Agent 项目 |
 | RAG 检索增强 | `rag-pipeline`、`rag-evaluation` | RAG 设计、召回与 groundedness 证据 |
 | GenAI 安全 | `genai-red-team`、`access-concurrency` | 威胁模型、攻击结果、服务安全契约 |
@@ -191,6 +191,14 @@ http://localhost:8080
 1. 阅读目标、记忆膨胀场景和讲义。
 2. 完成 10 道判断题，覆盖两类记忆、写入门槛、PII、过期偏好、相似召回、钉住契约、压缩来源、最近 N 轮、永久记忆和删除传播。
 3. 运行确定性检查；全部选对后解锁 `workflow-agent-decision`。
+
+### 实验七怎么学
+
+第七项任务 `workflow-agent-decision` 是场景判断，不再手写 `architecture-decision.md`。校验、拒绝改日历和生成三条建议，哪些该写死、哪些才能让模型转，都要判断。正确流程：
+
+1. 阅读目标、过度自治场景和讲义。
+2. 完成 10 道判断题，覆盖何时用 Workflow、何时才需要 Agent、如何组合、改日历不能自治、多轮≠Agent、停止条件、人工接管和 DAG。
+3. 运行确定性检查；全部选对后解锁 `tool-contract`。
 
 ### 请求安全边界
 

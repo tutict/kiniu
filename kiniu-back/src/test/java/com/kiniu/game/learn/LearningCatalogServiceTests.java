@@ -259,6 +259,23 @@ class LearningCatalogServiceTests {
                         "delete-memory"),
                 memoryBudget.quizQuestions().stream().map(LearningQuizQuestion::id).toList());
         assertEquals("working-only", memoryBudget.quizQuestions().get(0).correctOptionId());
+        LearningTaskDefinition workflowDecision = taskById(tasks, "workflow-agent-decision");
+        assertEquals("quiz", workflowDecision.evidenceMode());
+        assertEquals(10, workflowDecision.quizQuestions().size());
+        assertEquals(
+                List.of(
+                        "when-workflow",
+                        "when-agent",
+                        "plan-next-shape",
+                        "calendar-autonomy",
+                        "not-just-turns",
+                        "no-demo-autonomy",
+                        "stop-condition",
+                        "human-handoff",
+                        "dag-vs-search",
+                        "compose"),
+                workflowDecision.quizQuestions().stream().map(LearningQuizQuestion::id).toList());
+        assertEquals("stable-rules", workflowDecision.quizQuestions().get(0).correctOptionId());
         assertTrue(tasks.stream()
                 .filter(task -> "import".equals(task.evidenceMode()))
                 .allMatch(task -> List.of("/source", "/capturedAt", "/requestId").stream()
