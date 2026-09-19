@@ -310,6 +310,23 @@ class LearningCatalogServiceTests {
                         "evaluation"),
                 skillAuthoringQuiz.quizQuestions().stream().map(LearningQuizQuestion::id).toList());
         assertEquals("reusable-pack", skillAuthoringQuiz.quizQuestions().get(0).correctOptionId());
+        LearningTaskDefinition traceRecovery = taskById(tasks, "agent-trace-recovery");
+        assertEquals("quiz", traceRecovery.evidenceMode());
+        assertEquals(10, traceRecovery.quizQuestions().size());
+        assertEquals(
+                List.of(
+                        "what-is-trace",
+                        "trace-ids",
+                        "step-shape",
+                        "redact-trace",
+                        "timeout-write",
+                        "failure-class",
+                        "idempotent-replay",
+                        "no-infinite-retry",
+                        "stop-budget",
+                        "human-handoff"),
+                traceRecovery.quizQuestions().stream().map(LearningQuizQuestion::id).toList());
+        assertEquals("state-effects", traceRecovery.quizQuestions().get(0).correctOptionId());
         assertTrue(tasks.stream()
                 .filter(task -> "import".equals(task.evidenceMode()))
                 .allMatch(task -> List.of("/source", "/capturedAt", "/requestId").stream()

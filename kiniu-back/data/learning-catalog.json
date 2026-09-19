@@ -2683,13 +2683,13 @@
           ]
         },
         {
-          "level": "中级",
+          "level": "初级",
           "mentorAgentId": "project-agent",
           "id": "agent-trace-recovery",
           "title": "记录 Agent 轨迹并设计恢复",
-          "summary": "导入工具调用轨迹，定义错误恢复、预算和停止条件。",
+          "summary": "围绕晚间计划助手在创建会议超时后陷入重试，用场景判断分清轨迹该记什么、如何恢复和何时停止。",
           "kind": "agent-trace",
-          "estimatedMinutes": 65,
+          "estimatedMinutes": 25,
           "skills": [
             "Agent Loop",
             "轨迹",
@@ -2697,17 +2697,17 @@
             "停止条件"
           ],
           "objective": "用脱敏轨迹解释 Agent 如何观察、决定、调用工具和停止，并能从部分失败中恢复。",
-          "scenario": "Agent 连续调用工具后陷入重试，团队需要从轨迹判断是哪一步、哪个参数或哪个停止规则失效。",
-          "lesson": "## 核心概念\nAgent 轨迹是状态转换和外部副作用的记录，不等同于公开完整思维过程。工程上应保存输入摘要、决策类型、工具参数摘要、结果状态、错误、预算消耗和停止原因，同时隐藏密钥和敏感推理。恢复策略要区分瞬时失败、永久失败、权限不足和不确定副作用。\n\n## 算法思想\n恢复的核心是检查点加重放：从最近一致状态重演后续步骤，幂等键保证重放不产生二次副作用——与数据库先写日志、崩溃后按日志恢复是同一思想。\n\n## 完成步骤\n从外部实验导入 trace.json；填写 source、capturedAt 和 requestId；记录至少三个步骤和一次工具调用；标记错误与恢复；在 recovery.md 中定义超时、重试、补偿、人工接管及最大步数/成本停止条件。 留下可复现记录，提交前移除密钥和个人信息。\n\n## 常见误区\n不要把全部原始 Prompt 和隐私写入日志，也不要无限重试。调用超时后不能假设写操作未发生，恢复前应查询状态或使用幂等键。\n\n## 完成标准\n轨迹来源可追踪、步骤结构完整、包含工具与恢复证据，并明确 stopReason 和预算；恢复文档覆盖失败分类和人工接管。",
+          "scenario": "晚间计划助手在生成建议后，有人违规调用了 calendar.create。第一次调用 5 秒超时，循环立刻又打了一次。团队不知道会议有没有被创建，日志里还混着 API key 和完整 Prompt。需要从轨迹判断是哪一步、哪个参数或哪个停止规则失效。",
+          "lesson": "## 核心概念\nAgent 轨迹记录状态转换和外部副作用，不是把完整思维过程公开。工程上应保存输入摘要、决策类型、工具参数摘要、结果状态、错误、预算和停止原因，同时隐藏密钥。恢复要区分瞬时失败、永久失败、权限不足和不确定副作用。\n\n## 算法思想\n恢复是检查点加重放：从最近一致状态重演后续步骤，幂等键保证重放不产生二次副作用。超时不等于写操作没发生。\n\n## 完成步骤\n结合晚间计划助手判断：calendar.create 超时后该记什么、能不能立刻再调一次、无限重试对不对、stopReason 和最大步数怎么定、何时交给人工。\n\n## 常见误区\n不要把全部 Prompt 和隐私写入日志，也不要无限重试。调用超时后不能假设会议没被创建。\n\n## 完成标准\n十道场景判断全部选对，并能说明错误选项会让副作用重放或轨迹无法定位失败步骤。",
           "deliverables": [
-            "trace.json：脱敏 Agent 轨迹",
-            "recovery.md：错误恢复与停止策略"
+            "场景判断：完成十道题，覆盖轨迹字段、脱敏、超时语义、失败分类、幂等重放、停止条件和人工接管"
           ],
           "prerequisiteTaskIds": [
             "tool-contract",
             "prompt-context-design"
           ],
-          "evidenceMode": "import",
+          "evidenceMode": "quiz",
+          "passingScore": 100,
           "references": [
             {
               "title": "Building effective agents",
@@ -2724,97 +2724,258 @@
               "accessedAt": "2026-07-23"
             }
           ],
-          "starterFiles": [
+          "starterFiles": [],
+          "checks": [],
+          "quizQuestions": [
             {
-              "path": "trace.json",
-              "content": "{\n  \"source\": \"\",\n  \"capturedAt\": \"\",\n  \"requestId\": \"\",\n  \"steps\": [],\n  \"toolCalls\": [],\n  \"error\": {},\n  \"recovery\": \"\",\n  \"stopReason\": \"\",\n  \"budget\": {\n    \"maxSteps\": 0,\n    \"maxTokens\": 0\n  }\n}"
-            },
-            {
-              "path": "recovery.md",
-              "content": "# 恢复策略\n\n## 失败分类\n\n## 重试与补偿\n\n## 用户确认\n\n## 停止条件\n\n## 人工接管\n"
-            }
-          ],
-          "checks": [
-            {
-              "id": "source",
-              "type": "json-pointer-present",
-              "path": "trace.json",
-              "rule": "/source",
-              "required": true,
+              "id": "what-is-trace",
+              "prompt": "Agent 轨迹主要应该记录什么？",
+              "options": [
+                {
+                  "id": "full-thoughts",
+                  "label": "模型每一个念头和完整思维链"
+                },
+                {
+                  "id": "state-effects",
+                  "label": "状态转换和外部副作用：观察、决策、工具、结果、停止原因"
+                },
+                {
+                  "id": "only-text",
+                  "label": "只要保存对用户说的那句话"
+                },
+                {
+                  "id": "screenshots",
+                  "label": "一串聊天截图就够了"
+                }
+              ],
+              "correctOptionId": "state-effects",
               "points": 10,
-              "message": "填写轨迹来源。"
+              "explanation": "轨迹是状态转换和副作用的记录，不是公开完整思维过程。"
             },
             {
-              "id": "request",
-              "type": "json-pointer-present",
-              "path": "trace.json",
-              "rule": "/requestId",
-              "required": true,
+              "id": "trace-ids",
+              "prompt": "一条可追踪轨迹至少要有哪些标识？",
+              "options": [
+                {
+                  "id": "model-only",
+                  "label": "只要模型名称"
+                },
+                {
+                  "id": "source-request-time",
+                  "label": "source、requestId 和 capturedAt，才能定位是哪一次运行"
+                },
+                {
+                  "id": "user-name",
+                  "label": "林舟的真名和手机号"
+                },
+                {
+                  "id": "no-ids",
+                  "label": "标识会泄露隐私，全部省略"
+                }
+              ],
+              "correctOptionId": "source-request-time",
               "points": 10,
-              "message": "填写请求标识。"
+              "explanation": "没有来源、请求标识和采集时间，失败步骤就无法复盘。"
             },
             {
-              "id": "steps",
-              "type": "json-array-shape",
-              "path": "trace.json",
-              "rule": "/steps:3:step,kind,status",
-              "required": true,
-              "points": 20,
-              "message": "至少三个结构化步骤。"
-            },
-            {
-              "id": "tools",
-              "type": "json-array-shape",
-              "path": "trace.json",
-              "rule": "/toolCalls:1:name,result",
-              "required": true,
-              "points": 15,
-              "message": "至少一条工具调用。"
-            },
-            {
-              "id": "stop",
-              "type": "json-pointer-present",
-              "path": "trace.json",
-              "rule": "/stopReason",
-              "required": true,
+              "id": "step-shape",
+              "prompt": "这次超时循环，轨迹里的步骤应长什么样？",
+              "options": [
+                {
+                  "id": "one-blob",
+                  "label": "一整段散文：“后来好像超时了”"
+                },
+                {
+                  "id": "structured-steps",
+                  "label": "至少三步结构化记录：观察输入、决定调用工具、工具超时/结果"
+                },
+                {
+                  "id": "only-final",
+                  "label": "只记最后一句对用户的回复"
+                },
+                {
+                  "id": "skip-tool",
+                  "label": "工具调用不必记，以免难看"
+                }
+              ],
+              "correctOptionId": "structured-steps",
               "points": 10,
-              "message": "记录停止原因。"
+              "explanation": "步骤要有 kind 和 status。至少能看出观察、决策和工具结果。"
             },
             {
-              "id": "budget",
-              "type": "json-number-range",
-              "path": "trace.json",
-              "rule": "/budget/maxSteps:1:100",
-              "required": true,
+              "id": "redact-trace",
+              "prompt": "保存这条轨迹时，哪项正确？",
+              "options": [
+                {
+                  "id": "keep-key",
+                  "label": "留下 API key 和完整 Prompt，方便同事复现"
+                },
+                {
+                  "id": "redact",
+                  "label": "只留参数摘要和状态，去掉密钥、完整敏感 Prompt 和个人待办原文"
+                },
+                {
+                  "id": "drop-trace",
+                  "label": "有风险就不要记轨迹"
+                },
+                {
+                  "id": "public-gist",
+                  "label": "发到公开 gist 让社区帮忙看"
+                }
+              ],
+              "correctOptionId": "redact",
               "points": 10,
-              "message": "设置最大步骤预算。"
+              "explanation": "可复盘不等于保存秘密。工具参数用摘要，密钥必须去掉。"
             },
             {
-              "id": "recovery",
-              "type": "markdown-section",
-              "path": "recovery.md",
-              "rule": "## 重试与补偿",
-              "required": true,
+              "id": "timeout-write",
+              "prompt": "calendar.create 超时后，正确理解是？",
+              "options": [
+                {
+                  "id": "not-created",
+                  "label": "一定没创建成功，可以当没发生过"
+                },
+                {
+                  "id": "unknown-effect",
+                  "label": "不确定会议有没有被创建，恢复前要查状态或靠幂等键"
+                },
+                {
+                  "id": "created",
+                  "label": "超时说明已经成功"
+                },
+                {
+                  "id": "retry-now",
+                  "label": "立刻用同一参数再调一次就行"
+                }
+              ],
+              "correctOptionId": "unknown-effect",
               "points": 10,
-              "message": "定义重试与补偿。"
+              "explanation": "超时不等于写操作未发生。盲目重试可能创建两场会议。"
             },
             {
-              "id": "handoff",
-              "type": "markdown-section",
-              "path": "recovery.md",
-              "rule": "## 人工接管",
-              "required": true,
+              "id": "failure-class",
+              "prompt": "这次超时应归入哪类失败？",
+              "options": [
+                {
+                  "id": "permanent",
+                  "label": "永久失败，工具永远坏了"
+                },
+                {
+                  "id": "transient-unknown",
+                  "label": "瞬时失败且副作用未知，不能当永久失败也不能当成功"
+                },
+                {
+                  "id": "auth",
+                  "label": "权限不足"
+                },
+                {
+                  "id": "user-error",
+                  "label": "都是林舟的错"
+                }
+              ],
+              "correctOptionId": "transient-unknown",
               "points": 10,
-              "message": "定义人工接管。"
+              "explanation": "恢复策略要区分瞬时、永久、权限不足和不确定副作用。超时属于前两者之间的未知副作用。"
             },
             {
-              "id": "captured-at",
-              "type": "json-pointer-present",
-              "path": "trace.json",
-              "rule": "/capturedAt",
-              "required": true,
-              "points": 5,
-              "message": "填写证据采集时间。"
+              "id": "idempotent-replay",
+              "prompt": "要从检查点恢复这次创建会议，正确做法是？",
+              "options": [
+                {
+                  "id": "blind-replay",
+                  "label": "从第一步重新跑，不管有没有幂等键"
+                },
+                {
+                  "id": "checkpoint-idempotent",
+                  "label": "从最近一致状态重放，同一幂等键保证多次执行效果等于一次"
+                },
+                {
+                  "id": "delete-all",
+                  "label": "把日历清空再来"
+                },
+                {
+                  "id": "new-agent",
+                  "label": "换一个 Agent 身份再试，当作新请求"
+                }
+              ],
+              "correctOptionId": "checkpoint-idempotent",
+              "points": 10,
+              "explanation": "恢复是检查点加重放。幂等键让重放不产生二次副作用。"
+            },
+            {
+              "id": "no-infinite-retry",
+              "prompt": "工具超时后立刻连打，为什么不行？",
+              "options": [
+                {
+                  "id": "faster",
+                  "label": "连打更快成功"
+                },
+                {
+                  "id": "duplicate-risk",
+                  "label": "没有预算和退避的重试会放大未知副作用"
+                },
+                {
+                  "id": "ok-if-logged",
+                  "label": "只要写了日志就可以无限重试"
+                },
+                {
+                  "id": "ok-local",
+                  "label": "本地调用没有副作用"
+                }
+              ],
+              "correctOptionId": "duplicate-risk",
+              "points": 10,
+              "explanation": "不要无限重试。超时后更要有步数/费用预算和退避。"
+            },
+            {
+              "id": "stop-budget",
+              "prompt": "这条轨迹怎样才算可运营的停止条件？",
+              "options": [
+                {
+                  "id": "until-happy",
+                  "label": "模型自己觉得满意再停"
+                },
+                {
+                  "id": "reason-and-max",
+                  "label": "记录 stopReason，并设置 maxSteps/maxTokens 预算"
+                },
+                {
+                  "id": "user-close",
+                  "label": "用户关掉窗口就算停止条件"
+                },
+                {
+                  "id": "no-stop",
+                  "label": "有恢复策略就不需要停止条件"
+                }
+              ],
+              "correctOptionId": "reason-and-max",
+              "points": 10,
+              "explanation": "停止原因和预算是轨迹的一部分。没有它们，循环无法被审计。"
+            },
+            {
+              "id": "human-handoff",
+              "prompt": "不确定会议有没有被创建时，正确的接管是？",
+              "options": [
+                {
+                  "id": "keep-looping",
+                  "label": "继续让 Agent 猜，直到日历看起来对"
+                },
+                {
+                  "id": "handoff-check",
+                  "label": "停止循环，交给人工查日历状态再决定补偿或确认"
+                },
+                {
+                  "id": "tell-success",
+                  "label": "对林舟说已经改好了"
+                },
+                {
+                  "id": "delete-guess",
+                  "label": "随机删一场会议当补偿"
+                }
+              ],
+              "correctOptionId": "handoff-check",
+              "points": 10,
+              "explanation": "不确定副作用必须人工接管。先查状态，再补偿，而不是继续循环。"
             }
           ]
         }

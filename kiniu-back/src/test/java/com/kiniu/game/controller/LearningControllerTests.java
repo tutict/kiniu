@@ -297,5 +297,27 @@ class LearningControllerTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.passed").value(true))
                 .andExpect(jsonPath("$.progress.currentTaskId").value("agent-trace-recovery"));
+
+        mockMvc.perform(post("/learn/tasks/agent-trace-recovery/check")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "answers": {
+                                    "what-is-trace": "state-effects",
+                                    "trace-ids": "source-request-time",
+                                    "step-shape": "structured-steps",
+                                    "redact-trace": "redact",
+                                    "timeout-write": "unknown-effect",
+                                    "failure-class": "transient-unknown",
+                                    "idempotent-replay": "checkpoint-idempotent",
+                                    "no-infinite-retry": "duplicate-risk",
+                                    "stop-budget": "reason-and-max",
+                                    "human-handoff": "handoff-check"
+                                  }
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.passed").value(true))
+                .andExpect(jsonPath("$.progress.currentTaskId").value("evaluation-suite"));
     }
 }
