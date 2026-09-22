@@ -57,6 +57,12 @@ public class StoryNode {
     }
 
     public Optional<StoryChoice> findMatchingChoice(WorldState worldState, String input, String choice) {
+        Optional<StoryChoice> exact = choices.stream()
+                .filter(candidate -> candidate.matchesExactSelection(worldState, choice))
+                .findFirst();
+        if (exact.isPresent()) {
+            return exact;
+        }
         return choices.stream()
                 .filter(candidate -> candidate.matchesSelection(worldState, input, choice))
                 .findFirst();

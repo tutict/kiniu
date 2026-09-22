@@ -16,6 +16,7 @@ import com.kiniu.game.state.WorldState;
 import com.kiniu.game.story.StoryEvent;
 import java.io.IOException;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -70,59 +71,39 @@ public class AIService {
             WorldState worldState,
             List<String> recentDialogue,
             StoryEvent storyBeat) {
-        StringBuilder reply = new StringBuilder();
-        reply.append(agent.name())
-                .append(" acts as an independent ")
-                .append(agent.role())
-                .append(" inside a configurable Agent container. The tone is ")
-                .append(agent.personality())
-                .append(". ");
-        reply.append(agent.summary()).append(' ');
-        reply.append("Current objective: ").append(turnPlan.objective()).append(". ");
-        reply.append("Initiative score: ").append(turnPlan.initiativeScore()).append(". ");
-        reply.append("Private memory: ").append(turnPlan.memorySummary()).append(' ');
+        Optional<String> practiceReply = EveningPracticeReply.fromLearnerText(playerInput);
+        if (practiceReply.isPresent()) {
+            return practiceReply.get();
+        }
+        String move = !safe(playerChoice).isBlank() ? safe(playerChoice) : safe(playerInput);
+        String scene = worldState.getCurrentScene() == null ? "" : worldState.getCurrentScene();
+        String node = worldState.getCurrentNodeId() == null ? "" : worldState.getCurrentNodeId();
+        String combined = (safe(agent.role()) + " " + scene + " " + node + " " + move).toLowerCase();
+        if (containsAny(combined, "companion", "今晚", "待办", "日历", "理清", "晚间")) {
+            return "把今晚最乱的那几条待办贴过来。我最多给三条下一步，不确定的会标出来。我不会改日历，也不会给同事发消息。";
+        }
+        if (containsAny(combined, "knowledge", "资料", "检索", "公告")) {
+            return "有资料我才回答。把要查的那几句贴过来；找不到我会明说，不编，也不拿别人的东西来答你。";
+        }
+        if (containsAny(combined, "writing", "写作", "提纲", "改稿")) {
+            return "先告诉我写给谁、想让对方看完后做什么。我帮你提纲或改这一段，不会换成别人的口气。";
+        }
+        if (containsAny(combined, "project", "workspace", "推进", "拆")) {
+            return "先说这件事做到什么算完。我帮你拆成今晚能做的一小步，并标出不确定的地方。我不会替你改日历。";
+        }
+        if (containsAny(combined, "interview", "追问")) {
+            return "一次只问一件事。答完再问边界：能不能改日历、找不到能不能编。";
+        }
+        return "先说今晚最想搞定的一件事。我最多给三条下一步，不确定会标出来。做不到的事（改日历、群发）我会直接拒绝。";
+    }
 
-        if (storyBeat != null) {
-            reply.append(storyBeat.narrative()).append(' ');
-            reply.append("Branch: ")
-                    .append(storyBeat.title())
-                    .append(" [")
-                    .append(storyBeat.targetNodeId())
-                    .append("] sourced from ")
-                    .append(storyBeat.sourceType())
-                    .append(". ");
-            if (!storyBeat.directorSummary().isBlank()) {
-                reply.append(storyBeat.directorSummary()).append(' ');
+    private boolean containsAny(String haystack, String... needles) {
+        for (String needle : needles) {
+            if (haystack.contains(needle.toLowerCase()) || haystack.contains(needle)) {
+                return true;
             }
-        } else {
-            reply.append("The session holds for a moment, waiting for the next useful move. ");
         }
-
-        if (!playerChoice.isBlank()) {
-            reply.append("The user chose \"").append(playerChoice).append("\". ");
-        } else if (!playerInput.isBlank()) {
-            reply.append("The user said \"").append(playerInput).append("\". ");
-        } else {
-            reply.append("The user has not acted yet. ");
-        }
-
-        reply.append("Current workspace: ")
-                .append(worldState.getCurrentScene())
-                .append(", node: ")
-                .append(worldState.getCurrentNodeId())
-                .append(". Recent memory entries: ")
-                .append(recentDialogue.size())
-                .append(". ");
-        reply.append("Relationship vector: trust=")
-                .append(worldState.getRelationship(agent.id()).getTrust())
-                .append(", affection=")
-                .append(worldState.getRelationship(agent.id()).getAffection())
-                .append(", curiosity=")
-                .append(worldState.getRelationship(agent.id()).getCuriosity())
-                .append(". ");
-
-        reply.append("Fallback local agent-container generation path.");
-        return reply.toString();
+        return false;
     }
 
     public PlotBeatDraft generatePlotBeatDraft(
@@ -330,13 +311,21 @@ public class AIService {
             WorldState worldState,
             List<String> recentDialogue,
             StoryEvent storyBeat) {
-        String move = !safe(playerChoice).isBlank() ? playerChoice : safe(playerInput);
+        String learnerText = safe(playerInput).trim();
+        String choice = safe(playerChoice).trim();
+        String move = !learnerText.isBlank() && !choice.isBlank() && !learnerText.equals(choice)
+                ? choice + "\nLearner text: " + learnerText
+                : (!choice.isBlank() ? choice : learnerText);
+        String practiceNote = EveningPracticeReply.fromLearnerText(learnerText).isPresent()
+                ? "\nThe learner text already states tonight's boundary. Answer that text in Chinese. Use at most 3 steps, repeat the limits they wrote, and do not ask them to paste it again."
+                : "";
         return "Workspace: " + worldState.getCurrentScene()
                 + "\nNode: " + worldState.getCurrentNodeId()
                 + "\nTurn title: " + storyBeat.title()
                 + "\nContext: " + storyBeat.narrative()
                 + "\nDirector note: " + storyBeat.directorSummary()
                 + "\nUser move: " + (move.isBlank() ? "silence" : move)
+                + practiceNote
                 + "\nRecent dialogue:\n- " + String.join("\n- ", recentDialogue)
                 + "\nRespond in 2-4 sentences.";
     }

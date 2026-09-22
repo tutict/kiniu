@@ -6,6 +6,7 @@ import com.kiniu.game.agent.AgentOrchestratorService;
 import com.kiniu.game.agent.AgentService;
 import com.kiniu.game.agent.AgentTurnPlan;
 import com.kiniu.game.ai.AITelemetryCollector;
+import com.kiniu.game.ai.EveningPracticeReply;
 import com.kiniu.game.dto.AgentReplyView;
 import com.kiniu.game.dto.BranchOptionView;
 import com.kiniu.game.dto.GameRequest;
@@ -20,6 +21,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -171,7 +173,7 @@ public class GameEngine {
                 .map(reply -> reply.agentName() + ": " + reply.message())
                 .reduce((left, right) -> left + "\n\n" + right)
                 .orElse("No agent replied.");
-        String combinedMessage = buildCombinedMessage(directedBeat, agentMessage);
+        String combinedMessage = visibleMessage(input, directedBeat, agentMessage, agentReplies);
 
         sessionArchiveService.recordTurn(
                 sessionId,
@@ -235,7 +237,8 @@ public class GameEngine {
         if (containsAny(combined, "help", "帮助", "建议", "下一步", "plan", "review", "复盘", "总结")) {
             state.adjustRelationship("narrator", 1, 0, 1);
         }
-        if (containsAny(combined, "doubt", "refuse", "不对", "换一个", "别", "不要")) {
+        if (EveningPracticeReply.fromLearnerText(input).isEmpty()
+                && containsAny(combined, "doubt", "refuse", "不对", "换一个", "别", "不要")) {
             state.addFlag("needs-reroute");
         }
     }
@@ -249,15 +252,29 @@ public class GameEngine {
         return false;
     }
 
+    private String visibleMessage(
+            String input,
+            StoryEvent storyBeat,
+            String agentMessage,
+            List<AgentReplyView> agentReplies) {
+        Optional<String> practiceReply = EveningPracticeReply.fromLearnerText(input);
+        if (practiceReply.isEmpty()) {
+            return buildCombinedMessage(storyBeat, agentMessage);
+        }
+        String spoken = agentReplies.stream()
+                .map(AgentReplyView::message)
+                .filter(message -> message != null && !message.isBlank())
+                .distinct()
+                .collect(Collectors.joining("\n\n"));
+        return spoken.isBlank() ? practiceReply.orElse("") : spoken;
+    }
+
     private String buildCombinedMessage(StoryEvent storyBeat, String agentMessage) {
         StringBuilder combinedMessage = new StringBuilder();
         combinedMessage.append(storyBeat.title())
                 .append('\n')
                 .append(storyBeat.narrative());
 
-        if (!storyBeat.directorSummary().isBlank()) {
-            combinedMessage.append("\n\n").append(storyBeat.directorSummary());
-        }
         if (!agentMessage.isBlank()) {
             combinedMessage.append("\n\n").append(agentMessage);
         }

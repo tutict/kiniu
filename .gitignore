@@ -73,6 +73,7 @@ release.properties
 /kiniu-back/src/main/resources/learning-test.txt
 /kiniu-back/data/learning-attempts.json
 /kiniu-back/data/learning-progress.json
+/kiniu-back/data/session-exports/
 
 # Local agent workspaces
 /.workbuddy/

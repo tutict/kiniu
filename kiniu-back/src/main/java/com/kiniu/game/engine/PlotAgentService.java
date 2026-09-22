@@ -101,24 +101,15 @@ public class PlotAgentService {
             String playerInput,
             String playerChoice,
             List<String> choices) {
-        String playerMove = !safe(playerChoice).isBlank() ? playerChoice : safe(playerInput);
-        return "Container-generated turn: type="
-                + beatType
-                + ", scene="
-                + sceneId
-                + ", spotlight="
-                + spotlightAgent.name()
-                + ". The user steers the session with \""
-                + (playerMove.isBlank() ? "silence" : playerMove)
-                + "\" while the relationship vector is trust="
-                + worldState.getRelationship(spotlightAgent.id()).getTrust()
-                + ", affection="
-                + worldState.getRelationship(spotlightAgent.id()).getAffection()
-                + ", curiosity="
-                + worldState.getRelationship(spotlightAgent.id()).getCuriosity()
-                + ". Suggested next actions: "
-                + String.join(", ", choices)
-                + ". Fallback local agent-container planning path.";
+        return switch (beatType) {
+            case "companion" -> "今晚先说最乱的一件。贴几条待办的话，我最多给三条下一步，不确定会标出来。我不会改日历。";
+            case "review" -> "先收成：你要做成什么、已经知道什么、还不确定什么。最多三条下一步。我不会替你改日历。";
+            case "knowledge" -> "有资料才回答。找不到就明说，不编，也不拿别人的东西来答你。";
+            case "writing" -> "先问写给谁、想说什么，再帮你提纲或改稿。不会换成别人的口气。";
+            case "planning" -> "把这件事拆成今晚能做的小步，并写清怎样算做完。我不替你改日历或下单。";
+            case "interview" -> "一次只问一件事。答完再追问边界：能不能改日历、找不到能不能编。";
+            default -> "先说今晚想做什么。我按「最多三条下一步、不确定就标出、不改日历」来帮你。";
+        };
     }
 
     private Agent selectSpotlightAgent(WorldState worldState, List<Agent> contextAgents) {
@@ -130,11 +121,11 @@ public class PlotAgentService {
                 .orElseGet(() -> contextAgents.isEmpty()
                         ? new Agent(
                                 "narrator",
-                                "Narrator",
+                                "引导",
                                 "director",
-                                "Fallback narrator",
+                                "把对话带到合适的帮法。",
                                 "calm",
-                                "Keep the session coherent.",
+                                "用中文简短回答。最多三条下一步，不确定就标出，不要改日历。",
                                 List.of(worldState.getCurrentScene()),
                                 java.util.Map.of(),
                                 List.of("Keep the session coherent."),
@@ -149,14 +140,14 @@ public class PlotAgentService {
         int trust = worldState.getRelationship(spotlightAgent.id()).getTrust();
         int curiosity = worldState.getRelationship(spotlightAgent.id()).getCuriosity();
 
+        if (containsAny(combined, "今晚", "待办", "日历", "理清", "陪聊", "闲聊", "心情")) {
+            return "companion";
+        }
         if (containsAny(combined, "面试", "八股", "java", "jvm", "spring", "interview")) {
             return "interview";
         }
         if (containsAny(combined, "rag", "检索", "向量", "embedding", "重排", "知识库", "文档")) {
             return "knowledge";
-        }
-        if (containsAny(combined, "项目", "代码", "任务", "计划", "prepare", "strategy", "project")) {
-            return "planning";
         }
         if (containsAny(combined, "写作", "文章", "改稿", "提纲", "draft", "writing")) {
             return "writing";
@@ -164,11 +155,14 @@ public class PlotAgentService {
         if (containsAny(combined, "复盘", "总结", "review", "薄弱", "下一步")) {
             return "review";
         }
-        if (containsAny(combined, "陪聊", "闲聊", "状态", "心情", "trust", "help", "stay") || trust >= 2) {
-            return "companion";
+        if (containsAny(combined, "项目", "代码", "任务", "计划", "prepare", "strategy", "project")) {
+            return "planning";
         }
         if (containsAny(combined, "who", "why", "ask", "memory", "为什么", "怎么") || curiosity >= 2) {
             return "discovery";
+        }
+        if (trust >= 2) {
+            return "companion";
         }
         return "pivot";
     }
@@ -189,14 +183,14 @@ public class PlotAgentService {
 
         switch (beatType) {
             case "interview" -> {
-                choices.add("让 " + agentName + " 出一道新题");
-                choices.add("先回答上一题再让它评分");
-                choices.add("要求它追问一个更深的边界条件");
+                choices.add("一次只问一件事");
+                choices.add("再问能不能改日历");
+                choices.add("再问找不到能不能编");
             }
             case "knowledge" -> {
-                choices.add("让 " + agentName + " 基于资料回答");
-                choices.add("让它列出缺失上下文");
-                choices.add("设计一套检索与评估策略");
+                choices.add("按手头资料回答");
+                choices.add("资料不够就明说还缺什么");
+                choices.add("找不到就拒绝编造");
             }
             case "planning" -> {
                 choices.add("让 " + agentName + " 拆解下一步");
@@ -214,19 +208,19 @@ public class PlotAgentService {
                 choices.add("把发现记录到会话记忆");
             }
             case "companion" -> {
-                choices.add("让 " + agentName + " 继续陪聊");
-                choices.add("把状态整理成一个小行动");
-                choices.add("记录一个偏好到长期记忆");
+                choices.add("把今晚最乱的一件说清楚");
+                choices.add("贴几条待办，帮我排出下一步");
+                choices.add("先问我做不到哪些事");
             }
             case "review" -> {
-                choices.add("总结本轮关键结论");
-                choices.add("列出薄弱点和下一步");
-                choices.add("沉淀成可复用 Agent 模板");
+                choices.add("再收成最多三条下一步");
+                choices.add("把不确定的地方标出来");
+                choices.add("记下下次还能用的做法");
             }
             default -> {
-                choices.add("让容器重新判断最合适的 Agent");
-                choices.add("切换到另一个任务流");
-                choices.add("先总结当前会话再继续");
+                choices.add("换一种帮法");
+                choices.add("先说今晚最想搞定的一件事");
+                choices.add("先问清楚做不到什么");
             }
         }
 
@@ -242,14 +236,14 @@ public class PlotAgentService {
 
     private String titleFor(String beatType, Agent spotlightAgent) {
         return switch (beatType) {
-            case "interview" -> "Adaptive Interview Turn";
-            case "knowledge" -> "Grounded Knowledge Turn";
-            case "planning" -> "Project Planning Turn";
-            case "writing" -> "Writing Coaching Turn";
-            case "companion" -> "Companion Check-in";
-            case "review" -> "Session Review";
-            case "discovery" -> "Context Discovery";
-            default -> "Container Routing Turn";
+            case "interview" -> "追问练习";
+            case "knowledge" -> "先查再答";
+            case "planning" -> "推进一件事";
+            case "writing" -> "写作帮手";
+            case "companion" -> "晚间计划";
+            case "review" -> "收成下一步";
+            case "discovery" -> "先问清楚";
+            default -> "先说今晚要做什么";
         };
     }
 

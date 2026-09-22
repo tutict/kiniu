@@ -26,27 +26,51 @@ class StoryEngineTests {
 
         List<String> choices = storyEngine.getDefaultChoices(state);
 
-        assertThat(choices).containsExactly(
-                "自由陪聊",
-                "Java/RAG 面试考查",
-                "知识库问答",
-                "项目助理",
+        assertThat(choices).contains(
+                "随便聊聊",
+                "帮我理清今晚",
+                "先查资料再回答",
+                "帮我推进一件事",
                 "写作教练");
     }
 
     @Test
-    void shouldRouteIntoJavaRagInterviewMode() {
+    void shouldRouteEveningPlanIntoCompanion() {
         StoryEngine storyEngine = createStoryEngine();
         WorldState state = WorldState.initial();
 
-        storyEngine.findTriggeredEvent(state, "", "Java/RAG 面试考查");
+        storyEngine.findTriggeredEvent(state, "", "帮我理清今晚");
+
+        assertThat(state.getFlags()).contains("mode-companion");
+        assertThat(state.getCurrentNodeId()).isEqualTo("companion.check-in");
+        assertThat(storyEngine.getDefaultChoices(state)).contains("接着聊今晚", "帮我排出下一步");
+    }
+
+    @Test
+    void shouldRouteThePreparedEveningStarterIntoCompanion() {
+        StoryEngine storyEngine = createStoryEngine();
+        WorldState state = WorldState.initial();
+
+        storyEngine.findTriggeredEvent(
+                state,
+                "请按刚才定下的边界，帮我安排今晚：最多 3 条下一步，标出不确定的地方。不要改日历。",
+                "");
+
+        assertThat(state.getCurrentNodeId()).isEqualTo("companion.check-in");
+        assertThat(state.getFlags()).contains("mode-companion");
+    }
+
+    @Test
+    void shouldKeepInterviewOffTheOrdinaryHome() {
+        StoryEngine storyEngine = createStoryEngine();
+        WorldState state = WorldState.initial();
 
         List<String> choices = storyEngine.getDefaultChoices(state);
 
-        assertThat(state.getFlags()).contains("mode-interview");
-        assertThat(state.getCurrentNodeId()).isEqualTo("interview.java-rag");
-        assertThat(state.getAffinity("java-rag-interviewer")).isGreaterThan(0);
-        assertThat(choices).contains("先问 Java 基础", "切到 RAG 架构", "总结薄弱点");
+        assertThat(choices).doesNotContain("Java/RAG 面试考查");
+        assertThat(choices).contains("随便聊聊", "帮我理清今晚", "写作教练");
+        assertThat(storyEngine.getStoryCatalog().nodes().stream().map(node -> node.id()))
+                .contains("interview.java-rag");
     }
 
     @Test
@@ -54,12 +78,12 @@ class StoryEngineTests {
         StoryEngine storyEngine = createStoryEngine();
         WorldState state = WorldState.initial();
 
-        storyEngine.findTriggeredEvent(state, "", "知识库问答");
-        storyEngine.findTriggeredEvent(state, "", "整理知识包缺口");
+        storyEngine.findTriggeredEvent(state, "", "先查资料再回答");
+        storyEngine.findTriggeredEvent(state, "", "资料还缺什么");
 
         assertThat(state.getFlags()).contains("mode-knowledge");
         assertThat(state.getCurrentNodeId()).isEqualTo("learning.review");
-        assertThat(storyEngine.getDefaultChoices(state)).contains("继续复盘", "回到 Agent 容器");
+        assertThat(storyEngine.getDefaultChoices(state)).contains("再收紧一点", "换一件别的事");
     }
 
     @Test

@@ -236,6 +236,102 @@ class AIServiceStructuredOutputTests {
                         "ai"));
     }
 
+    @Test
+    void shouldSpeakPlainChineseWhenProviderIsMissing() {
+        AIRuntimeContext runtimeContext = new AIRuntimeContext();
+        OpenAICompatibleClient client = mock(OpenAICompatibleClient.class);
+        AIService aiService = new AIService(runtimeContext, client, new AITelemetryCollector(), new ObjectMapper());
+        Agent companion = new Agent(
+                "companion",
+                "晚间计划助手",
+                "companion",
+                "把乱成一团的今晚收成最多三条下一步。",
+                "warm",
+                "用中文简短回答。",
+                List.of("companion-check-in"),
+                Map.of(),
+                List.of("Help plan tonight"),
+                List.of(),
+                7,
+                "emotional");
+        AgentTurnPlan plan = new AgentTurnPlan(companion, "plan tonight", "none", 7, true, List.of());
+        StoryEvent beat = new StoryEvent(
+                "evt-evening",
+                "container.home",
+                "companion.check-in",
+                "companion-check-in",
+                "companion",
+                "晚间计划",
+                "我不会改日历，也不会给同事发消息。",
+                List.of("接着聊今晚"),
+                "seed",
+                "Keep it short.",
+                List.of("companion"));
+        WorldState state = WorldState.initial();
+        state.setCurrentScene("companion-check-in");
+        state.setCurrentNodeId("companion.check-in");
+
+        String reply = aiService.generateReply(
+                companion,
+                plan,
+                "请按刚才定下的边界，帮我安排今晚。",
+                "帮我理清今晚",
+                state,
+                List.of(),
+                beat);
+
+        assertThat(reply).contains("三条下一步").contains("不会改日历");
+        assertThat(reply).doesNotContain("relationship vector", "Agent container", "Current objective", "Fallback local");
+    }
+
+    @Test
+    void shouldAnswerTheLessonSentenceInsteadOfAskingForItAgain() {
+        AIRuntimeContext runtimeContext = new AIRuntimeContext();
+        OpenAICompatibleClient client = mock(OpenAICompatibleClient.class);
+        AIService aiService = new AIService(runtimeContext, client, new AITelemetryCollector(), new ObjectMapper());
+        Agent companion = new Agent(
+                "companion",
+                "晚间计划助手",
+                "companion",
+                "把乱成一团的今晚收成最多三条下一步。",
+                "warm",
+                "用中文简短回答。",
+                List.of("companion-check-in"),
+                Map.of(),
+                List.of("Help plan tonight"),
+                List.of(),
+                7,
+                "emotional");
+        AgentTurnPlan plan = new AgentTurnPlan(companion, "plan tonight", "none", 7, true, List.of());
+        StoryEvent beat = new StoryEvent(
+                "evt-evening",
+                "container.home",
+                "companion.check-in",
+                "companion-check-in",
+                "companion",
+                "晚间计划",
+                "我不会改日历，也不会给同事发消息。",
+                List.of("接着聊今晚"),
+                "seed",
+                "Keep it short.",
+                List.of("companion"));
+        WorldState state = WorldState.initial();
+        state.setCurrentScene("companion-check-in");
+        state.setCurrentNodeId("companion.check-in");
+
+        String reply = aiService.generateReply(
+                companion,
+                plan,
+                "今晚我加班回家了。不要改日历，不要发消息，也不要下单。待办：回客户邮件，买早餐，准备周会。",
+                "帮我理清今晚",
+                state,
+                List.of(),
+                beat);
+
+        assertThat(reply).contains("回客户邮件", "买早餐", "准备周会", "不要下单");
+        assertThat(reply).doesNotContain("贴过来");
+    }
+
     private WorldState sampleWorldState() {
         WorldState state = WorldState.initial();
         state.setCurrentScene("crossroads");

@@ -162,11 +162,11 @@ public class AgentManager {
         LinkedHashMap<String, Agent> defaults = new LinkedHashMap<>();
         defaults.put("narrator", new Agent(
                 "narrator",
-                "Lab Coordinator",
+                "引导",
                 "orchestrator",
-                "Routes each conversation into the right Agent, task flow, and knowledge context.",
+                "把对话带到合适的帮法：理清今晚、查资料、推进一件事或写作。",
                 "calm, concise, systems-minded",
-                "Keep the session useful. Clarify the user's goal, select the right Agent mode, and summarize next actions.",
+                "用中文简短回答。先弄清用户今晚要做什么，再选一种帮法。最多三条下一步，不确定就标出，不要改日历或通知别人。",
                 List.of("agent-hub", "mode-router", "session-review", "learning-review"),
                 Map.of(
                         "voice", "operator",
@@ -181,11 +181,11 @@ public class AgentManager {
                 "session"));
         defaults.put("companion", new Agent(
                 "companion",
-                "Daily Companion",
+                "晚间计划助手",
                 "companion",
-                "A steady desktop companion for open conversation, lightweight planning, and emotional check-ins.",
+                "把乱成一团的今晚收成最多三条下一步，标出不确定的地方，不改日历。",
                 "warm, practical, attentive",
-                "Respond like a supportive companion. Ask one useful follow-up, remember preferences, and keep the tone natural.",
+                "你是晚间计划助手。用中文简短回答。最多三条下一步，标出不确定，不改日历、不群发、不代下单。先问清楚今晚最乱的一件，缺待办就请对方贴出来，不要编造日程。",
                 List.of("companion-check-in", "learning-review", "agent-hub"),
                 Map.of(
                         "tone", "supportive",
@@ -200,11 +200,11 @@ public class AgentManager {
                 "emotional"));
         defaults.put("java-rag-interviewer", new Agent(
                 "java-rag-interviewer",
-                "Java & RAG Interviewer",
+                "追问助手",
                 "interviewer",
-                "A rigorous interviewer for Java fundamentals, JVM, concurrency, Spring, and RAG architecture.",
+                "一次只问一件事，答完再追问边界：能不能改日历、找不到能不能编。",
                 "direct, precise, fair",
-                "Run adaptive interviews. Ask one question at a time, evaluate the answer, follow up on gaps, then give a concise reference answer.",
+                "用中文一次只问一件事。追问边界：能不能改日历、找不到资料能不能编。不要输出调试信息。",
                 List.of("interview-java-rag", "interview-java-core", "interview-rag-architecture", "learning-review"),
                 Map.of(
                         "difficulty", "adaptive",
@@ -219,11 +219,11 @@ public class AgentManager {
                 "skill-gap"));
         defaults.put("knowledge-curator", new Agent(
                 "knowledge-curator",
-                "Knowledge Curator",
+                "查资料助手",
                 "rag-specialist",
-                "A knowledge-base Agent that turns documents, notes, and retrieved context into grounded answers.",
+                "有资料才回答。找不到就明说，不编，也不拿别人的东西来答。",
                 "careful, source-aware, skeptical",
-                "Prefer grounded answers. Separate known facts, assumptions, and missing context. Ask for documents when retrieval context is absent.",
+                "用中文回答。有资料才给结论，找不到就明说还缺什么。不要编，也不要拿别人的材料来答当前这个人。",
                 List.of("knowledge-qa", "interview-rag-architecture", "session-review"),
                 Map.of(
                         "grounding", "required",
@@ -238,11 +238,11 @@ public class AgentManager {
                 "semantic"));
         defaults.put("project-agent", new Agent(
                 "project-agent",
-                "Project Agent",
+                "推进助手",
                 "workspace-assistant",
-                "A project assistant for codebase orientation, task breakdown, reviews, and progress tracking.",
+                "把一件事拆成今晚能做的小步，写清怎样算做完，不替用户改日历。",
                 "structured, pragmatic, engineering-focused",
-                "Help the user move project work forward. Clarify scope, identify risks, and produce actionable next steps.",
+                "用中文帮助推进一件事。先问做到什么算完，再拆成今晚能做的一小步，标出不确定。不要改日历或下单。",
                 List.of("workspace-project", "session-review", "agent-hub"),
                 Map.of(
                         "focus", "delivery",
@@ -257,11 +257,11 @@ public class AgentManager {
                 "strategic"));
         defaults.put("writing-coach", new Agent(
                 "writing-coach",
-                "Writing Coach",
+                "写作帮手",
                 "coach",
-                "A writing companion for outlines, drafts, revision, and idea shaping.",
+                "先问写给谁、想说什么，再帮提纲或改稿，不换成别人的口气。",
                 "clear, editorial, patient",
-                "Help the user shape writing without taking over their voice. Offer structure, examples, and targeted edits.",
+                "用中文帮写作。先问写给谁、想让对方看完后做什么，再提纲或改这一段。不要换成别人的口气。",
                 List.of("writing-coach", "learning-review", "agent-hub"),
                 Map.of(
                         "focus", "clarity",

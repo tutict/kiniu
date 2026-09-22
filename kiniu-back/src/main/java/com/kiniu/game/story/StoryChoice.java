@@ -76,14 +76,21 @@ public class StoryChoice {
         return condition.isSatisfiedBy(worldState);
     }
 
+    public boolean matchesExactSelection(WorldState worldState, String choice) {
+        if (!isAvailable(worldState)) {
+            return false;
+        }
+        String normalizedChoice = normalize(choice);
+        return !normalizedChoice.isBlank()
+                && (normalize(label).equals(normalizedChoice) || normalize(id).equals(normalizedChoice));
+    }
+
     public boolean matchesSelection(WorldState worldState, String input, String choice) {
         if (!isAvailable(worldState)) {
             return false;
         }
 
-        String normalizedChoice = normalize(choice);
-        if (!normalizedChoice.isBlank()
-                && (normalize(label).equals(normalizedChoice) || normalize(id).equals(normalizedChoice))) {
+        if (matchesExactSelection(worldState, choice)) {
             return true;
         }
 
@@ -91,6 +98,7 @@ public class StoryChoice {
             return false;
         }
 
+        String normalizedChoice = normalize(choice);
         String combined = (normalize(input) + " " + normalizedChoice).trim();
         return !combined.isBlank() && condition.matchesKeywords(combined);
     }

@@ -42,7 +42,7 @@ class GameEngineOrchestrationTests {
         assertThat(response.storyEvent()).isNotNull();
         assertThat(response.storyEvent().sourceType()).isEqualTo("generated");
         assertThat(response.state().getCurrentNodeId()).startsWith("generated.");
-        assertThat(response.directorMessage()).contains("Container framing");
+        assertThat(response.directorMessage()).contains("这一轮围绕");
         assertThat(response.orchestration()).isNotNull();
         assertThat(response.orchestration().planner()).isNotNull();
         assertThat(response.orchestration().critic()).isNotNull();
@@ -58,7 +58,7 @@ class GameEngineOrchestrationTests {
         SessionExportResponse exportResponse = sessionArchiveService.getSessionExport(sessionId);
         assertThat(exportResponse.turns()).hasSize(1);
         assertThat(exportResponse.turns().get(0).storyEvent().sourceType()).isEqualTo("generated");
-        assertThat(exportResponse.turns().get(0).directorMessage()).contains("Container framing");
+        assertThat(exportResponse.turns().get(0).directorMessage()).contains("这一轮围绕");
         assertThat(exportResponse.turns().get(0).presentedBranchOptions()).isNotEmpty();
         assertThat(exportResponse.turns().get(0).orchestration()).isNotNull();
         assertThat(exportResponse.turns().get(0).orchestration().critic().notes()).isNotEmpty();
@@ -77,7 +77,7 @@ class GameEngineOrchestrationTests {
         GameResponse response = gameEngine.next(new GameRequest(
                 sessionId,
                 "",
-                "Java/RAG 面试考查",
+                "帮我理清今晚",
                 "companion"));
 
         assertThat(response.orchestration().focusAgentId()).isEqualTo("companion");
@@ -90,42 +90,63 @@ class GameEngineOrchestrationTests {
     void shouldPreferSeededStoryWhenAuthoredChoiceMatches() {
         String sessionId = "seed-" + UUID.randomUUID();
 
-        GameResponse response = gameEngine.next(new GameRequest(sessionId, "", "Java/RAG 面试考查"));
+        GameResponse response = gameEngine.next(new GameRequest(sessionId, "", "帮我理清今晚"));
 
         assertThat(response.storyEvent()).isNotNull();
         assertThat(response.storyEvent().sourceType()).isEqualTo("seed");
-        assertThat(response.storyEvent().targetNodeId()).isEqualTo("interview.java-rag");
-        assertThat(response.state().getCurrentNodeId()).isEqualTo("interview.java-rag");
-        assertThat(response.state().getStorySeedNodeId()).isEqualTo("interview.java-rag");
+        assertThat(response.storyEvent().targetNodeId()).isEqualTo("companion.check-in");
+        assertThat(response.state().getCurrentNodeId()).isEqualTo("companion.check-in");
+        assertThat(response.state().getStorySeedNodeId()).isEqualTo("companion.check-in");
         assertThat(response.choices()).isNotEmpty();
         assertThat(response.branchOptions()).hasSize(response.choices().size());
         assertThat(response.orchestration().speakingAgentIds()).isNotEmpty();
-        assertThat(response.orchestration().planner().sceneGoal()).contains("Java & RAG Interview Room");
+        assertThat(response.message()).contains("不会改日历");
+        assertThat(response.message()).doesNotContain("Container framing", "relationship vector", "Current objective");
+        assertThat(response.orchestration().planner().sceneGoal()).contains("晚间计划");
+    }
+
+    @Test
+    void shouldApplyTheLessonSentenceWhenTheEveningChoiceIsAlsoClicked() {
+        String sessionId = "practice-" + UUID.randomUUID();
+
+        GameResponse response = gameEngine.next(new GameRequest(
+                sessionId,
+                "今晚我加班回家了。不要改日历，不要发消息，也不要下单。待办：回客户邮件，买早餐，准备周会。",
+                "帮我理清今晚"));
+
+        assertThat(response.message()).contains("回客户邮件", "不要下单");
+        assertThat(response.message()).doesNotContain(
+                "贴过来",
+                "acts as an independent",
+                "我可以陪你聊聊今晚",
+                "晚间计划助手:");
+        assertThat(response.message()).doesNotStartWith("晚间计划");
     }
 
     @Test
     void shouldCarryAgentPrivateMemoryAcrossTurns() {
         String sessionId = "memory-" + UUID.randomUUID();
 
-        gameEngine.next(new GameRequest(sessionId, "", "Java/RAG 面试考查"));
-        GameResponse secondTurn = gameEngine.next(new GameRequest(sessionId, "java-rag-interviewer 继续追问 JVM 和线程池", ""));
+        gameEngine.next(new GameRequest(sessionId, "", "帮我理清今晚"));
+        GameResponse secondTurn = gameEngine.next(new GameRequest(sessionId, "今晚待办有点乱，帮我排出下一步", ""));
 
         assertThat(secondTurn.agentReplies()).isNotEmpty();
-        assertThat(secondTurn.agentReplies().stream().map(reply -> reply.agentId())).contains("java-rag-interviewer");
+        assertThat(secondTurn.agentReplies().stream().map(reply -> reply.agentId())).contains("companion");
         assertThat(secondTurn.agentReplies().stream()
-                        .filter(reply -> reply.agentId().equals("java-rag-interviewer"))
+                        .filter(reply -> reply.agentId().equals("companion"))
                         .findFirst()
                         .orElseThrow()
                         .memorySummary())
                 .isNotEqualTo("No private memory yet.");
         assertThat(secondTurn.agentReplies().stream()
-                        .filter(reply -> reply.agentId().equals("java-rag-interviewer"))
+                        .filter(reply -> reply.agentId().equals("companion"))
                         .findFirst()
                         .orElseThrow()
                         .message())
-                .contains("Current objective");
+                .contains("三条下一步");
+        assertThat(secondTurn.message()).doesNotContain("Current objective", "relationship vector");
         assertThat(secondTurn.orchestration().plans().stream()
-                        .filter(plan -> plan.agentId().equals("java-rag-interviewer"))
+                        .filter(plan -> plan.agentId().equals("companion"))
                         .findFirst()
                         .orElseThrow()
                         .scoreFactors())
@@ -137,7 +158,7 @@ class GameEngineOrchestrationTests {
     void shouldPersistSandboxPlansInsideSessionExport() {
         String sessionId = "sandbox-" + UUID.randomUUID();
 
-        GameResponse firstTurn = gameEngine.next(new GameRequest(sessionId, "", "Java/RAG 面试考查"));
+        GameResponse firstTurn = gameEngine.next(new GameRequest(sessionId, "", "帮我理清今晚"));
         BranchOptionView firstOption = firstTurn.branchOptions().get(0);
 
         SessionExportResponse updatedExport = sessionArchiveService.saveSandboxPlan(sessionId, new SandboxPlanRequest(
@@ -148,7 +169,7 @@ class GameEngineOrchestrationTests {
                 List.of(firstOption),
                 firstOption.relationshipDelta(),
                 firstOption.addedFlags(),
-                Map.of("java-rag-interviewer", 2)));
+                Map.of("companion", 2)));
 
         assertThat(updatedExport.sandboxPlans()).hasSize(1);
         assertThat(updatedExport.sandboxPlans().get(0).title()).isEqualTo("Sandbox rehearsal");
