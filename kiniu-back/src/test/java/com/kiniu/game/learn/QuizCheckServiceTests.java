@@ -25,8 +25,16 @@ class QuizCheckServiceTests {
         assertTrue(results.get(0).passed());
         assertFalse(results.get(1).passed());
         assertEquals(50, service.score(results));
+        assertFalse(service.passed(quizTask(80), results));
         assertTrue(service.passed(task, results));
+        assertEquals("specific-user", results.get(0).correctOptionId());
         assertTrue(results.get(0).message().contains("具体用户"));
+        assertTrue(results.get(1).evidence().contains("应选"));
+        List<TaskCheckResult> passing = service.check(task, Map.of(
+                "user-scenario", "specific-user",
+                "business-outcome", "observable-outcome"));
+        assertEquals(100, service.score(passing));
+        assertTrue(service.passed(quizTask(80), passing));
         assertThrows(
                 IllegalArgumentException.class,
                 () -> service.check(task, Map.of(

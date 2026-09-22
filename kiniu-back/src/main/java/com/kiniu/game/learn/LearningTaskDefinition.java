@@ -21,7 +21,10 @@ public record LearningTaskDefinition(
         String evidenceMode,
         List<LearningReference> references,
         List<LearningQuizQuestion> quizQuestions,
-        Integer passingScore) {
+        Integer passingScore,
+        Boolean elective,
+        String tonightPrompt,
+        String takeaway) {
 
     public LearningTaskDefinition {
         skills = skills == null ? List.of() : List.copyOf(skills);
@@ -34,6 +37,100 @@ public record LearningTaskDefinition(
         references = references == null ? List.of() : List.copyOf(references);
         quizQuestions = quizQuestions == null ? List.of() : List.copyOf(quizQuestions);
         passingScore = passingScore == null || passingScore <= 0 ? 100 : passingScore;
+        elective = Boolean.TRUE.equals(elective);
+        tonightPrompt = tonightPrompt == null ? "" : tonightPrompt.trim();
+        takeaway = takeaway == null ? "" : takeaway.trim();
+    }
+
+    public LearningTaskDefinition(
+            String id,
+            String title,
+            String summary,
+            String level,
+            String kind,
+            int estimatedMinutes,
+            List<String> skills,
+            String objective,
+            String scenario,
+            String mentorAgentId,
+            List<LearningFileView> starterFiles,
+            List<TaskCheckDefinition> checks,
+            String lesson,
+            List<String> deliverables,
+            List<String> prerequisiteTaskIds,
+            String evidenceMode,
+            List<LearningReference> references,
+            List<LearningQuizQuestion> quizQuestions,
+            Integer passingScore) {
+        this(
+                id,
+                title,
+                summary,
+                level,
+                kind,
+                estimatedMinutes,
+                skills,
+                objective,
+                scenario,
+                mentorAgentId,
+                starterFiles,
+                checks,
+                lesson,
+                deliverables,
+                prerequisiteTaskIds,
+                evidenceMode,
+                references,
+                quizQuestions,
+                passingScore,
+                false,
+                "",
+                "");
+    }
+
+    public LearningTaskDefinition(
+            String id,
+            String title,
+            String summary,
+            String level,
+            String kind,
+            int estimatedMinutes,
+            List<String> skills,
+            String objective,
+            String scenario,
+            String mentorAgentId,
+            List<LearningFileView> starterFiles,
+            List<TaskCheckDefinition> checks,
+            String lesson,
+            List<String> deliverables,
+            List<String> prerequisiteTaskIds,
+            String evidenceMode,
+            List<LearningReference> references,
+            List<LearningQuizQuestion> quizQuestions,
+            Integer passingScore,
+            Boolean elective) {
+        this(
+                id,
+                title,
+                summary,
+                level,
+                kind,
+                estimatedMinutes,
+                skills,
+                objective,
+                scenario,
+                mentorAgentId,
+                starterFiles,
+                checks,
+                lesson,
+                deliverables,
+                prerequisiteTaskIds,
+                evidenceMode,
+                references,
+                quizQuestions,
+                passingScore,
+                elective,
+                "",
+                "");
     }
 
     public LearningTaskDefinition(
@@ -73,7 +170,10 @@ public record LearningTaskDefinition(
                 evidenceMode,
                 references,
                 List.of(),
-                100);
+                100,
+                false,
+                "",
+                "");
     }
 
     public LearningTaskDefinition(
@@ -108,6 +208,9 @@ public record LearningTaskDefinition(
                 "document",
                 List.of(),
                 List.of(),
-                100);
+                100,
+                false,
+                "",
+                "");
     }
 }

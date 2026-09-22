@@ -73,12 +73,21 @@ public class QuizCheckService {
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("Quiz submission contains an unknown option."));
         boolean correct = question.correctOptionId().equals(selected.id());
+        String correctLabel = question.options().stream()
+                .filter(option -> option.id().equals(question.correctOptionId()))
+                .map(LearningQuizOption::label)
+                .findFirst()
+                .orElse(question.correctOptionId());
+        String evidence = correct
+                ? "你的选择：" + selected.label()
+                : "你的选择：" + selected.label() + "。应选：" + correctLabel + "。";
         return new TaskCheckResult(
                 question.id(),
                 correct,
                 true,
                 question.points(),
-                "你的选择：" + selected.label(),
-                question.explanation());
+                evidence,
+                question.explanation(),
+                question.correctOptionId());
     }
 }

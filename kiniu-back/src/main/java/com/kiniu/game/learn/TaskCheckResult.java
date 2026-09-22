@@ -6,5 +6,20 @@ public record TaskCheckResult(
         boolean required,
         int points,
         String evidence,
-        String message) {
+        String message,
+        String correctOptionId) {
+
+    public TaskCheckResult {
+        correctOptionId = correctOptionId == null ? "" : correctOptionId;
+    }
+
+    public TaskCheckResult(
+            String checkId,
+            boolean passed,
+            boolean required,
+            int points,
+            String evidence,
+            String message) {
+        this(checkId, passed, required, points, evidence, message, "");
+    }
 }

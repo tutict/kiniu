@@ -9,6 +9,7 @@ import tools.jackson.databind.ObjectMapper;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -146,8 +147,65 @@ class LearningCatalogServiceTests {
                 List.of("observability-runbook", "release-safety", "architecture-collaboration"),
                 catalog.modules().get(7).tasks().stream().map(LearningTaskDefinition::id).toList());
         assertTrue(tasks.stream().allMatch(task -> task.lesson().length() >= 300 && task.lesson().length() <= 600));
+        assertEquals(tasks.size(), tasks.stream().map(LearningTaskDefinition::tonightPrompt).distinct().count());
+        assertTrue(tasks.stream().allMatch(task -> {
+            String prompt = task.tonightPrompt();
+            return prompt.length() >= 40 && prompt.length() <= 180 && prompt.contains("今晚");
+        }));
+        assertEquals(
+                "今晚我加班回家了。请只看我贴的待办，给最多 3 条下一步，不确定的标出来。不要改日历，不要发消息，也不要下单。待办：回客户邮件，买早餐，准备周会。",
+                taskById(tasks, "requirements-contract").tonightPrompt());
+        assertEquals(
+                "先写清帮谁、做成什么样、不能做什么，再让它动手。",
+                taskById(tasks, "requirements-contract").takeaway());
+        assertEquals(tasks.size(), tasks.stream().map(LearningTaskDefinition::takeaway).distinct().count());
+        assertTrue(tasks.stream().allMatch(task -> {
+            String takeaway = task.takeaway();
+            return takeaway.length() >= 16
+                    && takeaway.length() <= 80
+                    && !takeaway.contains("\n")
+                    && !takeaway.contains("今晚");
+        }));
+        assertTrue(tasks.stream().map(LearningTaskDefinition::takeaway).noneMatch(takeaway ->
+                takeaway.chars().anyMatch(ch -> ch < 128 && Character.isLetter(ch))));
         assertTrue(tasks.stream().allMatch(task -> task.references().size() >= 1 && task.references().size() <= 3));
-        assertTrue(tasks.stream().allMatch(task -> task.passingScore() == 100));
+        assertTrue(tasks.stream().allMatch(task -> "quiz".equals(task.evidenceMode()) && task.passingScore() == 80));
+        assertEquals(
+                List.of(
+                        "a2a-collaboration",
+                        "observability-runbook",
+                        "release-safety",
+                        "architecture-collaboration"),
+                tasks.stream().filter(LearningTaskDefinition::elective).map(LearningTaskDefinition::id).toList());
+        assertTrue(tasks.stream()
+                .flatMap(task -> task.skills().stream())
+                .noneMatch(skill -> skill.chars().anyMatch(ch -> ch < 128 && Character.isLetter(ch))));
+        assertTrue(tasks.stream().allMatch(task -> {
+            List<String> labels = task.quizQuestions().stream()
+                    .flatMap(question -> question.options().stream())
+                    .map(LearningQuizOption::label)
+                    .toList();
+            return labels.size() == Set.copyOf(labels).size();
+        }));
+        assertTrue(tasks.stream().allMatch(task -> {
+            String learnerText = task.lesson() + task.title() + task.summary() + task.scenario() + task.objective()
+                    + task.tonightPrompt()
+                    + task.takeaway()
+                    + String.join("", task.deliverables())
+                    + task.quizQuestions().stream()
+                    .flatMap(question -> java.util.stream.Stream.concat(
+                            java.util.stream.Stream.of(question.prompt(), question.explanation()),
+                            question.options().stream().map(LearningQuizOption::label)))
+                    .reduce("", String::concat);
+            return java.util.stream.Stream.of(
+                            "PKCE", "OAuth", "ACL", "idempotency", "documentId", "requestId", "capturedAt",
+                            "HTTP", "JSON", "网关", "状态码", "调用方", "正则", "解析", "请求编号",
+                            "幂等", "租户", "契约", "注入", "脱敏", "评测集", "红队", "投毒", "哈希", "隔离", "实验室", "接口")
+                    .noneMatch(term -> learnerText.toLowerCase().contains(term.toLowerCase()));
+        }));
+        assertEquals(
+                List.of("资料还是工具", "令牌不能转发", "写入先问"),
+                taskById(tasks, "mcp-integration").skills());
         assertTrue(tasks.stream().allMatch(task -> {
             if ("quiz".equals(task.evidenceMode())) {
                 return task.checks().isEmpty()
@@ -430,39 +488,92 @@ class LearningCatalogServiceTests {
                         "audit"),
                 accessConcurrency.quizQuestions().stream().map(LearningQuizQuestion::id).toList());
         assertEquals("who-what", accessConcurrency.quizQuestions().get(0).correctOptionId());
-        assertTrue(tasks.stream()
-                .filter(task -> "import".equals(task.evidenceMode()))
-                .allMatch(task -> List.of("/source", "/capturedAt", "/requestId").stream()
-                        .allMatch(pointer -> task.checks().stream()
-                                .anyMatch(check -> pointer.equals(check.rule())))));
-
+        LearningTaskDefinition mcp = taskById(tasks, "mcp-integration");
+        assertEquals("quiz", mcp.evidenceMode());
+        assertEquals(10, mcp.quizQuestions().size());
+        assertEquals(
+                List.of(
+                        "three-capabilities",
+                        "resource-not-tool",
+                        "prompt-not-authz",
+                        "server-validate",
+                        "oauth-pkce",
+                        "scope-subset",
+                        "audience",
+                        "no-passthrough",
+                        "confirm-audit",
+                        "limits"),
+                mcp.quizQuestions().stream().map(LearningQuizQuestion::id).toList());
+        assertEquals("split", mcp.quizQuestions().get(0).correctOptionId());
         LearningTaskDefinition a2a = taskById(tasks, "a2a-collaboration");
-        String delegationShape = a2a.checks().stream()
-                .filter(check -> "tasks".equals(check.id()))
-                .findFirst()
-                .orElseThrow()
-                .rule();
-        assertTrue(List.of("messageParts", "idempotency", "cancellation", "retry", "delivery", "identity")
-                .stream()
-                .allMatch(delegationShape::contains));
-        assertTrue(a2a.checks().stream().anyMatch(check -> "delivery-modes".equals(check.id())));
-        assertTrue(a2a.checks().stream().anyMatch(check -> "lifecycle".equals(check.id())));
-
+        assertEquals("quiz", a2a.evidenceMode());
+        assertTrue(a2a.elective());
+        assertEquals(10, a2a.quizQuestions().size());
+        assertEquals(
+                List.of(
+                        "agent-card",
+                        "message-parts",
+                        "task-not-message",
+                        "identity",
+                        "idempotency",
+                        "cancel",
+                        "callback-trust",
+                        "retry-side-effect",
+                        "streaming-callback",
+                        "lifecycle"),
+                a2a.quizQuestions().stream().map(LearningQuizQuestion::id).toList());
+        assertEquals("skills-io-auth", a2a.quizQuestions().get(0).correctOptionId());
         LearningTaskDefinition observability = taskById(tasks, "observability-runbook");
-        assertTrue(List.of(
-                        "/trace_id",
-                        "/provider",
-                        "/model",
-                        "/input_tokens:1:10000000",
-                        "/output_tokens:1:10000000",
-                        "/latency_ms:1:3600000",
-                        "/correlations/tool_call_id",
-                        "/correlations/mcp_request_id",
-                        "/correlations/a2a_task_id")
-                .stream()
-                .allMatch(rule -> observability.checks().stream()
-                        .anyMatch(check -> "trace-sample.json".equals(check.path()) && rule.equals(check.rule()))));
-        assertTrue(observability.checks().stream().anyMatch(check -> "trace-redacted".equals(check.id())));
+        assertEquals("quiz", observability.evidenceMode());
+        assertTrue(observability.elective());
+        assertEquals(
+                List.of(
+                        "three-signals",
+                        "genai-span",
+                        "child-calls",
+                        "redact",
+                        "p99",
+                        "alert-duration",
+                        "runbook",
+                        "no-full-prompt",
+                        "no-trace",
+                        "four-metrics"),
+                observability.quizQuestions().stream().map(LearningQuizQuestion::id).toList());
+        assertEquals("logs-metrics-traces", observability.quizQuestions().get(0).correctOptionId());
+        LearningTaskDefinition releaseSafety = taskById(tasks, "release-safety");
+        assertEquals("quiz", releaseSafety.evidenceMode());
+        assertTrue(releaseSafety.elective());
+        assertEquals(
+                List.of(
+                        "artifacts",
+                        "eval-gate",
+                        "gradual",
+                        "rollback-checkpoint",
+                        "index-compat",
+                        "one-variable",
+                        "avg-metrics",
+                        "human-not-gate",
+                        "owner-window",
+                        "trigger"),
+                releaseSafety.quizQuestions().stream().map(LearningQuizQuestion::id).toList());
+        assertEquals("more-than-code", releaseSafety.quizQuestions().get(0).correctOptionId());
+        LearningTaskDefinition architecture = taskById(tasks, "architecture-collaboration");
+        assertEquals("quiz", architecture.evidenceMode());
+        assertTrue(architecture.elective());
+        assertEquals(
+                List.of(
+                        "value",
+                        "diagram-not-contract",
+                        "ownership",
+                        "platform-owner",
+                        "risk-register",
+                        "adr",
+                        "shared-semantics",
+                        "failure-paths",
+                        "evidence-index",
+                        "six-modules"),
+                architecture.quizQuestions().stream().map(LearningQuizQuestion::id).toList());
+        assertEquals("boundaries-evidence", architecture.quizQuestions().get(0).correctOptionId());
 
         LearningTaskDefinition skillAuthoring = taskById(tasks, "agent-skill-authoring");
         assertEquals(List.of("tool-contract", "prompt-context-design"), skillAuthoring.prerequisiteTaskIds());
@@ -535,6 +646,22 @@ class LearningCatalogServiceTests {
                 List.of(new TaskCheckDefinition("content", "min-length", "artifact.md", "3", true, 100, "Content")));
     }
 
+
+    @Test
+    void shouldPreferCoreTasksOverElectivesWhenRecommendingNext() throws Exception {
+        LearningCatalogService service = serviceWith(
+                task("first", "min-length"),
+                electiveTask("second", List.of("first")),
+                taskWithPrerequisites("third", List.of("first")));
+
+        LearningProgress afterFirst = LearningProgress.empty("first")
+                .record("first", 80, List.of(), "second");
+
+        assertTrue(service.isUnlocked("second", afterFirst));
+        assertTrue(service.isUnlocked("third", afterFirst));
+        assertEquals("third", service.nextTaskId("first", afterFirst));
+    }
+
     @Test
     void shouldAcceptQuizTasksWithoutStarterFiles() throws Exception {
         LearningCatalogService service = serviceWithQuizCatalog("specific-scene");
@@ -546,6 +673,38 @@ class LearningCatalogServiceTests {
     @Test
     void shouldRejectQuizTasksWithInvalidOptions() {
         assertThrows(IllegalStateException.class, () -> serviceWithQuizCatalog("missing-option"));
+    }
+
+
+    private LearningTaskDefinition electiveTask(String id, List<String> prerequisiteTaskIds) {
+        return new LearningTaskDefinition(
+                id,
+                id,
+                "Summary",
+                "beginner",
+                "requirements",
+                10,
+                List.of("requirements"),
+                "Objective",
+                "Scenario",
+                "project-agent",
+                List.of(new LearningFileView("artifact.md", "starter text")),
+                List.of(new TaskCheckDefinition(
+                        "content",
+                        "min-length",
+                        "artifact.md",
+                        "3",
+                        true,
+                        100,
+                        "Content")),
+                "Lesson",
+                List.of("artifact.md"),
+                prerequisiteTaskIds,
+                "document",
+                List.of(),
+                List.of(),
+                100,
+                true);
     }
 
     private LearningTaskDefinition taskWithPrerequisites(String id, List<String> prerequisiteTaskIds) {

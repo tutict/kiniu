@@ -40,7 +40,17 @@ class LearningControllerTests {
                 .andExpect(jsonPath("$.modules[0].tasks[0].evidenceMode").value("quiz"))
                 .andExpect(jsonPath("$.modules[0].tasks[0].quizQuestions[0].correctOptionId").doesNotExist())
                 .andExpect(jsonPath("$.modules[0].tasks[0].quizQuestions[0].explanation").doesNotExist())
-                .andExpect(jsonPath("$.modules[0].tasks[0].quizQuestions[0].options").isArray());
+                .andExpect(jsonPath("$.modules[0].tasks[0].quizQuestions[0].options").isArray())
+                .andExpect(jsonPath("$.modules[0].tasks[0].passingScore").value(80))
+                .andExpect(jsonPath("$.modules[0].tasks[0].takeaway").value("先写清帮谁、做成什么样、不能做什么，再让它动手。"))
+                .andExpect(jsonPath("$.modules[0].tasks[0].elective").value(false))
+                .andExpect(jsonPath("$.modules[6].tasks[0].id").value("mcp-integration"))
+                .andExpect(jsonPath("$.modules[6].tasks[0].evidenceMode").value("quiz"))
+                .andExpect(jsonPath("$.modules[6].tasks[1].id").value("a2a-collaboration"))
+                .andExpect(jsonPath("$.modules[6].tasks[1].evidenceMode").value("quiz"))
+                .andExpect(jsonPath("$.modules[6].tasks[1].elective").value(true))
+                .andExpect(jsonPath("$.modules[7].tasks[0].evidenceMode").value("quiz"))
+                .andExpect(jsonPath("$.modules[7].tasks[0].elective").value(true));
 
         mockMvc.perform(get("/learn/tasks/requirements-contract"))
                 .andExpect(status().isOk())
@@ -59,9 +69,9 @@ class LearningControllerTests {
                                 {
                                   "answers": {
                                     "first-move": "write-prompt",
-                                    "user-scope": "specific-scene",
+                                    "user-scope": "all-users",
                                     "out-of-scope-user": "team-coordinator",
-                                    "business-outcome": "observable-result",
+                                    "business-outcome": "smarter",
                                     "input-ambiguity": "flag-and-bound",
                                     "data-boundary": "pasted-only",
                                     "risk-boundary": "refuse-and-escalate",
@@ -73,6 +83,9 @@ class LearningControllerTests {
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.passed").value(false))
+                .andExpect(jsonPath("$.score").value(70))
+                .andExpect(jsonPath("$.results[0].correctOptionId").value("define-contract"))
+                .andExpect(jsonPath("$.results[0].message").isNotEmpty())
                 .andExpect(jsonPath("$.progress.currentTaskId").value("requirements-contract"));
 
         String request = """
@@ -451,5 +464,115 @@ class LearningControllerTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.passed").value(true))
                 .andExpect(jsonPath("$.progress.currentTaskId").value("mcp-integration"));
+
+        mockMvc.perform(post("/learn/tasks/mcp-integration/check")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "answers": {
+                                    "three-capabilities": "split",
+                                    "resource-not-tool": "read-resource",
+                                    "prompt-not-authz": "no",
+                                    "server-validate": "server-must",
+                                    "oauth-pkce": "oauth-pkce",
+                                    "scope-subset": "deny-subset",
+                                    "audience": "this-server",
+                                    "no-passthrough": "no-exchange",
+                                    "confirm-audit": "confirm-and-audit",
+                                    "limits": "rate-and-timeout"
+                                  }
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.passed").value(true))
+                .andExpect(jsonPath("$.progress.currentTaskId").value("a2a-collaboration"));
+
+        mockMvc.perform(post("/learn/tasks/a2a-collaboration/check")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "answers": {
+                                    "agent-card": "skills-io-auth",
+                                    "message-parts": "composable-parts",
+                                    "task-not-message": "not-complete",
+                                    "identity": "from-to-idem",
+                                    "idempotency": "same-key",
+                                    "cancel": "state-not-undo",
+                                    "callback-trust": "verify",
+                                    "retry-side-effect": "no-new-effect",
+                                    "streaming-callback": "stream-or-callback",
+                                    "lifecycle": "state-machine"
+                                  }
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.passed").value(true))
+                .andExpect(jsonPath("$.progress.currentTaskId").value("observability-runbook"));
+
+        mockMvc.perform(post("/learn/tasks/observability-runbook/check")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "answers": {
+                                    "three-signals": "logs-metrics-traces",
+                                    "genai-span": "ids-model-tokens",
+                                    "child-calls": "same-trace",
+                                    "redact": "redact-or-summarize",
+                                    "p99": "tail-latency",
+                                    "alert-duration": "window-denoise",
+                                    "runbook": "diagnose-stop-recover-review",
+                                    "no-full-prompt": "no",
+                                    "no-trace": "cannot-locate",
+                                    "four-metrics": "latency-error-token-cost"
+                                  }
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.passed").value(true))
+                .andExpect(jsonPath("$.progress.currentTaskId").value("release-safety"));
+
+        mockMvc.perform(post("/learn/tasks/release-safety/check")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "answers": {
+                                    "artifacts": "more-than-code",
+                                    "eval-gate": "block-regression",
+                                    "gradual": "blast-radius",
+                                    "rollback-checkpoint": "versioned-checkpoint",
+                                    "index-compat": "no-incompatible",
+                                    "one-variable": "one-change",
+                                    "avg-metrics": "no",
+                                    "human-not-gate": "no",
+                                    "owner-window": "owner-and-window",
+                                    "trigger": "pause-or-rollback"
+                                  }
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.passed").value(true))
+                .andExpect(jsonPath("$.progress.currentTaskId").value("architecture-collaboration"));
+
+        mockMvc.perform(post("/learn/tasks/architecture-collaboration/check")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "answers": {
+                                    "value": "boundaries-evidence",
+                                    "diagram-not-contract": "no",
+                                    "ownership": "named-owner",
+                                    "platform-owner": "no-fuzzy",
+                                    "risk-register": "tests-and-monitoring",
+                                    "adr": "alternatives-rollback",
+                                    "shared-semantics": "identity-trace-idem",
+                                    "failure-paths": "include-failures",
+                                    "evidence-index": "eval-and-release",
+                                    "six-modules": "owner-interface"
+                                  }
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.passed").value(true))
+                .andExpect(jsonPath("$.progress.currentTaskId").value(""));
     }
 }

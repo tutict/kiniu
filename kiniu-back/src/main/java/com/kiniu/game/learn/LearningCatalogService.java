@@ -78,7 +78,13 @@ public class LearningCatalogService {
     }
 
     public String nextTaskId(String completedTaskId, LearningProgress progress) {
+        String coreNext = firstUnlockedIncomplete(progress, false);
+        return coreNext.isBlank() ? firstUnlockedIncomplete(progress, true) : coreNext;
+    }
+
+    private String firstUnlockedIncomplete(LearningProgress progress, boolean elective) {
         return flattenTasks().stream()
+                .filter(task -> task.elective() == elective)
                 .filter(task -> !progress.completedTaskIds().contains(task.id()))
                 .filter(task -> isUnlocked(task.id(), progress))
                 .map(LearningTaskDefinition::id)
@@ -157,6 +163,16 @@ public class LearningCatalogService {
         }
         if (modernCatalog) {
             requireText(task.lesson(), "Learning task lesson");
+            requireText(task.tonightPrompt(), "Learning task tonight prompt");
+            int tonightLength = task.tonightPrompt().length();
+            if (tonightLength < 40 || tonightLength > 180) {
+                throw new IllegalStateException("Learning task tonight prompt must be a sendable sentence: " + task.id());
+            }
+            requireText(task.takeaway(), "Learning task takeaway");
+            int takeawayLength = task.takeaway().length();
+            if (takeawayLength < 16 || takeawayLength > 80 || task.takeaway().indexOf('\n') >= 0) {
+                throw new IllegalStateException("Learning task takeaway must be one sentence: " + task.id());
+            }
             if (task.deliverables().isEmpty()
                     || task.deliverables().stream().anyMatch(item -> item == null || item.isBlank())) {
                 throw new IllegalStateException("Learning tasks need non-blank deliverables.");
