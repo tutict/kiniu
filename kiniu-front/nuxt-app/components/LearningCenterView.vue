@@ -25,7 +25,8 @@ const props = defineProps<{
   model: string
 }>()
 const emit = defineEmits<{
-  (event: 'use-agent', agentId: string): void
+  (event: 'use-agent', agentId: string, prompt?: string): void
+  (event: 'try-evening-plan', prompt?: string): void
   (event: 'open-settings'): void
 }>()
 const { t } = useUiI18n()
@@ -40,6 +41,7 @@ const activeFile = ref('')
 const drafts = ref<Record<string, Record<string, string>>>({})
 const quizDrafts = ref<Record<string, Record<string, string>>>({})
 const quizAnswers = ref<Record<string, string>>({})
+const quizIndex = ref(0)
 const submittedAnswers = ref<Record<string, string>>({})
 const results = ref<TaskCheckResult[]>([])
 const attemptId = ref('')
@@ -50,6 +52,7 @@ const publishing = ref(false)
 const error = ref('')
 const errorAction = ref<'' | 'settings'>('')
 const notice = ref('')
+const noticeTone = ref<'success' | 'error'>('success')
 const mentorQuestion = ref('')
 const mentorFeedback = ref('')
 const publishedAgentName = ref('')
@@ -65,12 +68,51 @@ const selectedTask = computed<LearningTask | null>(() =>
   tasks.value.find(task => task.id === selectedTaskId.value) ?? tasks.value[0] ?? null)
 const completed = computed(() => new Set(progress.value?.completedTaskIds ?? []))
 const score = computed(() => progress.value?.bestScores[selectedTaskId.value] ?? 0)
-const progressPercent = computed(() => tasks.value.length
-  ? Math.round((completed.value.size / tasks.value.length) * 100)
+const coreTasks = computed(() => tasks.value.filter(task => !task.elective))
+const electiveTasks = computed(() => tasks.value.filter(task => task.elective))
+const coreCompletedCount = computed(() => coreTasks.value.filter(task => completed.value.has(task.id)).length)
+const electiveCompletedCount = computed(() => electiveTasks.value.filter(task => completed.value.has(task.id)).length)
+const coreComplete = computed(() => coreTasks.value.length > 0 && coreCompletedCount.value === coreTasks.value.length)
+const progressPercent = computed(() => coreTasks.value.length
+  ? Math.round((coreCompletedCount.value / coreTasks.value.length) * 100)
   : 0)
 const selectedTaskIndex = computed(() => Math.max(0, tasks.value.findIndex(task => task.id === selectedTask.value?.id)))
 const selectedModule = computed(() => catalog.value?.modules.find(module =>
   module.tasks.some(task => task.id === selectedTask.value?.id)) ?? null)
+const extraOpenModules = ref<string[]>([])
+const courseTracks = computed(() => {
+  const modules = catalog.value?.modules ?? []
+  const toTrack = (id: 'core' | 'elective', title: string, elective: boolean) => ({
+    id,
+    title,
+    completed: tasks.value.filter(task => Boolean(task.elective) === elective && completed.value.has(task.id)).length,
+    total: tasks.value.filter(task => Boolean(task.elective) === elective).length,
+    modules: modules
+      .map(module => ({ ...module, tasks: module.tasks.filter(task => Boolean(task.elective) === elective) }))
+      .filter(module => module.tasks.length)
+  })
+  const tracks = [toTrack('core', t('learningCoreSection'), false)]
+  const electives = toTrack('elective', t('learningElectiveSection'), true)
+  if (electives.total) tracks.push(electives)
+  return tracks
+})
+const visibleTracks = computed(() => courseTracks.value.filter(track =>
+  track.id === 'core' || coreComplete.value || track.completed > 0))
+
+function moduleCompletedCount(module: { tasks: LearningTask[] }) {
+  return module.tasks.filter(task => completed.value.has(task.id)).length
+}
+
+function isModuleOpen(moduleId: string) {
+  return selectedModule.value?.id === moduleId || extraOpenModules.value.includes(moduleId)
+}
+
+function toggleModule(moduleId: string) {
+  if (selectedModule.value?.id === moduleId) return
+  extraOpenModules.value = extraOpenModules.value.includes(moduleId)
+    ? extraOpenModules.value.filter(id => id !== moduleId)
+    : [...extraOpenModules.value, moduleId]
+}
 
 const isQuizTask = computed(() => selectedTask.value?.evidenceMode === 'quiz')
 const quizQuestions = computed(() => selectedTask.value?.quizQuestions ?? [])
@@ -80,6 +122,20 @@ const acceptanceCount = computed(() => isQuizTask.value
 const quizAnsweredCount = computed(() => quizQuestions.value.filter(question => Boolean(quizAnswers.value[question.id])).length)
 const quizComplete = computed(() => quizQuestions.value.length > 0
   && quizAnsweredCount.value === quizQuestions.value.length)
+const quizCorrectCount = computed(() => results.value.filter(result => result.passed).length)
+const quizReviewing = computed(() => results.value.length > 0)
+const rememberedTasks = computed(() => tasks.value.filter(task => completed.value.has(task.id) && Boolean(task.takeaway)))
+const canQuizPrevious = computed(() => quizIndex.value > 0 && !quizReviewing.value)
+const canQuizNext = computed(() => {
+  const question = quizQuestions.value[quizIndex.value]
+  return Boolean(question && quizAnswers.value[question.id] && quizIndex.value < quizQuestions.value.length - 1)
+})
+const nextAvailableTask = computed(() => {
+  const id = progress.value?.currentTaskId
+  if (!id || id === selectedTask.value?.id) return null
+  const task = tasks.value.find(item => item.id === id)
+  return task && taskUnlocked(task) ? task : null
+})
 const canRunChecks = computed(() => {
   if (!selectedTask.value || checking.value || publishing.value) return false
   return isQuizTask.value ? quizComplete.value : true
@@ -166,14 +222,49 @@ function prerequisiteTitles(task: LearningTask) {
 function firstAvailableTask(nextCatalog: LearningCatalog, nextProgress: LearningProgress) {
   const allTasks = nextCatalog.modules.flatMap(module => module.tasks)
   const done = new Set(nextProgress.completedTaskIds)
-  return allTasks.find(task => !done.has(task.id)
+  const available = allTasks.filter(task => !done.has(task.id)
     && (!task.prerequisiteTaskIds?.length || task.prerequisiteTaskIds.every(id => done.has(id))))
-    ?.id ?? nextProgress.currentTaskId ?? allTasks[0]?.id ?? ''
+  const nextIncomplete = available.find(task => !task.elective)?.id ?? available[0]?.id
+  if (nextIncomplete) return nextIncomplete
+  if (nextProgress.currentTaskId && allTasks.some(task => task.id === nextProgress.currentTaskId)) {
+    return nextProgress.currentTaskId
+  }
+  for (let index = nextProgress.completedTaskIds.length - 1; index >= 0; index -= 1) {
+    const taskId = nextProgress.completedTaskIds[index]
+    if (allTasks.some(task => task.id === taskId)) return taskId
+  }
+  return allTasks[0]?.id ?? ''
+}
+
+function prefersReducedMotion() {
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches
+}
+
+function scrollElement(node: Element | null, block: ScrollLogicalPosition = 'start') {
+  if (!node) return
+  node.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block })
+}
+
+function scrollToBrief() {
+  scrollElement(document.getElementById('lab-brief'))
+}
+
+function scrollQuizOutcome(passed: boolean) {
+  if (passed) {
+    scrollElement(document.querySelector('.quiz-actions'), 'center')
+    return
+  }
+  scrollElement(document.querySelector('.quiz-explanation.failed'), 'center')
 }
 
 function selectTask(task: LearningTask) {
   if (!taskUnlocked(task) || checking.value || publishing.value) return
   selectedTaskId.value = task.id
+  void nextTick(scrollToBrief)
+}
+
+function goToNextTask() {
+  if (nextAvailableTask.value) selectTask(nextAvailableTask.value)
 }
 
 watch(selectedTask, task => {
@@ -183,11 +274,15 @@ watch(selectedTask, task => {
   if (task.evidenceMode === 'quiz') {
     files.value = {}
     activeFile.value = ''
-    quizAnswers.value = restoredAnswers ? { ...restoredAnswers } : {}
+    const answers = restoredAnswers ? { ...restoredAnswers } : {}
+    quizAnswers.value = answers
+    const unanswered = (task.quizQuestions ?? []).findIndex(question => !answers[question.id])
+    quizIndex.value = unanswered < 0 ? 0 : unanswered
   } else {
     files.value = restored ? { ...restored } : Object.fromEntries(task.starterFiles.map(file => [file.path, file.content]))
     activeFile.value = task.starterFiles[0]?.path ?? ''
     quizAnswers.value = {}
+    quizIndex.value = 0
   }
   submittedAnswers.value = {}
   results.value = []
@@ -277,6 +372,17 @@ function quizResultFor(questionId: string) {
   return results.value.find(result => result.checkId === questionId)
 }
 
+function goQuiz(offset: number) {
+  if (quizReviewing.value || checking.value) return
+  const next = quizIndex.value + offset
+  if (next < 0 || next >= quizQuestions.value.length) return
+  if (offset > 0) {
+    const current = quizQuestions.value[quizIndex.value]
+    if (!current || !quizAnswers.value[current.id]) return
+  }
+  quizIndex.value = next
+}
+
 async function checkTask() {
   const task = selectedTask.value
   if (!task || !props.backendUrl.trim() || !taskUnlocked(task)) return
@@ -316,6 +422,11 @@ async function checkTask() {
     notice.value = response.passed
       ? t('learningCheckPassed', { score: response.score })
       : t('learningCheckFailed', { score: response.score })
+    noticeTone.value = response.passed ? 'success' : 'error'
+    if (task.evidenceMode === 'quiz') {
+      await nextTick()
+      scrollQuizOutcome(response.passed)
+    }
   } catch (requestError) {
     if (generation === requestGeneration && selectedTaskId.value === taskId) {
       showRequestFailure(requestError, 'learningCheckRequestFailed')
@@ -376,7 +487,7 @@ async function publishAgent() {
     if (generation === requestGeneration && selectedTaskId.value === taskId) {
       publishedAgentName.value = response.agent.name
       notice.value = t('learningPublished', { name: response.agent.name })
-      emit('use-agent', response.agent.id)
+      emit('use-agent', response.agent.id, task.tonightPrompt)
     }
   } catch (requestError) {
     if (generation === requestGeneration && selectedTaskId.value === taskId) {
@@ -452,12 +563,23 @@ function confirmImport() {
     <header class="learning-hero">
       <div class="hero-intro">
         <h2>{{ t('learningTitle') }}</h2>
-        <p class="hero-copy">{{ t('learningLabs', { count: tasks.length || 21 }) }} · {{ t('learningDuration') }}</p>
+        <p class="hero-copy">{{ t('learningHeroCopy') }}</p>
+        <p class="hero-meta">
+          <template v-if="selectedTask && !coreCompletedCount">
+            {{ t('learningThisLesson', { minutes: selectedTask.estimatedMinutes }) }}
+          </template>
+          <template v-else>
+            {{ t('learningLabs', { count: coreTasks.length || 17 }) }}
+            <template v-if="coreComplete"> · {{ t('learningElectiveLabs', { count: electiveTasks.length || 4 }) }}</template>
+            · {{ t('learningDuration') }}
+          </template>
+        </p>
       </div>
-      <div class="hero-progress-card">
-        <div class="progress-label"><span>{{ t('learningProgress') }}</span><strong>{{ progressPercent }}%</strong></div>
-        <div class="progress-track" aria-hidden="true"><span :style="{ width: `${progressPercent}%` }" /></div>
-        <p class="hero-copy">{{ progress?.completedTaskIds.length ?? 0 }}/{{ tasks.length || 21 }} {{ t('learningCompleted') }}</p>
+      <div v-if="progressPercent" class="hero-progress-card">
+        <div class="progress-label"><span>{{ t('learningProgress') }}</span><strong v-if="progressPercent">{{ progressPercent }}%</strong></div>
+        <div v-if="progressPercent" class="progress-track" aria-hidden="true"><span :style="{ width: `${progressPercent}%` }" /></div>
+        <p class="hero-meta">{{ coreCompletedCount }}/{{ coreTasks.length || 17 }} {{ t('learningCompleted') }}</p>
+        <p v-if="coreComplete" class="hero-meta">{{ t('learningCoreComplete') }} {{ electiveCompletedCount }}/{{ electiveTasks.length }}</p>
       </div>
     </header>
 
@@ -468,40 +590,60 @@ function confirmImport() {
         {{ t('learningOpenSettings') }}
       </button>
     </div>
-    <p v-if="notice" class="status success">{{ notice }}</p>
+    <p v-if="notice && !(isQuizTask && results.length)" class="status" :class="noticeTone">{{ notice }}</p>
 
     <div v-if="catalog" class="learning-grid">
       <aside class="course-rail">
-        <div class="course-rail-head"><strong>{{ t('learningSyllabus') }}</strong><span>{{ completed.size }}/{{ tasks.length }}</span></div>
-        <div v-for="(module, moduleIndex) in catalog.modules" :key="module.id" class="module-block">
-          <div class="module-heading"><span class="module-index">{{ moduleIndex + 1 }}</span><div><small>{{ module.level }}</small><strong>{{ module.title }}</strong></div></div>
-          <p>{{ module.summary }}</p>
-          <button
-            v-for="(task, taskIndex) in module.tasks"
-            :key="task.id"
-            class="task-button"
-            :class="{ active: selectedTask?.id === task.id, locked: !taskUnlocked(task) }"
-            type="button"
-            :disabled="!taskUnlocked(task) || checking || publishing"
-            :title="taskUnlocked(task) ? task.title : t('learningLockedPrerequisites', { prerequisites: prerequisiteTitles(task).join('、') || t('learningPreviousTask') })"
-            @click="selectTask(task)"
-          >
-            <span class="task-state" :class="{ done: completed.has(task.id), locked: !taskUnlocked(task) }">
-              {{ completed.has(task.id) ? '✓' : taskUnlocked(task) ? taskIndex + 1 : '—' }}
-            </span>
-            <span>
-              <strong>{{ task.title }}</strong>
-              <span class="task-badges">
-                <small>{{ t('learningMinutes', { minutes: task.estimatedMinutes, level: task.level }) }}</small>
+        <details v-if="rememberedTasks.length" class="remembered">
+          <summary>{{ t('learningRemembered', { count: rememberedTasks.length }) }}</summary>
+          <ol>
+            <li v-for="task in rememberedTasks" :key="task.id">{{ task.takeaway }}</li>
+          </ol>
+        </details>
+        <div v-for="track in visibleTracks" :key="track.id" class="course-track" :class="track.id">
+          <div class="course-rail-head"><strong>{{ track.title }}</strong><span>{{ track.completed }}/{{ track.total }}</span></div>
+          <div v-for="(module, moduleIndex) in track.modules" :key="`${track.id}-${module.id}`" class="module-block" :class="{ open: isModuleOpen(module.id) }">
+            <button
+              class="module-heading"
+              type="button"
+              :aria-expanded="isModuleOpen(module.id)"
+              @click="toggleModule(module.id)"
+            >
+              <span class="module-index">{{ moduleIndex + 1 }}</span>
+              <div>
+                <strong>{{ module.title }}</strong>
+                <small>{{ moduleCompletedCount(module) }}/{{ module.tasks.length }}</small>
+              </div>
+            </button>
+            <p v-show="isModuleOpen(module.id)">{{ module.summary }}</p>
+            <button
+              v-for="(task, taskIndex) in module.tasks"
+              v-show="isModuleOpen(module.id)"
+              :key="task.id"
+              class="task-button"
+              :class="{ active: selectedTask?.id === task.id, locked: !taskUnlocked(task) }"
+              type="button"
+              :disabled="!taskUnlocked(task) || checking || publishing"
+              :title="taskUnlocked(task) ? task.title : t('learningLockedPrerequisites', { prerequisites: prerequisiteTitles(task).join('、') || t('learningPreviousTask') })"
+              @click="selectTask(task)"
+            >
+              <span class="task-state" :class="{ done: completed.has(task.id), locked: !taskUnlocked(task) }">
+                {{ completed.has(task.id) ? '✓' : taskUnlocked(task) ? taskIndex + 1 : '—' }}
               </span>
-              <small v-if="!taskUnlocked(task)" class="lock-reason">{{ t('learningLockedPrerequisites', { prerequisites: prerequisiteTitles(task).join('、') || t('learningPreviousTask') }) }}</small>
-            </span>
-          </button>
+              <span>
+                <strong>{{ task.title }}</strong>
+                <span class="task-badges">
+                  <small>{{ t('learningMinutes', { minutes: task.estimatedMinutes }) }}</small>
+                </span>
+                <small v-if="!taskUnlocked(task)" class="lock-reason">{{ t('learningLocked') }}</small>
+              </span>
+            </button>
+          </div>
         </div>
       </aside>
 
       <main v-if="selectedTask" class="task-workspace">
-        <header class="lab-context-bar">
+        <header v-if="!isQuizTask" class="lab-context-bar">
           <nav class="lab-breadcrumb" :aria-label="t('learningSyllabus')">
             <span>{{ selectedModule?.title }}</span>
           </nav>
@@ -515,17 +657,19 @@ function confirmImport() {
         <section id="lab-brief" class="task-brief panel">
           <div class="section-heading">
             <h3>{{ selectedTask.title }}</h3>
-            <span class="score-chip">{{ score || '—' }}</span>
+            <span v-if="score" class="score-chip">{{ t('learningBestScore', { score }) }}</span>
           </div>
           <p class="summary">{{ selectedTask.summary }}</p>
+          <p v-if="selectedTask.takeaway" class="takeaway">
+            <strong>{{ t('learningTakeaway') }}</strong>
+            <span>{{ selectedTask.takeaway }}</span>
+          </p>
           <div class="task-facts">
-            <div><small>{{ t('learningDifficulty') }}</small><strong>{{ selectedTask.level }}</strong></div>
             <div><small>{{ t('learningTime') }}</small><strong>{{ selectedTask.estimatedMinutes }} {{ t('learningMinuteUnit') }}</strong></div>
-            <div><small>{{ t('learningChecks') }}</small><strong>{{ acceptanceCount }}</strong></div>
+            <div v-if="!isQuizTask"><small>{{ t('learningChecks') }}</small><strong>{{ acceptanceCount }}</strong></div>
+            <div v-if="isQuizTask"><small>{{ t('learningPassLine') }}</small><strong>{{ selectedTask.passingScore ?? 80 }}</strong></div>
           </div>
-          <div class="objective"><strong>{{ t('learningObjective') }}</strong><span>{{ selectedTask.objective }}</span></div>
           <div class="scenario"><strong>{{ t('learningScenario') }}</strong><span>{{ selectedTask.scenario }}</span></div>
-          <div class="skill-list"><span v-for="skill in selectedTask.skills" :key="skill">{{ skill }}</span></div>
           <div class="lesson-block">
             <p class="eyebrow">{{ t('learningLesson') }}</p>
             <div class="lesson-copy">
@@ -535,33 +679,51 @@ function confirmImport() {
               </section>
             </div>
           </div>
-          <div class="task-meta-grid">
-            <div><strong>{{ t('learningDeliverables') }}</strong><ul><li v-for="item in selectedTask.deliverables" :key="item">{{ item }}</li></ul></div>
-            <div><strong>{{ t('learningPrerequisites') }}</strong><span v-if="!selectedTask.prerequisiteTaskIds?.length">{{ t('learningNoPrerequisites') }}</span><ul v-else><li v-for="item in prerequisiteTitles(selectedTask)" :key="item">{{ item }}</li></ul></div>
+          <div v-if="!isQuizTask" class="objective"><strong>{{ t('learningObjective') }}</strong><span>{{ selectedTask.objective }}</span></div>
+          <div v-if="!isQuizTask" class="skill-block">
+            <p class="eyebrow">{{ t('learningSkills') }}</p>
+            <div class="skill-list"><span v-for="skill in selectedTask.skills" :key="skill">{{ skill }}</span></div>
           </div>
-          <div class="reference-list">
-            <strong>{{ t('learningReferences') }}</strong>
-            <a v-for="reference in selectedTask.references" :key="reference.url" :href="reference.url" target="_blank" rel="noopener noreferrer">
-              {{ reference.title }} · {{ reference.publisher }} · {{ reference.version }}
-            </a>
-          </div>
+          <p v-if="isQuizTask && selectedTask.tonightPrompt && !completed.has(selectedTask.id)" class="tonight-note">
+            {{ t('learningTonightLater') }}
+          </p>
+          <p v-if="isQuizTask" class="start-quiz after-lesson">
+            <a href="#lab-quiz">{{ t('learningStartQuizAfter') }}</a>
+          </p>
         </section>
 
-        <section class="workbench-grid">
+        <section id="lab-quiz" class="workbench-grid" :class="{ 'quiz-layout': isQuizTask }">
           <div class="panel file-panel">
             <div class="section-heading">
               <div>
                 <h3>{{ isQuizTask ? t('learningWorkspaceQuiz') : t('learningWorkspace') }}</h3>
-                <p v-if="isQuizTask" class="quiz-progress">{{ t('learningQuizProgress', { answered: quizAnsweredCount, total: quizQuestions.length }) }}</p>
               </div>
-              <UiButton variant="primary" size="sm" :disabled="!canRunChecks" @click="checkTask">
+              <UiButton v-if="!isQuizTask" variant="primary" size="sm" :disabled="!canRunChecks" @click="checkTask">
                 {{ checking ? t('learningChecking') : t('learningRunChecks') }}
               </UiButton>
             </div>
             <template v-if="isQuizTask">
-              <p class="editor-hint">{{ t('learningQuizMode') }}</p>
+              <ol class="quiz-steps">
+                <li>{{ t('learningHowRead') }}</li>
+                <li>{{ t('learningHowAnswer') }}</li>
+                <li>{{ t('learningHowSubmit') }}</li>
+              </ol>
+              <div v-if="!quizReviewing" class="quiz-nav">
+                <UiButton variant="secondary" size="sm" :disabled="!canQuizPrevious || checking" @click="goQuiz(-1)">
+                  {{ t('learningQuizPrevious') }}
+                </UiButton>
+                <span>{{ t('learningQuizAt', { current: quizIndex + 1, total: quizQuestions.length }) }}</span>
+                <UiButton variant="secondary" size="sm" :disabled="!canQuizNext || checking" @click="goQuiz(1)">
+                  {{ t('learningQuizNext') }}
+                </UiButton>
+              </div>
               <div class="quiz-list">
-                <article v-for="(question, index) in quizQuestions" :key="question.id" class="quiz-question">
+                <article
+                  v-for="(question, index) in quizQuestions"
+                  v-show="quizReviewing || index === quizIndex"
+                  :key="question.id"
+                  class="quiz-question"
+                >
                   <p class="quiz-prompt"><span class="quiz-index">{{ index + 1 }}</span>{{ question.prompt }}</p>
                   <div class="quiz-options">
                     <label
@@ -570,7 +732,8 @@ function confirmImport() {
                       :class="['quiz-option', {
                         selected: quizAnswers[question.id] === option.id,
                         passed: optionSubmitted(question.id, option.id) && quizResultFor(question.id)?.passed,
-                        failed: optionSubmitted(question.id, option.id) && quizResultFor(question.id) && !quizResultFor(question.id)?.passed
+                        failed: optionSubmitted(question.id, option.id) && quizResultFor(question.id) && !quizResultFor(question.id)?.passed,
+                        correct: Boolean(quizResultFor(question.id)?.correctOptionId) && option.id === quizResultFor(question.id)?.correctOptionId
                       }]"
                     >
                       <input
@@ -584,9 +747,75 @@ function confirmImport() {
                       <span>{{ option.label }}</span>
                     </label>
                   </div>
+                  <p
+                    v-if="quizResultFor(question.id)"
+                    class="quiz-explanation"
+                    :class="quizResultFor(question.id)?.passed ? 'passed' : 'failed'"
+                    role="status"
+                  >
+                    <strong>{{ quizResultFor(question.id)?.passed ? t('learningQuizRight') : t('learningQuizWrong') }}</strong>
+                    {{ quizResultFor(question.id)?.message }}
+                    <small>{{ quizResultFor(question.id)?.evidence }}</small>
+                  </p>
                 </article>
               </div>
-              <p class="editor-hint">{{ t('learningQuizHint') }}</p>
+              <div class="quiz-actions">
+                <p class="quiz-progress" :class="{ failed: results.length && noticeTone === 'error', passed: results.length && noticeTone === 'success' }">
+                  <template v-if="results.length">
+                    {{ notice }}
+                    <span>{{ t('learningAttemptSummary', { passed: quizCorrectCount, total: results.length }) }}</span>
+                  </template>
+                  <template v-else>
+                    {{ t('learningQuizProgress', { answered: quizAnsweredCount, total: quizQuestions.length }) }}
+                    <span v-if="!quizComplete">{{ t('learningQuizRemain', { remain: quizQuestions.length - quizAnsweredCount }) }}</span>
+                  </template>
+                </p>
+                <UiButton variant="primary" size="sm" :disabled="!canRunChecks" @click="checkTask">
+                  {{ checking ? t('learningChecking') : t('learningRunChecks') }}
+                </UiButton>
+                <UiButton
+                  v-if="nextAvailableTask && completed.has(selectedTask.id)"
+                  variant="accent"
+                  size="sm"
+                  :disabled="checking || publishing"
+                  :title="nextAvailableTask.title"
+                  @click="goToNextTask"
+                >
+                  {{ t('learningNextLesson') }}
+                  <span class="next-lesson-title">{{ nextAvailableTask.title }}</span>
+                </UiButton>
+                <p v-if="completed.has(selectedTask.id) && selectedTask.tonightPrompt" class="tonight-ready">
+                  <strong>{{ t('learningTonightUse') }}</strong>
+                  {{ selectedTask.tonightPrompt }}
+                </p>
+                <UiButton
+                  v-if="completed.has(selectedTask.id)"
+                  variant="secondary"
+                  size="sm"
+                  :disabled="checking || publishing"
+                  @click="emit('try-evening-plan', selectedTask.tonightPrompt)"
+                >
+                  {{ t('learningTryTonight') }}
+                </UiButton>
+                <UiButton
+                  v-if="selectedTask.kind === 'agent-project' && attemptId && completed.has(selectedTask.id)"
+                  variant="accent"
+                  size="sm"
+                  :disabled="publishing"
+                  @click="publishAgent"
+                >
+                  {{ publishing ? t('learningPublishing') : t('learningPublishUse') }}
+                </UiButton>
+                <small v-if="publishedAgentName" class="publish-note">{{ publishedAgentName }}</small>
+              </div>
+              <details v-if="results.length" class="mentor-box">
+                <summary>{{ t('learningMentor') }}</summary>
+                <textarea v-model="mentorQuestion" :placeholder="t('learningMentorPlaceholder')" rows="3" />
+                <UiButton variant="secondary" size="sm" :disabled="!attemptId || mentorChecking || checking" @click="askMentor">
+                  {{ mentorChecking ? t('learningRequesting') : t('learningRequestExplanation') }}
+                </UiButton>
+                <p v-if="mentorFeedback" class="mentor-feedback">{{ mentorFeedback }}</p>
+              </details>
             </template>
             <template v-else>
               <UiTabs
@@ -609,7 +838,7 @@ function confirmImport() {
             </template>
           </div>
 
-          <div class="panel evidence-panel">
+          <div v-if="!isQuizTask" class="panel evidence-panel">
             <div class="section-heading"><h3>{{ t('learningChecklist') }}</h3><span>{{ results.length }}/{{ acceptanceCount }}</span></div>
             <div v-if="results.length" class="check-list">
               <article v-for="result in results" :key="result.checkId" :class="['check-row', result.passed ? 'passed' : 'failed']">
@@ -618,7 +847,7 @@ function confirmImport() {
                 <small>{{ result.evidence }}</small>
               </article>
             </div>
-            <div v-else><UiEmptyState :title="t('learningNoEvidence')" :copy="isQuizTask ? t('learningNoEvidenceCopyQuiz') : t('learningNoEvidenceCopy')" /></div>
+            <div v-else><UiEmptyState :title="t('learningNoEvidence')" :copy="t('learningNoEvidenceCopy')" /></div>
             <div class="mentor-box">
               <p class="eyebrow">{{ t('learningMentor') }}</p>
               <textarea v-model="mentorQuestion" :placeholder="t('learningMentorPlaceholder')" rows="3" />
@@ -632,6 +861,21 @@ function confirmImport() {
               <small v-if="publishedAgentName" class="publish-note">{{ publishedAgentName }}</small>
             </div>
           </div>
+        </section>
+
+        <section class="task-brief panel task-appendix">
+          <details>
+            <summary>{{ t('learningReferences') }}</summary>
+            <div class="reference-list">
+              <a v-for="reference in selectedTask.references" :key="reference.url" :href="reference.url" target="_blank" rel="noopener noreferrer">
+                {{ reference.title }} · {{ reference.publisher }} · {{ reference.version }}
+              </a>
+            </div>
+            <div v-if="!isQuizTask" class="task-meta-grid">
+              <div><strong>{{ t('learningDeliverables') }}</strong><ul><li v-for="item in selectedTask.deliverables" :key="item">{{ item }}</li></ul></div>
+              <div><strong>{{ t('learningPrerequisites') }}</strong><span v-if="!selectedTask.prerequisiteTaskIds?.length">{{ t('learningNoPrerequisites') }}</span><ul v-else><li v-for="item in prerequisiteTitles(selectedTask)" :key="item">{{ item }}</li></ul></div>
+            </div>
+          </details>
         </section>
       </main>
     </div>
@@ -834,6 +1078,12 @@ function confirmImport() {
   grid-template-columns: 26px minmax(0, 1fr);
   gap: 9px;
   align-items: start;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
 }
 .module-heading div {
   display: grid;
@@ -1011,7 +1261,7 @@ function confirmImport() {
 }
 .task-facts {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   margin-top: var(--space-4);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
@@ -1055,16 +1305,76 @@ function confirmImport() {
 .scenario {
   border-left-color: var(--color-accent);
 }
+.tonight-note {
+  margin: 12px 0 0;
+  color: var(--color-muted);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+.takeaway {
+  display: grid;
+  gap: 4px;
+  margin: 12px 0 0;
+  padding: 11px 13px;
+  border-left: 4px solid var(--color-heading);
+  background: var(--color-surface-muted);
+}
+.takeaway strong {
+  color: var(--color-primary-strong);
+  font-size: 11px;
+}
+.takeaway span {
+  color: var(--color-heading);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+.quiz-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 0 10px;
+}
+.quiz-nav span {
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+  font-weight: 700;
+}
+.remembered {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-panel);
+}
+.remembered summary {
+  cursor: pointer;
+  color: var(--color-heading);
+  font-size: var(--text-xs);
+  font-weight: 700;
+}
+.remembered ol {
+  margin: 8px 0 0;
+  padding-left: 1.2em;
+  color: var(--color-muted);
+  font-size: var(--text-xs);
+  line-height: 1.55;
+}
 .objective strong,
 .scenario strong {
   font-size: 11px;
   color: var(--color-primary-strong);
 }
+.skill-block {
+  display: grid;
+  gap: 6px;
+  margin-top: var(--space-3);
+}
 .skill-list {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  margin-top: var(--space-3);
 }
 .skill-list span {
   padding: 5px 8px;
@@ -1141,6 +1451,9 @@ function confirmImport() {
   gap: var(--space-5);
   align-items: start;
 }
+.workbench-grid.quiz-layout {
+  grid-template-columns: minmax(0, 1fr);
+}
 .file-panel,
 .evidence-panel {
   display: grid;
@@ -1210,12 +1523,14 @@ function confirmImport() {
 .quiz-list {
   display: grid;
   gap: var(--space-4);
+  padding-bottom: 72px;
 }
 .quiz-question {
   display: grid;
   gap: 8px;
   padding-bottom: var(--space-3);
   border-bottom: 1px solid var(--color-border-soft);
+  scroll-margin-bottom: 80px;
 }
 .quiz-question:last-child {
   padding-bottom: 0;
@@ -1236,6 +1551,7 @@ function confirmImport() {
   display: flex;
   align-items: flex-start;
   gap: 8px;
+  min-height: 44px;
   padding: 9px 10px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
@@ -1259,6 +1575,39 @@ function confirmImport() {
 .quiz-option.failed {
   border-color: var(--color-danger);
 }
+.quiz-option.correct {
+  border-color: var(--color-success);
+}
+.quiz-explanation {
+  display: grid;
+  gap: 4px;
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  scroll-margin-bottom: 80px;
+  border-left: 3px solid var(--color-border);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: var(--color-row);
+  color: var(--color-text);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.quiz-explanation.passed {
+  border-left-color: var(--color-success);
+}
+.quiz-explanation.failed {
+  border-left-color: var(--color-danger);
+}
+.quiz-explanation small {
+  color: var(--color-muted);
+}
+.course-track {
+  display: grid;
+  gap: var(--space-3);
+}
+.course-track.elective {
+  padding-top: var(--space-4);
+  border-top: 1px dashed var(--color-border);
+}
 .file-panel textarea {
   width: 100%;
   min-height: 470px;
@@ -1275,6 +1624,120 @@ function confirmImport() {
 .editor-hint {
   margin: 0;
   font-size: 11px;
+}
+.hero-meta {
+  margin: 6px 0 0;
+  color: var(--color-muted);
+  font-size: 12px;
+}
+.start-quiz {
+  margin: 10px 0 0;
+}
+.start-quiz a {
+  color: var(--color-primary);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.start-quiz a:hover {
+  text-decoration: underline;
+}
+#lab-brief,
+#lab-quiz {
+  scroll-margin-top: 16px;
+}
+.quiz-steps {
+  display: grid;
+  gap: 4px;
+  margin: 0 0 8px;
+  padding-left: 1.2em;
+  color: var(--color-muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.quiz-actions {
+  position: sticky;
+  bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+  z-index: 3;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  background: var(--color-surface-panel);
+}
+.quiz-actions .quiz-progress {
+  margin: 0 auto 0 0;
+}
+.tonight-ready {
+  flex: 1 0 100%;
+  margin: 0;
+  color: var(--color-muted);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+.tonight-ready strong {
+  display: block;
+  color: var(--color-heading);
+  font-size: 11px;
+}
+.quiz-actions .quiz-progress.failed {
+  color: var(--color-danger);
+}
+.quiz-actions .quiz-progress.passed {
+  color: var(--color-success);
+}
+.quiz-actions .quiz-progress span {
+  display: block;
+  font-weight: 600;
+}
+.quiz-actions :deep(.ui-button--accent) {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  height: auto;
+  white-space: normal;
+}
+.quiz-actions :deep(.ui-button--accent .ui-button__content) {
+  display: grid;
+  justify-items: start;
+  white-space: normal;
+}
+.next-lesson-title {
+  display: block;
+  max-width: min(16rem, 70vw);
+  overflow: hidden;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  opacity: .92;
+}
+.attempt-summary {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+}
+.task-appendix {
+  opacity: .92;
+}
+.task-appendix details {
+  display: grid;
+  gap: var(--space-3);
+}
+.task-appendix summary {
+  cursor: pointer;
+  color: var(--color-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+.start-quiz.after-lesson {
+  margin-top: var(--space-4);
 }
 .check-list {
   display: grid;
@@ -1311,6 +1774,12 @@ function confirmImport() {
   padding-top: var(--space-3);
   border-top: 1px solid var(--color-border-soft);
 }
+.mentor-box summary {
+  cursor: pointer;
+  color: var(--color-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
 .mentor-box textarea {
   resize: vertical;
   padding: 9px;
@@ -1336,28 +1805,27 @@ function confirmImport() {
   .workbench-grid {
     grid-template-columns: 1fr;
   }
+  .task-workspace {
+    order: 1;
+  }
   .evidence-panel,
   .course-rail {
     position: static;
     max-height: none;
   }
   .course-rail {
-    max-height: 430px;
+    order: 2;
+    max-height: 280px;
   }
 }
 @media (max-width: 760px) {
   .learning-hero {
     grid-template-columns: 1fr;
-    gap: 22px;
-    padding: 22px 18px;
-  }
-  .learning-hero h2 {
-    font-size: 27px;
+    gap: 10px;
+    padding: 12px 14px;
   }
   .hero-progress-card {
-    padding: 18px 0 0;
-    border-top: 1px solid var(--color-border);
-    border-left: 0;
+    display: none;
   }
   .course-meta-line {
     gap: 7px;
@@ -1382,15 +1850,27 @@ function confirmImport() {
   .task-facts {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  .task-facts div:nth-child(3) {
-    border-left: 0;
-    border-top: 1px solid var(--color-border-soft);
-  }
   .panel {
     padding: 15px;
   }
   .file-panel textarea {
     min-height: 330px;
+  }
+  .quiz-actions :deep(button) {
+    min-height: 44px;
+  }
+  .quiz-prompt {
+    font-size: 15px;
+  }
+  .quiz-option {
+    min-height: 48px;
+    padding: 12px;
+    font-size: 14px;
+  }
+  .quiz-steps,
+  .editor-hint,
+  .skill-block {
+    display: none;
   }
 }
 @media (prefers-reduced-motion: reduce) {

@@ -75,12 +75,13 @@ const validationStatus = ref('')
 const validationError = ref('')
 const playerInput = ref('')
 const preferredAgentId = ref('')
+const fromLearning = ref(false)
 const sessionId = ref('')
 const settings = reactive<ApiSettings>({ ...defaultSettings })
 const currentLocale = computed(() => normalizeLocale(settings.locale))
 const currentTheme = computed(() => normalizeTheme(settings.theme))
 const { t } = provideUiI18n(currentLocale)
-useHead(() => ({ title: `${t('appBrand')} · ${t('learningNav')}` }))
+useHead(() => ({ title: t('appTitle') }))
 const storyDraft = ref<StoryCatalogResponse | null>(null)
 const agentDraft = ref<AgentCatalogResponse | null>(null)
 const sessionExport = ref<SessionExportResponse | null>(null)
@@ -109,10 +110,9 @@ const messages = ref<ChatMessage[]>([
 
 
 const navigationItems = computed(() => [
-  { id: 'learning' as const, label: t('navLearning'), key: '1' },
-  { id: 'chat' as const, label: t('navChat'), key: '2' },
-  { id: 'studio' as const, label: t('navStudio'), key: '3' },
-  { id: 'settings' as const, label: t('navSettings'), key: '4' }
+  { id: 'learning' as const, label: t('navLearning') },
+  { id: 'chat' as const, label: t('navChat') },
+  { id: 'settings' as const, label: t('navSettings') }
 ])
 
 const studioItems = computed(() => [
@@ -164,7 +164,7 @@ function applyTheme(theme: ThemeMode) {
 }
 
 function defaultModeLabels() {
-  return [t('modeCompanion'), t('modeInterview'), t('modeKnowledge'), t('modeProject')]
+  return [t('modeEvening'), t('modeCompanion'), t('modeKnowledge'), t('modeProject'), t('modeWriting')]
 }
 
 function createIntroMessages(): ChatMessage[] {
@@ -254,6 +254,7 @@ onMounted(() => {
 })
 
 watch([() => activeView.value, () => activeStudioView.value], async ([view, studioView]) => {
+  if (view !== 'chat') fromLearning.value = false
   saveStatus.value = ''
   errorMessage.value = ''
   if (view !== 'studio') return
@@ -901,10 +902,22 @@ function loadSessionExportPage(offset: number) {
   )
 }
 
-function useLearningAgent(agentId: string) {
+function useLearningAgent(agentId: string, prompt?: string) {
   preferredAgentId.value = agentId
+  openEveningPlanFromLearning(prompt)
+}
+
+function openEveningPlanFromLearning(prompt?: string) {
+  fromLearning.value = true
   activeView.value = 'chat'
-  playerInput.value = t('learningAgentStarter', { agentId })
+  const starter = typeof prompt === 'string' ? prompt.trim() : ''
+  playerInput.value = starter || t('learningAgentStarter')
+  messages.value = [{
+    id: 'intro-learning',
+    role: 'assistant',
+    speaker: t('conductorSpeaker'),
+    content: t('learningChatIntro')
+  }]
   errorMessage.value = ''
 }
 
@@ -964,7 +977,6 @@ async function sendTurn(choice = '') {
     <div v-if="isHydrated" class="workbench">
       <aside class="rail">
         <div class="brand-lockup">
-          <span class="brand-mark">K</span>
           <h1>{{ t('appTitle') }}</h1>
         </div>
 
@@ -977,7 +989,6 @@ async function sendTurn(choice = '') {
             type="button"
             @click="activeView = item.id"
           >
-            <span class="nav-key">{{ item.key }}</span>
             <span class="nav-copy">
               <strong>{{ item.label }}</strong>
             </span>
@@ -994,6 +1005,7 @@ async function sendTurn(choice = '') {
           :backend-url="settings.backendUrl"
           :local-token="settings.localToken"
           @use-agent="useLearningAgent"
+          @try-evening-plan="openEveningPlanFromLearning"
           @open-settings="activeView = 'settings'"
         />
 
@@ -1006,8 +1018,10 @@ async function sendTurn(choice = '') {
           :orchestration="currentOrchestration"
           :messages="messages"
           :is-sending="isSending"
+          :from-learning="fromLearning"
           @save-sandbox="saveSandboxPlan"
           @send-turn="sendTurn"
+          @back-to-learning="fromLearning = false; activeView = 'learning'"
         />
 
         <section v-else-if="activeView === 'studio'" class="studio-frame">
@@ -1068,6 +1082,7 @@ async function sendTurn(choice = '') {
           :save-status="saveStatus"
           @persist="persistSettings"
           @reset="resetSettings"
+          @open-studio="activeView = 'studio'"
         />
       </main>
 
@@ -1112,27 +1127,6 @@ async function sendTurn(choice = '') {
   gap: 10px;
   min-width: 0;
 }
-.brand-mark {
-  display: grid;
-  place-items: center;
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-sm);
-  background: var(--color-primary);
-  color: var(--color-on-primary);
-  font-size: var(--text-md);
-  font-weight: 900;
-  box-shadow: var(--shadow-primary);
-}
-.eyebrow {
-  margin: 0 0 var(--space-1);
-  color: var(--color-primary-strong);
-  font-size: var(--text-xs);
-  font-weight: var(--font-bold);
-  letter-spacing: 0.04em;
-  line-height: 1.2;
-  text-transform: uppercase;
-}
 h1 {
   margin: 0;
   color: var(--color-heading);
@@ -1167,18 +1161,6 @@ p {
   cursor: pointer;
   transition: background var(--duration-base) var(--ease), color var(--duration-base) var(--ease), border-color var(--duration-base) var(--ease);
 }
-.nav-key {
-  display: grid;
-  place-items: center;
-  width: 22px;
-  height: 22px;
-  border: 1px solid var(--color-border-soft);
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--color-faint);
-  font-size: 10px;
-  font-weight: 900;
-}
 .nav-copy {
   min-width: 0;
 }
@@ -1200,11 +1182,6 @@ p {
   border-color: var(--color-border-strong);
   background: var(--color-token-bg);
   color: var(--color-primary-strong);
-}
-.nav-button.active .nav-key {
-  border-color: var(--color-primary);
-  background: var(--color-primary);
-  color: var(--color-on-primary);
 }
 .workspace {
   display: grid;
@@ -1265,11 +1242,7 @@ p {
     padding-bottom: var(--space-5);
   }
   .brand-lockup {
-    grid-template-columns: 32px minmax(0, 1fr);
-  }
-  .brand-mark {
-    width: 32px;
-    height: 32px;
+    min-width: 0;
   }
   h1 {
     font-size: 16px;

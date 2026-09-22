@@ -11,19 +11,21 @@ const props = defineProps<{
   messages: ChatMessage[]
   playerInput: string
   isSending: boolean
+  fromLearning?: boolean
 }>()
 
 const emit = defineEmits<{
   'update:playerInput': [value: string]
   'send-turn': [choice?: string]
   'save-sandbox': [plan: SandboxPlanDraft]
+  'back-to-learning': []
 }>()
 
 const { t } = useUiI18n()
 const selectedBranchLabel = ref('')
 const sandboxQueue = ref<string[]>([])
 const sandboxStatus = ref('')
-const isContextOpen = ref(true)
+const isContextOpen = ref(false)
 
 watch(
   () => props.currentBranchOptions,
@@ -34,13 +36,34 @@ watch(
       sandboxStatus.value = ''
       return
     }
-    if (!options.some(option => option.label === selectedBranchLabel.value)) {
+    const evening = props.fromLearning
+      ? options.find(option => option.label === t('modeEvening'))
+      : undefined
+    if (evening) {
+      selectedBranchLabel.value = evening.label
+    } else if (!options.some(option => option.label === selectedBranchLabel.value)) {
       selectedBranchLabel.value = options[0].label
     }
     sandboxQueue.value = sandboxQueue.value.filter(label => options.some(option => option.label === label))
   },
   { immediate: true }
 )
+
+watch(
+  () => props.fromLearning,
+  (fromLearning) => {
+    if (!fromLearning) return
+    void nextTick(() => document.getElementById('playerInput')?.focus())
+  },
+  { immediate: true }
+)
+
+const visibleChoices = computed(() => {
+  const options = props.currentBranchOptions
+  if (!props.fromLearning) return options
+  const evening = options.find(option => option.label === t('modeEvening'))
+  return evening ? [evening] : []
+})
 
 const previewBranch = computed(() => {
   return props.currentBranchOptions.find(option => option.label === selectedBranchLabel.value)
@@ -171,13 +194,15 @@ function displayCode(value: string) {
 </script>
 
 <template>
-  <section class="game-view" :class="{ 'context-collapsed': !isContextOpen }">
+  <section class="game-view" :class="{ 'context-collapsed': !isContextOpen, 'from-learning': fromLearning }">
     <section class="dialogue-panel">
       <header class="session-bar">
         <div>
-          <p class="eyebrow">{{ t('labelCurrentWorkspace') }}</p>
-          <h2>{{ sceneLabel }}</h2>
+          <h2>{{ fromLearning ? t('learningChatScene') : sceneLabel }}</h2>
         </div>
+        <UiButton v-if="fromLearning" variant="secondary" size="sm" type="button" @click="emit('back-to-learning')">
+          {{ t('learningBackToCourse') }}
+        </UiButton>
       </header>
 
       <div class="dialogue-feed">
@@ -187,11 +212,12 @@ function displayCode(value: string) {
         </article>
       </div>
 
-      <div class="choice-row">
+      <div v-if="visibleChoices.length" class="choice-row">
         <button
-          v-for="option in currentBranchOptions"
+          v-for="option in visibleChoices"
           :key="option.label"
           class="choice-button"
+          :class="{ suggested: fromLearning && option.label === t('modeEvening') }"
           type="button"
           :disabled="isSending"
           @mouseenter="selectedBranchLabel = option.label"
@@ -204,6 +230,7 @@ function displayCode(value: string) {
       </div>
 
       <form class="composer" @submit.prevent="emit('send-turn')">
+        <p v-if="fromLearning" class="learning-chat-hint">{{ t('learningChatHint') }}</p>
         <label class="composer-label" for="playerInput">{{ t('labelComposer') }}</label>
         <textarea
           id="playerInput"
@@ -221,7 +248,7 @@ function displayCode(value: string) {
       </form>
     </section>
 
-    <aside class="context-panel" :class="{ collapsed: !isContextOpen }">
+    <aside v-if="!fromLearning" class="context-panel" :class="{ collapsed: !isContextOpen }">
       <header class="context-head">
         <div>
           <p class="eyebrow">{{ t('labelContextPanel') }}</p>
@@ -356,6 +383,19 @@ function displayCode(value: string) {
 }
 .game-view.context-collapsed {
   grid-template-columns: minmax(0,1fr) 64px;
+}
+.game-view.from-learning {
+  grid-template-columns: minmax(0,1fr);
+}
+.choice-button.suggested {
+  border-color: var(--color-primary);
+  background: var(--color-token-bg);
+}
+.learning-chat-hint {
+  margin: 0 0 8px;
+  color: var(--color-muted);
+  font-size: 13px;
+  line-height: 1.5;
 }
 .dialogue-panel {
   border: 1px solid var(--color-border);

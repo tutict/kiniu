@@ -11,6 +11,7 @@ defineProps<{
 const emit = defineEmits<{
   persist: []
   reset: []
+  'open-studio': []
 }>()
 
 const { t } = useUiI18n()
@@ -50,31 +51,36 @@ const themeOptions: ApiSettings['theme'][] = ['light', 'dark']
         </div>
       </div>
 
-      <label class="field">
-        <span>{{ t('settingsBackendUrl') }}</span>
-        <input v-model="settings.backendUrl" type="url" placeholder="http://localhost:8080">
-      </label>
-
-      <label class="field">
+      <label class="field token-field">
         <span>{{ t('settingsLocalToken') }}</span>
-        <input v-model="settings.localToken" type="password" placeholder="optional">
-      </label>
-
-      <label class="field">
-        <span>{{ t('settingsProviderUrl') }}</span>
-        <input v-model="settings.providerUrl" type="url" placeholder="https://api.openai.com/v1">
-      </label>
-
-      <label class="field">
-        <span>{{ t('settingsApiKey') }}</span>
-        <input v-model="settings.apiKey" type="password" placeholder="sk-...">
-      </label>
-
-      <label class="field">
-        <span>{{ t('settingsModel') }}</span>
-        <input v-model="settings.model" type="text" placeholder="gpt-4.1-mini">
+        <input v-model="settings.localToken" type="password" :placeholder="t('settingsTokenPlaceholder')">
+        <small>{{ t('settingsLocalTokenHelp') }}</small>
       </label>
     </div>
+
+    <details class="advanced-studio">
+      <summary>{{ t('settingsAdvanced') }}</summary>
+      <div class="settings-grid advanced-grid">
+        <label class="field">
+          <span>{{ t('settingsBackendUrl') }}</span>
+          <input v-model="settings.backendUrl" type="url" placeholder="http://localhost:8080">
+        </label>
+        <label class="field">
+          <span>{{ t('settingsProviderUrl') }}</span>
+          <input v-model="settings.providerUrl" type="url" placeholder="https://api.openai.com/v1">
+        </label>
+        <label class="field">
+          <span>{{ t('settingsApiKey') }}</span>
+          <input v-model="settings.apiKey" type="password" placeholder="sk-...">
+        </label>
+        <label class="field">
+          <span>{{ t('settingsModel') }}</span>
+          <input v-model="settings.model" type="text" placeholder="gpt-4.1-mini">
+        </label>
+      </div>
+      <p>{{ t('settingsStudioHint') }}</p>
+      <UiButton variant="secondary" size="sm" type="button" @click="emit('open-studio')">{{ t('settingsOpenStudio') }}</UiButton>
+    </details>
 
     <div class="settings-actions">
       <UiButton variant="accent" size="lg" @click="emit('persist')">{{ t('actionSaveSettings') }}</UiButton>
@@ -146,6 +152,9 @@ h2 {
   max-width: 72ch;
   color: var(--color-muted);
   line-height: 1.6;
+}
+.token-field {
+  grid-column: 1 / -1;
 }
 .settings-grid {
   display: grid;
@@ -259,6 +268,20 @@ h2 {
 }
 .theme-option strong {
   font-size: 14px;
+}
+.advanced-studio {
+  display: grid;
+  gap: 8px;
+  padding-top: 8px;
+  color: var(--color-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.advanced-studio summary {
+  cursor: pointer;
+  color: var(--color-muted);
+  font-size: 12px;
+  font-weight: 700;
 }
 .settings-actions {
   display: flex;

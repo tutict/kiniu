@@ -13,6 +13,7 @@ test('bootstraps the local token and follows custom backend ports', async ({ pag
   expect(new URL(request.url()).port).toBe(process.env.KINIU_E2E_BACKEND_PORT || '18080')
   expect(request.headers()['x-local-token']).toBeTruthy()
   await expect(page.locator('.learning-grid')).toBeVisible()
+  await expect(page.getByRole('navigation', { name: 'Workspace' }).getByRole('button', { name: /流程|Flow/ })).toHaveCount(0)
   await expect(page.getByRole('alert')).toHaveCount(0)
 })
 
@@ -21,14 +22,17 @@ test('shows a compact live-backend authentication error that opens settings', as
   await expect(page.locator('.learning-grid')).toBeVisible()
 
   await page.getByRole('button', { name: /设置|Settings/i }).click()
-  const localTokenInput = page.getByRole('textbox', { name: /本机访问令牌|Local access token/i })
+  const localTokenInput = page.getByRole('textbox', { name: /访问令牌|Local Access Token/i })
+  await expect(localTokenInput).toBeVisible()
+  await expect(page.getByText('一键启动会自动填好')).toBeVisible()
+  await expect(page.getByRole('textbox', { name: /模型地址|Upstream API/i })).toBeHidden()
   await localTokenInput.fill('definitely-wrong-local-token')
   await page.getByRole('button', { name: /保存设置|Save Settings/i }).click()
 
   const progressResponse = page.waitForResponse((response) => {
     return new URL(response.url()).pathname === '/learn/progress'
   })
-  await page.getByRole('button', { name: /学习中心|Learning Center/i }).click()
+  await page.getByRole('navigation', { name: 'Workspace' }).getByRole('button', { name: /学习|Learn/ }).click()
   const response = await progressResponse
   expect(response.status()).toBe(401)
   expect(response.request().headers()['x-local-token']).toBe('definitely-wrong-local-token')

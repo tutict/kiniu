@@ -23,11 +23,14 @@ export type LearningTask = {
   references: LearningReference[]
   quizQuestions?: LearningQuizQuestion[]
   passingScore?: number
+  elective?: boolean
+  tonightPrompt?: string
+  takeaway?: string
 }
 export type LearningModule = { id: string; title: string; summary: string; level: string; tasks: LearningTask[] }
 export type LearningCatalog = { version: number; modules: LearningModule[] }
 export type LearningProgress = { schemaVersion: number; currentTaskId: string; completedTaskIds: string[]; bestScores: Record<string, number>; weakSkills: string[] }
-export type TaskCheckResult = { checkId: string; passed: boolean; required: boolean; points: number; evidence: string; message: string }
+export type TaskCheckResult = { checkId: string; passed: boolean; required: boolean; points: number; evidence: string; message: string; correctOptionId?: string }
 export type LearningCheckResponse = { attemptId: string; taskId: string; passed: boolean; score: number; results: TaskCheckResult[]; progress: LearningProgress }
 export type LearningPublishedAgent = {
   id: string
