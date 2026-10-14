@@ -79,8 +79,8 @@ public class QuizCheckService {
                 .findFirst()
                 .orElse(question.correctOptionId());
         String evidence = correct
-                ? "你的选择：" + selected.label()
-                : "你的选择：" + selected.label() + "。应选：" + correctLabel + "。";
+                ? "你选的是：" + selected.label()
+                : "你选的是：" + selected.label() + "。题目要的是：" + correctLabel + "。";
         return new TaskCheckResult(
                 question.id(),
                 correct,

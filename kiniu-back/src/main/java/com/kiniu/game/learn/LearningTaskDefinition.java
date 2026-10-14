@@ -1,5 +1,6 @@
 package com.kiniu.game.learn;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 
 public record LearningTaskDefinition(
@@ -40,6 +41,36 @@ public record LearningTaskDefinition(
         elective = Boolean.TRUE.equals(elective);
         tonightPrompt = tonightPrompt == null ? "" : tonightPrompt.trim();
         takeaway = takeaway == null ? "" : takeaway.trim();
+    }
+
+    @JsonProperty(value = "boundaryGloss", access = JsonProperty.Access.READ_ONLY)
+    public boolean boundaryGloss() {
+        if (lesson.contains("这里说的边界")) {
+            return false;
+        }
+        if (mentionsBoundary(summary)
+                || mentionsBoundary(objective)
+                || mentionsBoundary(scenario)
+                || mentionsBoundary(lesson)
+                || mentionsBoundary(takeaway)
+                || deliverables.stream().anyMatch(this::mentionsBoundary)) {
+            return true;
+        }
+        for (LearningQuizQuestion question : quizQuestions) {
+            if (mentionsBoundary(question.prompt()) || mentionsBoundary(question.explanation())) {
+                return true;
+            }
+            for (LearningQuizOption option : question.options()) {
+                if (mentionsBoundary(option.label())) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private boolean mentionsBoundary(String text) {
+        return text != null && text.contains("边界");
     }
 
     public LearningTaskDefinition(

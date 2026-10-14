@@ -51,6 +51,10 @@ public class AIService {
             WorldState worldState,
             List<String> recentDialogue,
             StoryEvent storyBeat) {
+        Optional<String> practiceReply = EveningPracticeReply.fromLearnerText(playerInput);
+        if (practiceReply.isPresent()) {
+            return practiceReply.get();
+        }
         return withTelemetry(
                 "reply",
                 agent.id(),
@@ -240,7 +244,7 @@ public class AIService {
                 attempt.attemptId(),
                 config -> sanitize(openAICompatibleClient.complete(
                         config,
-                        "You are a software engineering mentor. Use only the supplied deterministic evidence. Return concise, actionable feedback.",
+                        "用白话解释题下已经给出的原因。不要改对了几题，也不要提分数、检查编号或行话。",
                         prompt,
                         0.2,
                         360)),
@@ -253,16 +257,13 @@ public class AIService {
             String question) {
         List<String> failed = attempt.results().stream()
                 .filter(result -> !result.passed())
-                .map(result -> result.checkId() + ": " + result.message())
+                .map(result -> result.message())
+                .filter(message -> message != null && !message.isBlank())
                 .toList();
-        String next = failed.isEmpty()
-                ? "复查每一项证据，并把通过标准写成团队可以重复执行的检查。"
-                : "下一步先修复：" + String.join("；", failed);
-        return "任务目标：" + task.objective()
-                + "。本次得分：" + attempt.score()
-                + "。" + next
-                + (safe(question).isBlank() ? "" : " 你的问题：" + safe(question))
-                + " 分数只由确定性检查决定。";
+        if (failed.isEmpty()) {
+            return "题下已经写了原因。再问一次也不会改掉对了几题。";
+        }
+        return "先看题下的原因，再点「题目要的是这个」。这题要改的是：" + String.join("；", failed);
     }
     public String generateAgentMemoryNote(
             Agent agent,
@@ -316,16 +317,12 @@ public class AIService {
         String move = !learnerText.isBlank() && !choice.isBlank() && !learnerText.equals(choice)
                 ? choice + "\nLearner text: " + learnerText
                 : (!choice.isBlank() ? choice : learnerText);
-        String practiceNote = EveningPracticeReply.fromLearnerText(learnerText).isPresent()
-                ? "\nThe learner text already states tonight's boundary. Answer that text in Chinese. Use at most 3 steps, repeat the limits they wrote, and do not ask them to paste it again."
-                : "";
         return "Workspace: " + worldState.getCurrentScene()
                 + "\nNode: " + worldState.getCurrentNodeId()
                 + "\nTurn title: " + storyBeat.title()
                 + "\nContext: " + storyBeat.narrative()
                 + "\nDirector note: " + storyBeat.directorSummary()
                 + "\nUser move: " + (move.isBlank() ? "silence" : move)
-                + practiceNote
                 + "\nRecent dialogue:\n- " + String.join("\n- ", recentDialogue)
                 + "\nRespond in 2-4 sentences.";
     }

@@ -33,6 +33,13 @@ class LearningControllerTests {
     }
 
     @Test
+    void shouldReloadCatalogThroughEndpoint() throws Exception {
+        mockMvc.perform(post("/learn/catalog/reload"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.modules[0].tasks[0].id").value("requirements-contract"));
+    }
+
+    @Test
     void shouldEnforceUnlocksPersistAttemptsAndExplainEvidence() throws Exception {
         mockMvc.perform(get("/learn/catalog"))
                 .andExpect(status().isOk())
@@ -44,6 +51,10 @@ class LearningControllerTests {
                 .andExpect(jsonPath("$.modules[0].tasks[0].passingScore").value(80))
                 .andExpect(jsonPath("$.modules[0].tasks[0].takeaway").value("先写清帮谁、做成什么样、不能做什么，再让它动手。"))
                 .andExpect(jsonPath("$.modules[0].tasks[0].elective").value(false))
+                .andExpect(jsonPath("$.modules[0].tasks[0].boundaryGloss").value(false))
+                .andExpect(jsonPath("$.modules[1].tasks[1].id").value("data-lifecycle"))
+                .andExpect(jsonPath("$.modules[1].tasks[1].boundaryGloss").value(true))
+                .andExpect(jsonPath("$.modules[6].tasks[0].boundaryGloss").value(true))
                 .andExpect(jsonPath("$.modules[6].tasks[0].id").value("mcp-integration"))
                 .andExpect(jsonPath("$.modules[6].tasks[0].evidenceMode").value("quiz"))
                 .andExpect(jsonPath("$.modules[6].tasks[1].id").value("a2a-collaboration"))
@@ -122,7 +133,7 @@ class LearningControllerTests {
                         .content("{\"attemptId\":\"" + attemptId + "\",\"question\":\"为什么通过？\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.feedback").isString())
-                .andExpect(jsonPath("$.feedback").value(org.hamcrest.Matchers.containsString("任务目标")));
+                .andExpect(jsonPath("$.feedback").value(org.hamcrest.Matchers.containsString("题下已经写了原因")));
 
         mockMvc.perform(get("/learn/tasks/http-json-basics"))
                 .andExpect(status().isOk())

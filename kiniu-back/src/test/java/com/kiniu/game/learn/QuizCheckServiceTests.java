@@ -29,7 +29,9 @@ class QuizCheckServiceTests {
         assertTrue(service.passed(task, results));
         assertEquals("specific-user", results.get(0).correctOptionId());
         assertTrue(results.get(0).message().contains("具体用户"));
-        assertTrue(results.get(1).evidence().contains("应选"));
+        assertTrue(results.get(1).evidence().contains("题目要的是"));
+        assertTrue(results.get(1).evidence().contains("你选的是"));
+        assertFalse(results.get(1).evidence().contains("应选"));
         List<TaskCheckResult> passing = service.check(task, Map.of(
                 "user-scenario", "specific-user",
                 "business-outcome", "observable-outcome"));
