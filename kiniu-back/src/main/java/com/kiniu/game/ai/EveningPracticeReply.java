@@ -6,6 +6,16 @@ import java.util.Optional;
 
 public final class EveningPracticeReply {
 
+    /**
+     * The deterministic demonstration only fires for a deliberate, short practice utterance. Longer
+     * text is left to the model, so a pasted document that merely mentions a cue is not answered
+     * with a canned boundary.
+     */
+    private static final int MAX_PRACTICE_LENGTH = 240;
+    /** Explicit escape hatch: a learner can ask for a normal answer and bypass the demo entirely. */
+    private static final List<String> FORCE_MODEL_MARKERS =
+            List.of("正常回答", "别用预置", "不要用预置");
+
     private static final List<Handling> HANDLINGS = List.of(
             new Handling("全员会已取消", "话说得顺不算有根据。漏了已经取消，就是答错了：另一篇写着全员会已取消，我不会因为话说得顺就回答有。两边对不上，我直接说明，并指出能点开核对的那一段。"),
             new Handling("自己公司找得到", "只用自己公司找得到的公告。找不到就说不知道：我看不到你公司的公告，所以明天有没有全员会，我不知道。不要编，也不会用别的公司的公告来答。"),
@@ -34,9 +44,21 @@ public final class EveningPracticeReply {
     }
 
     public static Optional<String> fromLearnerText(String text) {
+        return fromLearnerText(text, false);
+    }
+
+    /**
+     * @param forceModel when true, skip the deterministic demonstration and let the caller use the model.
+     */
+    public static Optional<String> fromLearnerText(String text, boolean forceModel) {
         String practice = text == null ? "" : text.trim();
-        if (!practice.contains("今晚")) {
+        if (forceModel || !practice.contains("今晚") || practice.length() > MAX_PRACTICE_LENGTH) {
             return Optional.empty();
+        }
+        for (String marker : FORCE_MODEL_MARKERS) {
+            if (practice.contains(marker)) {
+                return Optional.empty();
+            }
         }
         List<String> steps = todos(practice);
         List<String> limits = limits(practice);

@@ -105,6 +105,18 @@ class EveningPracticeReplyTests {
     }
 
     @Test
+    void shouldLeaveLongTextToTheModel() {
+        String longText = "今晚" + "好".repeat(300) + "不要改日历。";
+        assertThat(EveningPracticeReply.fromLearnerText(longText)).isEmpty();
+    }
+
+    @Test
+    void shouldHonorAnExplicitRequestForANormalAnswer() {
+        assertThat(EveningPracticeReply.fromLearnerText("今晚不要改日历，请正常回答。")).isEmpty();
+        assertThat(EveningPracticeReply.fromLearnerText("今晚不要改日历。", true)).isEmpty();
+    }
+
+    @Test
     void shouldShowWhatTheAssistantDidInsteadOfOnlyRepeatingTheLesson() throws Exception {
         JsonNode root = new ObjectMapper().readTree(Path.of("data", "learning-catalog.json").toFile());
         java.util.Map<String, String> expected = java.util.Map.of(
