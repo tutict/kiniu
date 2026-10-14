@@ -2,6 +2,7 @@ package com.kiniu.game.learn;
 
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
+import java.io.IOException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -13,6 +14,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -20,12 +23,15 @@ import org.springframework.stereotype.Service;
 @Service
 public class LearningCatalogService {
 
+    private static final Logger log = LoggerFactory.getLogger(LearningCatalogService.class);
     private static final Set<String> SUPPORTED_EVIDENCE_MODES = Set.of("document", "import", "quiz");
 
     private final ObjectMapper objectMapper;
     private final Path catalogPath;
     private final TaskCheckRegistry taskCheckRegistry;
-    private final LearningCatalogDefinition catalog;
+    private volatile LearningCatalogDefinition catalog;
+    private volatile long loadedModifiedMillis = Long.MIN_VALUE;
+    private volatile long loadedSize = -1L;
 
     @Autowired
     public LearningCatalogService(
@@ -37,14 +43,72 @@ public class LearningCatalogService {
         this.taskCheckRegistry = taskCheckRegistry;
         this.catalog = loadCatalog();
         validateCatalog(this.catalog);
+        recordFileStamp();
     }
 
     public LearningCatalogDefinition getCatalog() {
+        return catalog();
+    }
+
+    /**
+     * Forces a reload from disk and returns the catalog now being served. Throws when the file is
+     * missing or invalid, leaving the previously loaded catalog in place.
+     */
+    public LearningCatalogDefinition reload() {
+        LearningCatalogDefinition reloaded = loadCatalog();
+        validateCatalog(reloaded);
+        this.catalog = reloaded;
+        recordFileStamp();
+        log.info("Reloaded learning catalog from {}.", catalogPath);
+        return reloaded;
+    }
+
+    private LearningCatalogDefinition catalog() {
+        refreshIfChanged();
         return catalog;
     }
 
+    private void refreshIfChanged() {
+        long modified = lastModifiedMillis();
+        long size = fileSize();
+        if (modified < 0 || size < 0 || (modified == loadedModifiedMillis && size == loadedSize)) {
+            return;
+        }
+        try {
+            LearningCatalogDefinition reloaded = loadCatalog();
+            validateCatalog(reloaded);
+            this.catalog = reloaded;
+            recordFileStamp();
+            log.info("Reloaded learning catalog from {}.", catalogPath);
+        } catch (RuntimeException exception) {
+            // Keep serving the last valid catalog and retry on the next request.
+            log.warn("Ignoring invalid learning catalog at {}: {}", catalogPath, exception.getMessage());
+        }
+    }
+
+    private void recordFileStamp() {
+        this.loadedModifiedMillis = lastModifiedMillis();
+        this.loadedSize = fileSize();
+    }
+
+    private long lastModifiedMillis() {
+        try {
+            return Files.getLastModifiedTime(catalogPath).toMillis();
+        } catch (IOException exception) {
+            return -1L;
+        }
+    }
+
+    private long fileSize() {
+        try {
+            return Files.size(catalogPath);
+        } catch (IOException exception) {
+            return -1L;
+        }
+    }
+
     public LearningTaskDefinition getTask(String taskId) {
-        return catalog.modules().stream()
+        return catalog().modules().stream()
                 .flatMap(module -> module.tasks().stream())
                 .filter(task -> task.id().equals(taskId))
                 .findFirst()
@@ -100,7 +164,7 @@ public class LearningCatalogService {
     }
 
     private List<LearningTaskDefinition> flattenTasks() {
-        return catalog.modules().stream()
+        return catalog().modules().stream()
                 .flatMap(module -> module.tasks().stream())
                 .toList();
     }
@@ -142,7 +206,7 @@ public class LearningCatalogService {
             }
             module.tasks().forEach(task -> validateTask(task, taskIds, modernCatalog));
         });
-        validatePrerequisites(taskIds, modernCatalog);
+        validatePrerequisites(definition, taskIds, modernCatalog);
     }
 
     private void validateTask(LearningTaskDefinition task, Set<String> taskIds, boolean modernCatalog) {
@@ -243,8 +307,13 @@ public class LearningCatalogService {
         });
     }
 
-    private void validatePrerequisites(Set<String> taskIds, boolean modernCatalog) {
-        List<LearningTaskDefinition> tasks = flattenTasks();
+    private void validatePrerequisites(
+            LearningCatalogDefinition definition,
+            Set<String> taskIds,
+            boolean modernCatalog) {
+        List<LearningTaskDefinition> tasks = definition.modules().stream()
+                .flatMap(module -> module.tasks().stream())
+                .toList();
         Map<String, List<String>> dependencies = new HashMap<>();
         for (int index = 0; index < tasks.size(); index++) {
             LearningTaskDefinition task = tasks.get(index);

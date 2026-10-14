@@ -82,6 +82,12 @@ public class LearningController {
         return catalogService.getCatalog();
     }
 
+    @PostMapping("/catalog/reload")
+    public LearningCatalogDefinition reloadCatalog(HttpServletRequest request) {
+        requireLocalToken(request);
+        return catalogService.reload();
+    }
+
     @GetMapping("/progress")
     public LearningProgress progress(HttpServletRequest request) {
         requireLocalToken(request);
