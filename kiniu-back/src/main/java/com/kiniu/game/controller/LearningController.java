@@ -21,7 +21,6 @@ import com.kiniu.game.learn.LearningTaskDefinition;
 import com.kiniu.game.learn.QuizCheckService;
 import com.kiniu.game.learn.TaskCheckResult;
 import com.kiniu.game.learn.TaskCheckService;
-import com.kiniu.game.security.LocalAccessProperties;
 import com.kiniu.game.security.ProviderUrlValidator;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
@@ -49,7 +48,6 @@ public class LearningController {
     private final AIRuntimeContext aiRuntimeContext;
     private final AITelemetryCollector aiTelemetryCollector;
     private final ProviderUrlValidator providerUrlValidator;
-    private final LocalAccessProperties localAccessProperties;
 
     public LearningController(
             LearningCatalogService catalogService,
@@ -61,8 +59,7 @@ public class LearningController {
             AIService aiService,
             AIRuntimeContext aiRuntimeContext,
             AITelemetryCollector aiTelemetryCollector,
-            ProviderUrlValidator providerUrlValidator,
-            LocalAccessProperties localAccessProperties) {
+            ProviderUrlValidator providerUrlValidator) {
         this.catalogService = catalogService;
         this.progressService = progressService;
         this.attemptService = attemptService;
@@ -73,45 +70,37 @@ public class LearningController {
         this.aiRuntimeContext = aiRuntimeContext;
         this.aiTelemetryCollector = aiTelemetryCollector;
         this.providerUrlValidator = providerUrlValidator;
-        this.localAccessProperties = localAccessProperties;
     }
 
     @GetMapping("/catalog")
-    public LearningCatalogDefinition catalog(HttpServletRequest request) {
-        requireLocalToken(request);
+    public LearningCatalogDefinition catalog() {
         return catalogService.getCatalog();
     }
 
     @PostMapping("/catalog/reload")
-    public LearningCatalogDefinition reloadCatalog(HttpServletRequest request) {
-        requireLocalToken(request);
+    public LearningCatalogDefinition reloadCatalog() {
         return catalogService.reload();
     }
 
     @GetMapping("/progress")
-    public LearningProgress progress(HttpServletRequest request) {
-        requireLocalToken(request);
+    public LearningProgress progress() {
         return progressService.getProgress();
     }
 
     @PostMapping("/progress/reset")
-    public LearningProgress resetProgress(HttpServletRequest request) {
-        requireLocalToken(request);
+    public LearningProgress resetProgress() {
         return progressService.reset();
     }
 
     @GetMapping("/tasks/{taskId}")
-    public LearningTaskDefinition task(@PathVariable String taskId, HttpServletRequest request) {
-        requireLocalToken(request);
+    public LearningTaskDefinition task(@PathVariable String taskId) {
         return catalogService.getTask(taskId);
     }
 
     @PostMapping("/tasks/{taskId}/check")
     public LearningCheckResponse check(
             @PathVariable String taskId,
-            @RequestBody LearningCheckRequest request,
-            HttpServletRequest httpRequest) {
-        requireLocalToken(httpRequest);
+            @RequestBody LearningCheckRequest request) {
         LearningTaskDefinition task = catalogService.getTask(taskId);
         LearningProgress before = progressService.getProgress();
         if (!catalogService.isUnlocked(taskId, before)) {
@@ -152,7 +141,6 @@ public class LearningController {
             @PathVariable String taskId,
             @RequestBody LearningFeedbackRequest request,
             HttpServletRequest httpRequest) {
-        requireLocalToken(httpRequest);
         LearningTaskDefinition task = catalogService.getTask(taskId);
         String attemptId = request == null ? "" : safe(request.attemptId());
         if (attemptId.isBlank()) {
@@ -181,9 +169,7 @@ public class LearningController {
     @PostMapping("/tasks/{taskId}/publish-agent")
     public LearningPublishResponse publishAgent(
             @PathVariable String taskId,
-            @RequestBody LearningPublishRequest request,
-            HttpServletRequest httpRequest) {
-        requireLocalToken(httpRequest);
+            @RequestBody LearningPublishRequest request) {
         LearningTaskDefinition task = catalogService.getTask(taskId);
         String attemptId = request == null ? "" : safe(request.attemptId());
         if (attemptId.isBlank()) {
@@ -216,15 +202,5 @@ public class LearningController {
 
     private String safe(String value) {
         return value == null ? "" : value.trim();
-    }
-
-    private void requireLocalToken(HttpServletRequest request) {
-        if (!localAccessProperties.requiresToken()) {
-            return;
-        }
-        String token = request.getHeader("X-Local-Token");
-        if (token == null || !localAccessProperties.getLocalToken().equals(token.trim())) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing or invalid local access token.");
-        }
     }
 }

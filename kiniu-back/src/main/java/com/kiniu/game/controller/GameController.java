@@ -16,13 +16,11 @@ import com.kiniu.game.dto.StoryGenerationRequest;
 import com.kiniu.game.dto.StoryGenerationResponse;
 import com.kiniu.game.engine.GameEngine;
 import com.kiniu.game.engine.SessionArchiveService;
-import com.kiniu.game.security.LocalAccessProperties;
 import com.kiniu.game.security.ProviderUrlValidator;
 import com.kiniu.game.story.StoryCompilerService;
 import com.kiniu.game.story.StoryEngine;
 import com.kiniu.game.story.StoryGeneratorService;
 import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -31,7 +29,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping({"/game", "/agent"})
@@ -46,7 +43,6 @@ public class GameController {
     private final AIRuntimeContext aiRuntimeContext;
     private final AITelemetryCollector aiTelemetryCollector;
     private final ProviderUrlValidator providerUrlValidator;
-    private final LocalAccessProperties localAccessProperties;
 
     public GameController(
             GameEngine gameEngine,
@@ -57,8 +53,7 @@ public class GameController {
             SessionArchiveService sessionArchiveService,
             AIRuntimeContext aiRuntimeContext,
             AITelemetryCollector aiTelemetryCollector,
-            ProviderUrlValidator providerUrlValidator,
-            LocalAccessProperties localAccessProperties) {
+            ProviderUrlValidator providerUrlValidator) {
         this.gameEngine = gameEngine;
         this.storyEngine = storyEngine;
         this.storyCompilerService = storyCompilerService;
@@ -68,12 +63,10 @@ public class GameController {
         this.aiRuntimeContext = aiRuntimeContext;
         this.aiTelemetryCollector = aiTelemetryCollector;
         this.providerUrlValidator = providerUrlValidator;
-        this.localAccessProperties = localAccessProperties;
     }
 
     @PostMapping("/next")
     public GameResponse next(@RequestBody GameRequest request, HttpServletRequest httpRequest) {
-        requireLocalToken(httpRequest);
         aiTelemetryCollector.clear();
         aiRuntimeContext.set(new AIRequestConfig(
                 providerUrlValidator.validate(headerOrBlank(httpRequest, "X-Provider-Url")),
@@ -88,39 +81,33 @@ public class GameController {
     }
 
     @GetMapping("/story")
-    public StoryCatalogResponse storyCatalog(HttpServletRequest httpRequest) {
-        requireLocalToken(httpRequest);
+    public StoryCatalogResponse storyCatalog() {
         return storyEngine.getStoryCatalog();
     }
 
     @PutMapping("/story")
-    public StoryCatalogResponse saveStoryCatalog(@RequestBody StoryCatalogResponse request, HttpServletRequest httpRequest) {
-        requireLocalToken(httpRequest);
+    public StoryCatalogResponse saveStoryCatalog(@RequestBody StoryCatalogResponse request) {
         return storyEngine.saveStoryCatalog(request);
     }
 
     @PostMapping("/story/analyze")
-    public StoryAnalysisResponse analyzeStoryCatalog(@RequestBody StoryAnalysisRequest request, HttpServletRequest httpRequest) {
-        requireLocalToken(httpRequest);
+    public StoryAnalysisResponse analyzeStoryCatalog(@RequestBody StoryAnalysisRequest request) {
         AgentCatalogResponse agentCatalog = request.agents() == null ? agentManager.getAgentCatalog() : request.agents();
         return storyCompilerService.analyze(request.story(), agentCatalog);
     }
 
     @PostMapping("/story/generate")
-    public StoryGenerationResponse generateStoryCatalog(@RequestBody StoryGenerationRequest request, HttpServletRequest httpRequest) {
-        requireLocalToken(httpRequest);
+    public StoryGenerationResponse generateStoryCatalog(@RequestBody StoryGenerationRequest request) {
         return storyGeneratorService.generate(request);
     }
 
     @GetMapping("/agents")
-    public AgentCatalogResponse agentCatalog(HttpServletRequest httpRequest) {
-        requireLocalToken(httpRequest);
+    public AgentCatalogResponse agentCatalog() {
         return agentManager.getAgentCatalog();
     }
 
     @PutMapping("/agents")
-    public AgentCatalogResponse saveAgentCatalog(@RequestBody AgentCatalogResponse request, HttpServletRequest httpRequest) {
-        requireLocalToken(httpRequest);
+    public AgentCatalogResponse saveAgentCatalog(@RequestBody AgentCatalogResponse request) {
         return agentManager.saveAgentCatalog(request);
     }
 
@@ -128,18 +115,14 @@ public class GameController {
     public SessionExportResponse exportSession(
             @PathVariable String sessionId,
             @RequestParam(defaultValue = "0") int offset,
-            @RequestParam(defaultValue = "50") int limit,
-            HttpServletRequest httpRequest) {
-        requireLocalToken(httpRequest);
+            @RequestParam(defaultValue = "50") int limit) {
         return sessionArchiveService.getSessionExport(sessionId, offset, limit);
     }
 
     @PostMapping("/export/{sessionId}/sandbox-plans")
     public SessionExportResponse saveSandboxPlan(
             @PathVariable String sessionId,
-            @RequestBody SandboxPlanRequest request,
-            HttpServletRequest httpRequest) {
-        requireLocalToken(httpRequest);
+            @RequestBody SandboxPlanRequest request) {
         return sessionArchiveService.saveSandboxPlan(sessionId, request);
     }
 
@@ -159,15 +142,5 @@ public class GameController {
     private String headerOrBlank(HttpServletRequest request, String name) {
         String value = request.getHeader(name);
         return value == null ? "" : value.trim();
-    }
-
-    private void requireLocalToken(HttpServletRequest request) {
-        if (!localAccessProperties.requiresToken()) {
-            return;
-        }
-        String token = headerOrBlank(request, "X-Local-Token");
-        if (!localAccessProperties.getLocalToken().equals(token)) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing or invalid local access token.");
-        }
     }
 }

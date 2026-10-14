@@ -1,7 +1,9 @@
 package com.kiniu.game.controller;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import org.junit.jupiter.api.Test;
@@ -33,11 +35,38 @@ class GameControllerSecurityTests {
                         .header("Origin", "http://localhost:3000"))
                 .andExpect(status().isUnauthorized());
     }
+
     @Test
     void shouldRequireLocalTokenForLearningCatalog() throws Exception {
         mockMvc.perform(get("/learn/catalog")
                         .header("Origin", "http://localhost:3000"))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void shouldRejectAWrongLocalToken() throws Exception {
+        mockMvc.perform(get("/learn/catalog")
+                        .header("Origin", "http://localhost:3000")
+                        .header("X-Local-Token", "definitely-wrong"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void shouldServeProtectedEndpointsWithAValidLocalToken() throws Exception {
+        mockMvc.perform(get("/learn/catalog")
+                        .header("Origin", "http://localhost:3000")
+                        .header("X-Local-Token", "test-token"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void shouldAllowCorsPreflightWithoutALocalToken() throws Exception {
+        mockMvc.perform(options("/learn/catalog")
+                        .header("Origin", "http://localhost:3000")
+                        .header("Access-Control-Request-Method", "GET")
+                        .header("Access-Control-Request-Headers", "x-local-token"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Access-Control-Allow-Origin", "http://localhost:3000"));
     }
 
     @Test
