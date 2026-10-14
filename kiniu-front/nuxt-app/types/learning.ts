@@ -53,3 +53,20 @@ export type LearningPublishResponse = {
   attemptId: string
   agent: LearningPublishedAgent
 }
+export type LearningAttemptView = {
+  attemptId: string
+  createdAt: string
+  passed: boolean
+  score: number
+  correctCount: number
+  totalCount: number
+}
+export type LearningReviewItemView = {
+  taskId: string
+  taskTitle: string
+  questionId: string
+  prompt: string
+  evidence: string
+  message: string
+  attemptedAt: string
+}

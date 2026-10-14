@@ -310,7 +310,7 @@ test('an ordinary learner can finish the core path and reach electives', async (
   await expect(page.getByText('这些课学完了。后面的可以接着学，也可以停在这里。')).toHaveCount(0)
   await expect(page.locator('.course-rail-head').first()).toContainText('先学这些')
   await expect(page.locator('.course-rail-head').first()).not.toContainText('/17')
-  await expect(page.getByText('学完了多少')).toHaveCount(0)
+  await expect(page.locator('.rail-progress-label')).toContainText('学完了多少 0 / 21')
 
   for (const [index, task] of core.entries()) {
     if (index > 0) {
@@ -347,7 +347,7 @@ test('an ordinary learner can finish the core path and reach electives', async (
       await expect(page.getByText('learningCoreOnly')).toHaveCount(0)
       await expect(page.locator('.hero-progress-card')).toContainText('一次只做眼前这一课。后面的课等这些做完再出现。')
       await expect(page.locator('.hero-progress-card')).not.toContainText('/17')
-      await expect(page.getByText('学完了多少')).toHaveCount(0)
+  await expect(page.locator('.rail-progress-label')).toContainText('学完了多少 1 / 21')
     }
   }
 
@@ -372,9 +372,88 @@ test('on a narrow screen the current lesson comes before the syllabus', async ({
   const lessonTop = (await page.locator('#lab-brief').boundingBox())?.y ?? 0
   const railTop = (await page.locator('.course-rail').boundingBox())?.y ?? 0
   expect(lessonTop).toBeLessThan(railTop)
+  await expect(page.locator('#course-rail-body')).toBeHidden()
+  const railToggle = page.locator('.rail-toggle')
+  await expect(railToggle).toHaveAttribute('aria-expanded', 'false')
+  await railToggle.click()
+  await expect(page.locator('#course-rail-body')).toBeVisible()
+  await expect(railToggle).toHaveAttribute('aria-expanded', 'true')
+  await expect(page.locator('.course-rail .task-button').first()).toBeVisible()
+  await railToggle.click()
+  await expect(page.locator('#course-rail-body')).toBeHidden()
   await page.getByRole('button', { name: '开始做这十道题' }).click()
   await expect(page.locator('.quiz-steps')).toBeHidden()
   const option = page.locator('.quiz-option').first()
   await expect(option).toBeVisible()
   expect((await option.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(44)
+})
+
+test('search narrows the syllabus to the matching lesson', async ({ page }) => {
+  await page.goto('/')
+  await expect(page.locator('.learning-grid')).toBeVisible()
+  const search = page.locator('.rail-search-input')
+  await expect(search).toBeVisible()
+  await search.fill('整份退回去')
+  await expect(page.locator('.course-rail .task-button')).toHaveCount(1)
+  await expect(page.locator('.course-rail .task-button')).toContainText('怎样小范围试、怎样整份退回去')
+  await expect(page.locator('.course-rail .task-button')).not.toContainText('先写清这个助手帮谁、不能干什么')
+  await search.press('Escape')
+  await expect(search).toHaveValue('')
+  await expect(page.locator('.course-rail .task-button').first()).toContainText('先写清这个助手帮谁、不能干什么')
+})
+
+test('a learner can answer the quiz with the keyboard', async ({ page }) => {
+  await openFirstLab(page)
+  await page.getByRole('button', { name: '开始做这十道题' }).click()
+  await expect(page.getByText('第 1 / 10 题')).toBeVisible()
+  await page.locator('.quiz-question:visible').focus()
+  await page.keyboard.press('1')
+  await expect(page.locator('.quiz-question:visible .quiz-option').first()).toHaveClass(/selected/)
+  await page.keyboard.press('ArrowRight')
+  await expect(page.getByText('第 2 / 10 题')).toBeVisible()
+  await page.keyboard.press('ArrowLeft')
+  await expect(page.getByText('第 1 / 10 题')).toBeVisible()
+})
+
+test('submitting records an attempt and lists a missed question', async ({ page }) => {
+  await openFirstLab(page)
+  await page.getByRole('button', { name: '开始做这十道题' }).click()
+  const firstLab = catalogTasks().find((task) => task.id === 'requirements-contract')
+  if (!firstLab) throw new Error('missing first lab')
+  const wrongIds = [
+    'write-prompt',
+    'all-users',
+    'team-coordinator',
+    'smarter',
+    'flag-and-bound',
+    'pasted-only',
+    'refuse-and-escalate',
+    'refuse-external-write',
+    'flag-or-refuse',
+    'given-when-then',
+  ]
+  const wrongLabels = wrongIds.map((optionId, index) => {
+    const option = firstLab.quizQuestions[index]?.options.find((item) => item.id === optionId)
+    if (!option) throw new Error(`Missing option ${optionId} on question ${index}`)
+    return option.label
+  })
+  await answerInOrder(page, wrongLabels)
+  const submit = page.getByRole('button', { name: '提交判断' })
+  const check = page.waitForResponse((response) => {
+    return new URL(response.url()).pathname === '/learn/tasks/requirements-contract/check'
+  })
+  await submit.last().click()
+  expect((await check).status()).toBe(200)
+
+  const history = page.locator('.attempt-history')
+  await expect(history).toHaveCount(1)
+  await history.locator('summary').click()
+  await expect(history.locator('.attempt-list li').first()).toContainText('没过')
+  await expect(history.locator('.attempt-list li').first()).toContainText('/ 10 题')
+
+  const review = page.locator('.review-book')
+  await expect(review).toHaveCount(1)
+  await review.locator('summary').click()
+  await expect(review).toContainText('先写清这个助手帮谁、不能干什么')
+  await expect(review).toContainText('题目要的是')
 })
