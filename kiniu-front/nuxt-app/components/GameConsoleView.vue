@@ -12,6 +12,7 @@ const props = defineProps<{
   playerInput: string
   isSending: boolean
   fromLearning?: boolean
+  learningBoundary?: string
 }>()
 
 const emit = defineEmits<{
@@ -58,11 +59,32 @@ watch(
   { immediate: true }
 )
 
+const showOtherWays = ref(false)
+const starterLabels = computed(() => new Set([
+  t('modeEvening'),
+  t('modeCompanion'),
+  t('modeKnowledge'),
+  t('modeProject'),
+  t('modeWriting')
+]))
 const visibleChoices = computed(() => {
   const options = props.currentBranchOptions
-  if (!props.fromLearning) return options
-  const evening = options.find(option => option.label === t('modeEvening'))
-  return evening ? [evening] : []
+  if (props.fromLearning) {
+    const evening = options.find(option => option.label === t('modeEvening'))
+    return evening ? [evening] : []
+  }
+  const starterSet = options.length > 0 && options.every(option => starterLabels.value.has(option.label))
+  if (!showOtherWays.value && starterSet) {
+    const evening = options.find(option => option.label === t('modeEvening'))
+    return evening ? [evening] : []
+  }
+  if (!showOtherWays.value) {
+    return options.slice(0, 3)
+  }
+  return options
+})
+watch(() => props.fromLearning, (fromLearning) => {
+  if (fromLearning) showOtherWays.value = false
 })
 
 const previewBranch = computed(() => {
@@ -171,6 +193,13 @@ function saveSandbox() {
   sandboxStatus.value = t('sandboxSavedToDebug', { count: sandboxDraft.value.steps.length })
 }
 
+function keptSplit(content: string) {
+  const mark = '我守住的是：'
+  const at = content.indexOf(mark)
+  if (at < 0) return null
+  return { before: content.slice(0, at).trimEnd(), kept: content.slice(at) }
+}
+
 function displayCode(value: string) {
   switch (value) {
     case 'pivot':
@@ -196,9 +225,21 @@ function displayCode(value: string) {
 <template>
   <section class="game-view" :class="{ 'context-collapsed': !isContextOpen, 'from-learning': fromLearning }">
     <section class="dialogue-panel">
+      <div v-if="!fromLearning" class="lesson-first">
+        <h2>{{ t('learningChatWaitTitle') }}</h2>
+        <p>{{ t('learningChatWait') }}</p>
+        <UiButton variant="accent" size="lg" type="button" @click="emit('back-to-learning')">
+          {{ t('learningChatWaitBack') }}
+        </UiButton>
+      </div>
+      <template v-else>
       <header class="session-bar">
         <div>
           <h2>{{ fromLearning ? t('learningChatScene') : sceneLabel }}</h2>
+          <p v-if="fromLearning && learningBoundary" class="learning-boundary">
+            <strong>{{ t('learningTakeaway') }}</strong>
+            <span>{{ learningBoundary }}</span>
+          </p>
         </div>
         <UiButton v-if="fromLearning" variant="secondary" size="sm" type="button" @click="emit('back-to-learning')">
           {{ t('learningBackToCourse') }}
@@ -208,7 +249,12 @@ function displayCode(value: string) {
       <div class="dialogue-feed">
         <article v-for="message in messages" :key="message.id" class="message" :class="message.role">
           <p class="speaker">{{ message.speaker }}</p>
-          <p>{{ message.content }}</p>
+          <p v-if="keptSplit(message.content)" class="message-body">
+            {{ keptSplit(message.content)?.before }}
+            <small v-if="fromLearning && message.role === 'assistant'" class="kept-caption">{{ t('learningKeptCaption') }}</small>
+            <strong class="kept-line" :class="{ solo: !keptSplit(message.content)?.before }">{{ keptSplit(message.content)?.kept }}</strong>
+          </p>
+          <p v-else class="message-body">{{ message.content }}</p>
         </article>
       </div>
 
@@ -217,7 +263,7 @@ function displayCode(value: string) {
           v-for="option in visibleChoices"
           :key="option.label"
           class="choice-button"
-          :class="{ suggested: fromLearning && option.label === t('modeEvening') }"
+          :class="{ suggested: option.label === t('modeEvening') && (fromLearning || !showOtherWays) }"
           type="button"
           :disabled="isSending"
           @mouseenter="selectedBranchLabel = option.label"
@@ -225,12 +271,20 @@ function displayCode(value: string) {
           @click="emit('send-turn', option.label)"
         >
           <strong>{{ option.label }}</strong>
-          <span>{{ option.consequenceSummary }}</span>
+          <span>{{ fromLearning ? t('learningChatSendPrepared') : option.consequenceSummary }}</span>
         </button>
       </div>
+      <button
+        v-if="!fromLearning && !showOtherWays && currentBranchOptions.length > visibleChoices.length"
+        class="other-ways"
+        type="button"
+        @click="showOtherWays = true"
+      >
+        {{ t('chatOtherWays') }}
+      </button>
 
       <form class="composer" @submit.prevent="emit('send-turn')">
-        <p v-if="fromLearning" class="learning-chat-hint">{{ t('learningChatHint') }}</p>
+        <p v-if="fromLearning" class="learning-chat-hint">{{ visibleChoices.length ? t('learningChatHint') : t('learningChatAfter') }}</p>
         <label class="composer-label" for="playerInput">{{ t('labelComposer') }}</label>
         <textarea
           id="playerInput"
@@ -246,9 +300,10 @@ function displayCode(value: string) {
           </UiButton>
         </div>
       </form>
+      </template>
     </section>
 
-    <aside v-if="!fromLearning" class="context-panel" :class="{ collapsed: !isContextOpen }">
+    <aside v-if="!fromLearning && showOtherWays" class="context-panel" :class="{ collapsed: !isContextOpen }">
       <header class="context-head">
         <div>
           <p class="eyebrow">{{ t('labelContextPanel') }}</p>
@@ -391,6 +446,23 @@ function displayCode(value: string) {
   border-color: var(--color-primary);
   background: var(--color-token-bg);
 }
+.learning-boundary {
+  display: grid;
+  gap: 4px;
+  margin: 8px 0 0;
+  padding: 10px 12px;
+  border-left: 4px solid var(--color-heading);
+  background: var(--color-surface-muted);
+}
+.learning-boundary strong {
+  color: var(--color-primary-strong);
+  font-size: 12px;
+}
+.learning-boundary span {
+  color: var(--color-heading);
+  font-size: 15px;
+  line-height: 1.5;
+}
 .learning-chat-hint {
   margin: 0 0 8px;
   color: var(--color-muted);
@@ -468,6 +540,18 @@ h3 {
   color: var(--color-heading-soft);
   overflow-wrap: anywhere;
 }
+.lesson-first {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+  max-width: 40rem;
+}
+.lesson-first p {
+  margin: 0;
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+}
 .session-bar {
   display: flex;
   align-items: flex-start;
@@ -505,6 +589,30 @@ h3 {
   padding-right: 4px;
   scrollbar-gutter: stable;
 }
+.message-body {
+  margin: 0;
+  white-space: pre-line;
+}
+.kept-caption {
+  display: block;
+  margin-top: 8px;
+  color: var(--color-primary-strong);
+  font-size: 12px;
+  font-weight: 700;
+}
+.kept-line {
+  display: block;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--color-border);
+  color: var(--color-heading);
+  font-weight: 700;
+}
+.kept-line.solo {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
 .message {
   max-width: min(78%,840px);
   padding: 12px 14px;
@@ -528,7 +636,7 @@ h3 {
 }
 .speaker {
   margin-bottom: 5px;
-  font-size: 11px;
+  font-size: 12px;
   letter-spacing: 0;
   opacity: .75;
   font-weight: 800;
@@ -536,8 +644,26 @@ h3 {
 }
 .choice-row {
   display: grid;
-  grid-template-columns: repeat(2,minmax(0,1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 8px;
+}
+.other-ways {
+  justify-self: start;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-muted);
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.4;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.other-ways:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
 }
 .context-toggle {
   appearance: none;

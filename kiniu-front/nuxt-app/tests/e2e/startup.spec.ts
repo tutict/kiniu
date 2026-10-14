@@ -22,11 +22,19 @@ test('shows a compact live-backend authentication error that opens settings', as
   await expect(page.locator('.learning-grid')).toBeVisible()
 
   await page.getByRole('button', { name: /设置|Settings/i }).click()
-  const localTokenInput = page.getByRole('textbox', { name: /访问令牌|Local Access Token/i })
-  await expect(localTokenInput).toBeVisible()
-  await expect(page.getByText('一键启动会自动填好')).toBeVisible()
+  const localTokenInput = page.getByRole('textbox', { name: /启动口令|Startup passphrase/i })
+  await expect(localTokenInput).toBeHidden()
+  await expect(page.getByText('学习课和试今晚都不用填模型')).toBeVisible()
+  await expect(page.getByText('启动口令由一键启动填好，一般不用改')).toBeVisible()
+  await expect(page.getByRole('button', { name: '恢复默认', exact: true })).toHaveCount(0)
+  await expect(page.getByRole('button', { name: '只恢复语言和深浅色' })).toBeVisible()
+  await expect(page.getByText('才需要模型地址和密钥')).toHaveCount(0)
   await expect(page.getByRole('textbox', { name: /模型地址|Upstream API/i })).toBeHidden()
+  await page.locator('.advanced-studio summary').click()
+  await expect(localTokenInput).toBeVisible()
   await localTokenInput.fill('definitely-wrong-local-token')
+  await page.getByRole('button', { name: '只恢复语言和深浅色' }).click()
+  await expect(localTokenInput).toHaveValue('definitely-wrong-local-token')
   await page.getByRole('button', { name: /保存设置|Save Settings/i }).click()
 
   const progressResponse = page.waitForResponse((response) => {
@@ -39,9 +47,10 @@ test('shows a compact live-backend authentication error that opens settings', as
 
   const alert = page.getByRole('alert')
   await expect(alert).toBeVisible()
-  await expect(alert).toContainText(/令牌|token/i)
+  await expect(alert).toContainText(/启动口令|passphrase/i)
   expect((await alert.boundingBox())?.height).toBeLessThan(140)
 
   await alert.getByRole('button').click()
+  await expect(localTokenInput).toBeVisible()
   await expect(localTokenInput).toHaveValue('definitely-wrong-local-token')
 })

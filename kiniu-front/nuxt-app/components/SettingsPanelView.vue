@@ -3,10 +3,12 @@ import UiButton from './ui/UiButton.vue'
 import { localeOptions, useUiI18n } from '../i18n'
 import type { ApiSettings } from '../types/game'
 
-defineProps<{
+const props = defineProps<{
   settings: ApiSettings
   saveStatus: string
+  expandAdvanced?: boolean
 }>()
+const advancedOpen = ref(!!props.expandAdvanced)
 
 const emit = defineEmits<{
   persist: []
@@ -21,7 +23,10 @@ const themeOptions: ApiSettings['theme'][] = ['light', 'dark']
 <template>
   <section class="settings-view">
     <header class="settings-header">
-      <h2>{{ t('settingsTitle') }}</h2>
+      <div>
+        <h2>{{ t('settingsTitle') }}</h2>
+        <p class="settings-lead">{{ t('settingsIntro') }}</p>
+      </div>
       <span v-if="saveStatus" class="status success">{{ saveStatus }}</span>
     </header>
 
@@ -50,17 +55,17 @@ const themeOptions: ApiSettings['theme'][] = ['light', 'dark']
           </label>
         </div>
       </div>
-
-      <label class="field token-field">
-        <span>{{ t('settingsLocalToken') }}</span>
-        <input v-model="settings.localToken" type="password" :placeholder="t('settingsTokenPlaceholder')">
-        <small>{{ t('settingsLocalTokenHelp') }}</small>
-      </label>
+      <UiButton variant="secondary" size="sm" @click="emit('reset')">{{ t('actionResetDefault') }}</UiButton>
     </div>
 
-    <details class="advanced-studio">
+    <details class="advanced-studio" :open="advancedOpen" @toggle="advancedOpen = ($event.target as HTMLDetailsElement).open">
       <summary>{{ t('settingsAdvanced') }}</summary>
       <div class="settings-grid advanced-grid">
+        <label class="field token-field">
+          <span>{{ t('settingsLocalToken') }}</span>
+          <input v-model="settings.localToken" type="password" :placeholder="t('settingsTokenPlaceholder')">
+          <small>{{ t('settingsLocalTokenHelp') }}</small>
+        </label>
         <label class="field">
           <span>{{ t('settingsBackendUrl') }}</span>
           <input v-model="settings.backendUrl" type="url" placeholder="http://localhost:8080">
@@ -84,7 +89,6 @@ const themeOptions: ApiSettings['theme'][] = ['light', 'dark']
 
     <div class="settings-actions">
       <UiButton variant="accent" size="lg" @click="emit('persist')">{{ t('actionSaveSettings') }}</UiButton>
-      <UiButton variant="secondary" size="lg" @click="emit('reset')">{{ t('actionResetDefault') }}</UiButton>
     </div>
 
     <details class="settings-note">
@@ -116,6 +120,13 @@ const themeOptions: ApiSettings['theme'][] = ['light', 'dark']
   flex-wrap: wrap;
   padding-bottom: 12px;
   border-bottom: 1px solid var(--color-border-soft);
+}
+.settings-lead {
+  margin: 8px 0 0;
+  max-width: 62ch;
+  color: var(--color-muted);
+  font-size: var(--text-base);
+  line-height: 1.6;
 }
 .settings-note {
   display: grid;

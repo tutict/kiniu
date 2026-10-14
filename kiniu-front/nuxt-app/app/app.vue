@@ -76,6 +76,8 @@ const validationError = ref('')
 const playerInput = ref('')
 const preferredAgentId = ref('')
 const fromLearning = ref(false)
+const expandSettingsAdvanced = ref(false)
+const learningBoundary = ref('')
 const sessionId = ref('')
 const settings = reactive<ApiSettings>({ ...defaultSettings })
 const currentLocale = computed(() => normalizeLocale(settings.locale))
@@ -171,8 +173,8 @@ function createIntroMessages(): ChatMessage[] {
   return [
     {
       id: 'intro-system',
-      role: 'system',
-      speaker: t('systemSpeaker'),
+      role: 'assistant',
+      speaker: t('containerSpeaker'),
       content: t('introSystem')
     },
     {
@@ -254,7 +256,6 @@ onMounted(() => {
 })
 
 watch([() => activeView.value, () => activeStudioView.value], async ([view, studioView]) => {
-  if (view !== 'chat') fromLearning.value = false
   saveStatus.value = ''
   errorMessage.value = ''
   if (view !== 'studio') return
@@ -294,9 +295,8 @@ function persistSettings() {
 }
 
 function resetSettings() {
-  Object.assign(settings, defaultSettings)
-  sessionStorage.removeItem(API_KEY_STORAGE_KEY)
-  sessionStorage.removeItem(LOCAL_TOKEN_STORAGE_KEY)
+  settings.locale = defaultSettings.locale
+  settings.theme = defaultSettings.theme
   persistSettings()
 }
 
@@ -907,15 +907,16 @@ function useLearningAgent(agentId: string, prompt?: string) {
   openEveningPlanFromLearning(prompt)
 }
 
-function openEveningPlanFromLearning(prompt?: string) {
+function openEveningPlanFromLearning(prompt?: string, takeaway?: string) {
   fromLearning.value = true
   activeView.value = 'chat'
+  learningBoundary.value = typeof takeaway === 'string' ? takeaway.trim() : ''
   const starter = typeof prompt === 'string' ? prompt.trim() : ''
   playerInput.value = starter || t('learningAgentStarter')
   messages.value = [{
     id: 'intro-learning',
     role: 'assistant',
-    speaker: t('conductorSpeaker'),
+    speaker: t('learningChatSpeaker'),
     content: t('learningChatIntro')
   }]
   errorMessage.value = ''
@@ -987,7 +988,7 @@ async function sendTurn(choice = '') {
             class="nav-button"
             :class="{ active: activeView === item.id }"
             type="button"
-            @click="activeView = item.id"
+            @click="expandSettingsAdvanced = false; activeView = item.id"
           >
             <span class="nav-copy">
               <strong>{{ item.label }}</strong>
@@ -1006,7 +1007,7 @@ async function sendTurn(choice = '') {
           :local-token="settings.localToken"
           @use-agent="useLearningAgent"
           @try-evening-plan="openEveningPlanFromLearning"
-          @open-settings="activeView = 'settings'"
+          @open-settings="expandSettingsAdvanced = true; activeView = 'settings'"
         />
 
         <AgentConsoleView
@@ -1019,9 +1020,10 @@ async function sendTurn(choice = '') {
           :messages="messages"
           :is-sending="isSending"
           :from-learning="fromLearning"
+          :learning-boundary="learningBoundary"
           @save-sandbox="saveSandboxPlan"
           @send-turn="sendTurn"
-          @back-to-learning="fromLearning = false; activeView = 'learning'"
+          @back-to-learning="activeView = 'learning'"
         />
 
         <section v-else-if="activeView === 'studio'" class="studio-frame">
@@ -1080,6 +1082,7 @@ async function sendTurn(choice = '') {
           v-else
           :settings="settings"
           :save-status="saveStatus"
+          :expand-advanced="expandSettingsAdvanced"
           @persist="persistSettings"
           @reset="resetSettings"
           @open-studio="activeView = 'studio'"

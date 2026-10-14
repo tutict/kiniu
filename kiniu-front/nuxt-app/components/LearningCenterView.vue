@@ -26,13 +26,14 @@ const props = defineProps<{
 }>()
 const emit = defineEmits<{
   (event: 'use-agent', agentId: string, prompt?: string): void
-  (event: 'try-evening-plan', prompt?: string): void
+  (event: 'try-evening-plan', prompt?: string, takeaway?: string): void
   (event: 'open-settings'): void
 }>()
 const { t } = useUiI18n()
 
 const DRAFT_STORAGE_KEY = 'kiniu.learn.taskDrafts'
 const QUIZ_DRAFT_STORAGE_KEY = 'kiniu.learn.quizDrafts'
+const RETURN_TASK_STORAGE_KEY = 'kiniu.learn.returnTaskId'
 const catalog = ref<LearningCatalog | null>(null)
 const progress = ref<LearningProgress | null>(null)
 const selectedTaskId = ref('')
@@ -66,6 +67,13 @@ const tasks = computed(() => catalog.value?.modules.flatMap(module => module.tas
 const fileTabItems = computed(() => Object.keys(files.value).map(path => ({ id: path, label: path })))
 const selectedTask = computed<LearningTask | null>(() =>
   tasks.value.find(task => task.id === selectedTaskId.value) ?? tasks.value[0] ?? null)
+
+const scenarioSentences = computed(() => {
+  const text = selectedTask.value?.scenario?.trim() ?? ''
+  if (!text) return []
+  return text.split(/(?<=。)/).map(sentence => sentence.trim()).filter(Boolean)
+})
+
 const completed = computed(() => new Set(progress.value?.completedTaskIds ?? []))
 const score = computed(() => progress.value?.bestScores[selectedTaskId.value] ?? 0)
 const coreTasks = computed(() => tasks.value.filter(task => !task.elective))
@@ -96,12 +104,13 @@ const courseTracks = computed(() => {
   if (electives.total) tracks.push(electives)
   return tracks
 })
-const visibleTracks = computed(() => courseTracks.value.filter(track =>
-  track.id === 'core' || coreComplete.value || track.completed > 0))
-
-function moduleCompletedCount(module: { tasks: LearningTask[] }) {
-  return module.tasks.filter(task => completed.value.has(task.id)).length
-}
+const visibleTracks = computed(() => courseTracks.value
+  .filter(track => track.id === 'core' || coreComplete.value || track.completed > 0)
+  .map(track => ({
+    ...track,
+    modules: track.modules.filter(module => module.tasks.some(task => taskUnlocked(task)))
+  }))
+  .filter(track => track.modules.length > 0))
 
 function isModuleOpen(moduleId: string) {
   return selectedModule.value?.id === moduleId || extraOpenModules.value.includes(moduleId)
@@ -125,10 +134,17 @@ const quizComplete = computed(() => quizQuestions.value.length > 0
 const quizCorrectCount = computed(() => results.value.filter(result => result.passed).length)
 const quizReviewing = computed(() => results.value.length > 0)
 const rememberedTasks = computed(() => tasks.value.filter(task => completed.value.has(task.id) && Boolean(task.takeaway)))
+const previousTakeaway = computed(() => {
+  const index = tasks.value.findIndex(task => task.id === selectedTask.value?.id)
+  if (index <= 0) return ''
+  const previous = tasks.value[index - 1]
+  if (!previous?.takeaway || !completed.value.has(previous.id)) return ''
+  return previous.takeaway
+})
 const canQuizPrevious = computed(() => quizIndex.value > 0 && !quizReviewing.value)
-const canQuizNext = computed(() => {
+const currentQuestionAnswered = computed(() => {
   const question = quizQuestions.value[quizIndex.value]
-  return Boolean(question && quizAnswers.value[question.id] && quizIndex.value < quizQuestions.value.length - 1)
+  return Boolean(question && quizAnswers.value[question.id])
 })
 const nextAvailableTask = computed(() => {
   const id = progress.value?.currentTaskId
@@ -136,10 +152,48 @@ const nextAvailableTask = computed(() => {
   const task = tasks.value.find(item => item.id === id)
   return task && taskUnlocked(task) ? task : null
 })
+const missedAnswersUnchanged = computed(() => {
+  if (!quizReviewing.value || noticeTone.value !== 'error') return false
+  return results.value.some(result =>
+    !result.passed && quizAnswers.value[result.checkId] === submittedAnswers.value[result.checkId]
+  )
+})
+
 const canRunChecks = computed(() => {
-  if (!selectedTask.value || checking.value || publishing.value) return false
+  if (!selectedTask.value || checking.value || publishing.value || missedAnswersUnchanged.value) return false
   return isQuizTask.value ? quizComplete.value : true
 })
+
+const referenceNotes: Record<string, string> = {
+  "AI RMF Generative AI Profile": "生成式助手的风险怎么管",
+  "Evaluation best practices": "怎样检查它真的会了",
+  "HTTP Semantics": "点了生成之后，什么叫做成、什么叫失败",
+  "JSON Data Interchange Syntax": "回来的内容要长成说好的样子",
+  "Structured Outputs": "事先说好要有的那几样",
+  "Context engineering for AI agents": "它该听谁的、篇幅不够先留什么",
+  "Building effective agents": "什么时候按事先排好的步骤，什么时候才自己决定",
+  "Function calling": "看和改要分成两件事",
+  "MCP Tools": "公告是资料，日历才是会改东西的工具",
+  "Agent Skills Overview": "反复做的步骤写成短说明",
+  "Equipping agents for the real world with Agent Skills": "说明里不要写整本规章",
+  "Demystifying evals for AI agents": "用没见过的例子来检查",
+  "Retrieval": "只用找得到的资料，找不到就说不知道",
+  "OWASP Top 10 for LLM Applications": "公告里的假命令和链接不能当成新命令",
+  "MCP Authorization": "登录后那张证明不能转给别的地方",
+  "A2A Specification": "交给别的助手，发出去不算做完",
+  "OpenTelemetry GenAI semantic conventions": "变慢了要能对上是哪一次"
+}
+
+function referencePlain(title: string) {
+  return referenceNotes[title] ?? ""
+}
+
+function sectionKind(title: string) {
+  if (title.includes('别踩')) return 'is-pit'
+  if (title.includes('稳妥')) return 'is-practice'
+  return 'is-example'
+}
+
 const lessonSections = computed(() => {
   const lesson = selectedTask.value?.lesson?.trim() ?? ''
   if (!lesson) return []
@@ -157,6 +211,32 @@ const lessonSections = computed(() => {
   }
   if (current) sections.push({ ...current, body: current.body.trim() })
   return sections.filter(section => section.title || section.body)
+})
+
+function learnerVisibleParts(task: { lesson: string; summary: string; objective: string; scenario: string; takeaway?: string; deliverables: string[] }) {
+  return [
+    task.lesson,
+    task.summary,
+    task.objective,
+    task.scenario,
+    task.takeaway ?? '',
+    ...task.deliverables,
+    ...quizQuestions.value.flatMap(question => [question.prompt, ...question.options.map(option => option.label)]),
+    ...results.value.map(result => result.message)
+  ]
+}
+
+const showBoundaryGloss = computed(() => {
+  const task = selectedTask.value
+  if (!task || task.lesson.includes('这里说的边界')) return false
+  if (task.boundaryGloss) return true
+  return learnerVisibleParts(task).some(part => part.includes('边界'))
+})
+
+const showModelGloss = computed(() => {
+  const task = selectedTask.value
+  if (!task || task.lesson.includes('模型就是')) return false
+  return learnerVisibleParts(task).some(part => part.includes('模型'))
 })
 
 function learningHeaders(kind: LearningRequestKind) {
@@ -219,6 +299,27 @@ function prerequisiteTitles(task: LearningTask) {
     .map(taskId => tasks.value.find(candidate => candidate.id === taskId)?.title ?? taskId)
 }
 
+function rememberLessonForReturn() {
+  const taskId = selectedTask.value?.id
+  if (!taskId) return
+  try {
+    sessionStorage.setItem(RETURN_TASK_STORAGE_KEY, taskId)
+  } catch {
+    // Returning still opens the next lesson if the browser blocks storage.
+  }
+}
+
+function takeReturnTaskId(nextCatalog: LearningCatalog) {
+  let stored = ''
+  try {
+    stored = sessionStorage.getItem(RETURN_TASK_STORAGE_KEY) || ''
+  } catch {
+    stored = ''
+  }
+  const tasksInCatalog = nextCatalog.modules.flatMap(module => module.tasks)
+  return tasksInCatalog.some(task => task.id === stored) ? stored : ''
+}
+
 function firstAvailableTask(nextCatalog: LearningCatalog, nextProgress: LearningProgress) {
   const allTasks = nextCatalog.modules.flatMap(module => module.tasks)
   const done = new Set(nextProgress.completedTaskIds)
@@ -251,7 +352,7 @@ function scrollToBrief() {
 
 function scrollQuizOutcome(passed: boolean) {
   if (passed) {
-    scrollElement(document.querySelector('.quiz-actions'), 'center')
+    scrollElement(document.querySelector('.tonight-ready, .pass-next, .quiz-actions'), 'center')
     return
   }
   scrollElement(document.querySelector('.quiz-explanation.failed'), 'center')
@@ -259,6 +360,13 @@ function scrollQuizOutcome(passed: boolean) {
 
 function selectTask(task: LearningTask) {
   if (!taskUnlocked(task) || checking.value || publishing.value) return
+  if (task.id !== selectedTaskId.value) {
+    try {
+      sessionStorage.removeItem(RETURN_TASK_STORAGE_KEY)
+    } catch {
+      // Choosing another lesson still works if storage is blocked.
+    }
+  }
   selectedTaskId.value = task.id
   void nextTick(scrollToBrief)
 }
@@ -276,6 +384,7 @@ watch(selectedTask, task => {
     activeFile.value = ''
     const answers = restoredAnswers ? { ...restoredAnswers } : {}
     quizAnswers.value = answers
+    quizStarted.value = Object.keys(answers).length > 0
     const unanswered = (task.quizQuestions ?? []).findIndex(question => !answers[question.id])
     quizIndex.value = unanswered < 0 ? 0 : unanswered
   } else {
@@ -336,7 +445,7 @@ async function loadLearning() {
     if (generation !== requestGeneration) return
     catalog.value = nextCatalog
     progress.value = nextProgress
-    selectedTaskId.value = firstAvailableTask(nextCatalog, nextProgress)
+    selectedTaskId.value = takeReturnTaskId(nextCatalog) || firstAvailableTask(nextCatalog, nextProgress)
     notice.value = ""
   } catch (requestError) {
     if (generation === requestGeneration) {
@@ -359,9 +468,68 @@ function saveQuizDraft() {
   localStorage.setItem(QUIZ_DRAFT_STORAGE_KEY, JSON.stringify(quizDrafts.value))
 }
 
+
+
+const quizStarted = ref(false)
+const showPassedQuestions = ref(false)
+const passedQuestionCount = computed(() => results.value.filter(result => result.passed).length)
+watch(results, () => {
+  showPassedQuestions.value = false
+})
+function isQuestionVisible(question: { id: string }, index: number) {
+  if (!quizStarted.value && !quizReviewing.value) return false
+  if (!quizReviewing.value) return index === quizIndex.value
+  if (noticeTone.value !== 'error') return showPassedQuestions.value
+  const result = quizResultFor(question.id)
+  if (result && !result.passed) return true
+  return showPassedQuestions.value
+}
+
+
+function showSaferChoice(questionId: string, optionId: string) {
+  const result = quizResultFor(questionId)
+  return Boolean(result && !result.passed && result.correctOptionId === optionId)
+}
+
+function showPickedChoice(questionId: string, optionId: string) {
+  if (quizAnswers.value[questionId] !== optionId) return false
+  const result = quizResultFor(questionId)
+  return !result?.passed
+}
+
 function selectQuizAnswer(questionId: string, optionId: string) {
   quizAnswers.value = { ...quizAnswers.value, [questionId]: optionId }
   saveQuizDraft()
+  if (quizReviewing.value || checking.value) return
+  const index = quizQuestions.value.findIndex(question => question.id === questionId)
+  if (index !== quizIndex.value || index < 0) return
+  if (index >= quizQuestions.value.length - 1) {
+    void nextTick(() => {
+      document.querySelector(".quiz-actions")?.scrollIntoView({ block: "nearest", behavior: scrollBehavior() })
+    })
+  }
+}
+
+function scrollBehavior(): ScrollBehavior {
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth"
+}
+
+
+function startQuiz(event?: Event) {
+  event?.preventDefault()
+  quizStarted.value = true
+  const firstUnanswered = quizQuestions.value.findIndex(question => !quizAnswers.value[question.id])
+  const index = firstUnanswered >= 0 ? firstUnanswered : 0
+  quizIndex.value = index
+  void nextTick(() => focusQuizQuestion(index))
+}
+
+function focusQuizQuestion(index: number) {
+  const next = document.querySelectorAll<HTMLElement>(".quiz-question")[index]
+  if (!next) return
+  next.scrollIntoView({ block: "nearest", behavior: scrollBehavior() })
+  if (!next.hasAttribute("tabindex")) next.setAttribute("tabindex", "-1")
+  next.focus({ preventScroll: true })
 }
 
 function optionSubmitted(questionId: string, optionId: string) {
@@ -370,6 +538,15 @@ function optionSubmitted(questionId: string, optionId: string) {
 
 function quizResultFor(questionId: string) {
   return results.value.find(result => result.checkId === questionId)
+}
+
+function changedChoiceLabel(questionId: string) {
+  const current = quizAnswers.value[questionId]
+  const submitted = submittedAnswers.value[questionId]
+  if (!current || !submitted || current === submitted) return ''
+  return quizQuestions.value
+    .find(question => question.id === questionId)
+    ?.options.find(option => option.id === current)?.label ?? ''
 }
 
 function goQuiz(offset: number) {
@@ -419,9 +596,18 @@ async function checkTask() {
     if (task.evidenceMode === 'quiz') {
       submittedAnswers.value = { ...quizAnswers.value }
     }
-    notice.value = response.passed
-      ? t('learningCheckPassed', { score: response.score })
-      : t('learningCheckFailed', { score: response.score })
+    if (task.evidenceMode === 'quiz') {
+      const correct = response.results.filter(result => result.passed).length
+      const total = response.results.length
+      const need = Math.ceil(total * (task.passingScore ?? 80) / 100)
+      notice.value = response.passed
+        ? t('learningQuizPassed', { correct, total })
+        : t('learningQuizFailed', { correct, need })
+    } else {
+      notice.value = response.passed
+        ? t('learningCheckPassed', { score: response.score })
+        : t('learningCheckFailed', { score: response.score })
+    }
     noticeTone.value = response.passed ? 'success' : 'error'
     if (task.evidenceMode === 'quiz') {
       await nextTick()
@@ -487,6 +673,7 @@ async function publishAgent() {
     if (generation === requestGeneration && selectedTaskId.value === taskId) {
       publishedAgentName.value = response.agent.name
       notice.value = t('learningPublished', { name: response.agent.name })
+      rememberLessonForReturn()
       emit('use-agent', response.agent.id, task.tonightPrompt)
     }
   } catch (requestError) {
@@ -562,10 +749,14 @@ function confirmImport() {
   <section class="learning-view">
     <header class="learning-hero">
       <div class="hero-intro">
-        <h2>{{ t('learningTitle') }}</h2>
+        <h3 v-if="selectedModule" class="course-kicker">{{ selectedModule.title }}</h3>
+        <h2>{{ selectedTask?.title || t('learningTitle') }}</h2>
         <p class="hero-copy">{{ t('learningHeroCopy') }}</p>
         <p class="hero-meta">
-          <template v-if="selectedTask && !coreCompletedCount">
+          <template v-if="selectedTask && completed.has(selectedTask.id)">
+            {{ t('learningLessonPassedNext') }}
+          </template>
+          <template v-else-if="selectedTask">
             {{ t('learningThisLesson', { minutes: selectedTask.estimatedMinutes }) }}
           </template>
           <template v-else>
@@ -576,10 +767,8 @@ function confirmImport() {
         </p>
       </div>
       <div v-if="progressPercent" class="hero-progress-card">
-        <div class="progress-label"><span>{{ t('learningProgress') }}</span><strong v-if="progressPercent">{{ progressPercent }}%</strong></div>
-        <div v-if="progressPercent" class="progress-track" aria-hidden="true"><span :style="{ width: `${progressPercent}%` }" /></div>
-        <p class="hero-meta">{{ coreCompletedCount }}/{{ coreTasks.length || 17 }} {{ t('learningCompleted') }}</p>
-        <p v-if="coreComplete" class="hero-meta">{{ t('learningCoreComplete') }} {{ electiveCompletedCount }}/{{ electiveTasks.length }}</p>
+        <p v-if="!coreComplete" class="hero-meta">{{ t('learningCoreOnly') }}</p>
+        <p v-if="coreComplete" class="hero-meta">{{ t('learningCoreComplete') }}</p>
       </div>
     </header>
 
@@ -601,7 +790,7 @@ function confirmImport() {
           </ol>
         </details>
         <div v-for="track in visibleTracks" :key="track.id" class="course-track" :class="track.id">
-          <div class="course-rail-head"><strong>{{ track.title }}</strong><span>{{ track.completed }}/{{ track.total }}</span></div>
+          <div class="course-rail-head"><strong>{{ track.title }}</strong></div>
           <div v-for="(module, moduleIndex) in track.modules" :key="`${track.id}-${module.id}`" class="module-block" :class="{ open: isModuleOpen(module.id) }">
             <button
               class="module-heading"
@@ -612,10 +801,8 @@ function confirmImport() {
               <span class="module-index">{{ moduleIndex + 1 }}</span>
               <div>
                 <strong>{{ module.title }}</strong>
-                <small>{{ moduleCompletedCount(module) }}/{{ module.tasks.length }}</small>
               </div>
             </button>
-            <p v-show="isModuleOpen(module.id)">{{ module.summary }}</p>
             <button
               v-for="(task, taskIndex) in module.tasks"
               v-show="isModuleOpen(module.id)"
@@ -632,8 +819,8 @@ function confirmImport() {
               </span>
               <span>
                 <strong>{{ task.title }}</strong>
-                <span class="task-badges">
-                  <small>{{ t('learningMinutes', { minutes: task.estimatedMinutes }) }}</small>
+                <span v-if="selectedTask?.id === task.id && !completed.has(task.id)" class="task-badges">
+                  <small class="doing-now">{{ t('learningInProgress') }}</small>
                 </span>
                 <small v-if="!taskUnlocked(task)" class="lock-reason">{{ t('learningLocked') }}</small>
               </span>
@@ -655,41 +842,41 @@ function confirmImport() {
         </header>
 
         <section id="lab-brief" class="task-brief panel">
-          <div class="section-heading">
-            <h3>{{ selectedTask.title }}</h3>
+          <p v-if="previousTakeaway" class="previous-takeaway">
+            <strong>{{ t('learningPreviousTakeaway') }}</strong>
+            <span>{{ previousTakeaway }}</span>
+          </p>
+          <div v-if="!isQuizTask" class="section-heading">
+            <p class="lesson-title">{{ selectedTask.title }}</p>
             <span v-if="score" class="score-chip">{{ t('learningBestScore', { score }) }}</span>
           </div>
-          <p class="summary">{{ selectedTask.summary }}</p>
+          <p v-if="!isQuizTask" class="summary">{{ selectedTask.summary }}</p>
+          <p v-if="showBoundaryGloss" class="boundary-gloss">{{ t('learningBoundaryGloss') }}</p>
+          <p v-if="showModelGloss" class="model-gloss">{{ t('learningModelGloss') }}</p>
           <p v-if="selectedTask.takeaway" class="takeaway">
             <strong>{{ t('learningTakeaway') }}</strong>
             <span>{{ selectedTask.takeaway }}</span>
           </p>
-          <div class="task-facts">
-            <div><small>{{ t('learningTime') }}</small><strong>{{ selectedTask.estimatedMinutes }} {{ t('learningMinuteUnit') }}</strong></div>
-            <div v-if="!isQuizTask"><small>{{ t('learningChecks') }}</small><strong>{{ acceptanceCount }}</strong></div>
-            <div v-if="isQuizTask"><small>{{ t('learningPassLine') }}</small><strong>{{ selectedTask.passingScore ?? 80 }}</strong></div>
-          </div>
-          <div class="scenario"><strong>{{ t('learningScenario') }}</strong><span>{{ selectedTask.scenario }}</span></div>
+          <div class="scenario"><strong>{{ t('learningScenario') }}</strong><div class="scenario-copy"><p v-for="(sentence, index) in scenarioSentences" :key="index">{{ sentence }}</p></div></div>
           <div class="lesson-block">
             <p class="eyebrow">{{ t('learningLesson') }}</p>
             <div class="lesson-copy">
-              <section v-for="(section, index) in lessonSections" :key="`${section.title}-${index}`" class="lesson-section">
+              <section v-for="(section, index) in lessonSections" :key="`${section.title}-${index}`" class="lesson-section" :class="sectionKind(section.title)">
                 <strong v-if="section.title">{{ section.title }}</strong>
                 <p v-if="section.body">{{ section.body }}</p>
               </section>
             </div>
+          </div>
+          <div class="task-facts">
+            <div v-if="!isQuizTask"><small>{{ t('learningTime') }}</small><strong>{{ selectedTask.estimatedMinutes }} {{ t('learningMinuteUnit') }}</strong></div>
+            <div v-if="!isQuizTask"><small>{{ t('learningChecks') }}</small><strong>{{ acceptanceCount }}</strong></div>
+            <div v-if="isQuizTask"><small>{{ t('learningPassLine') }}</small><strong>{{ t('learningPassScore', { score: selectedTask.passingScore ?? 80 }) }}</strong></div>
           </div>
           <div v-if="!isQuizTask" class="objective"><strong>{{ t('learningObjective') }}</strong><span>{{ selectedTask.objective }}</span></div>
           <div v-if="!isQuizTask" class="skill-block">
             <p class="eyebrow">{{ t('learningSkills') }}</p>
             <div class="skill-list"><span v-for="skill in selectedTask.skills" :key="skill">{{ skill }}</span></div>
           </div>
-          <p v-if="isQuizTask && selectedTask.tonightPrompt && !completed.has(selectedTask.id)" class="tonight-note">
-            {{ t('learningTonightLater') }}
-          </p>
-          <p v-if="isQuizTask" class="start-quiz after-lesson">
-            <a href="#lab-quiz">{{ t('learningStartQuizAfter') }}</a>
-          </p>
         </section>
 
         <section id="lab-quiz" class="workbench-grid" :class="{ 'quiz-layout': isQuizTask }">
@@ -703,24 +890,37 @@ function confirmImport() {
               </UiButton>
             </div>
             <template v-if="isQuizTask">
-              <ol class="quiz-steps">
+              <p v-if="!completed.has(selectedTask.id)" class="quiz-ask">{{ t('learningQuizAsk') }}</p>
+              <p v-if="showBoundaryGloss" class="boundary-gloss">{{ t('learningBoundaryGloss') }}</p>
+              <p v-if="showModelGloss" class="model-gloss">{{ t('learningModelGloss') }}</p>
+              <p v-if="selectedTask.takeaway" class="quiz-remember">
+                <strong>{{ t('learningTakeaway') }}</strong>
+                <span>{{ selectedTask.takeaway }}</span>
+              </p>
+              <ol v-if="!quizStarted && !completed.has(selectedTask.id)" class="quiz-steps">
                 <li>{{ t('learningHowRead') }}</li>
                 <li>{{ t('learningHowAnswer') }}</li>
                 <li>{{ t('learningHowSubmit') }}</li>
               </ol>
-              <div v-if="!quizReviewing" class="quiz-nav">
+              <UiButton
+                v-if="!quizStarted && !completed.has(selectedTask.id)"
+                class="start-quiz-action"
+                variant="accent"
+                size="lg"
+                @click="startQuiz()"
+              >
+                {{ t('learningStartQuizAfter') }}
+              </UiButton>
+              <div v-if="quizStarted && !quizReviewing" class="quiz-nav">
                 <UiButton variant="secondary" size="sm" :disabled="!canQuizPrevious || checking" @click="goQuiz(-1)">
                   {{ t('learningQuizPrevious') }}
                 </UiButton>
                 <span>{{ t('learningQuizAt', { current: quizIndex + 1, total: quizQuestions.length }) }}</span>
-                <UiButton variant="secondary" size="sm" :disabled="!canQuizNext || checking" @click="goQuiz(1)">
-                  {{ t('learningQuizNext') }}
-                </UiButton>
               </div>
               <div class="quiz-list">
                 <article
                   v-for="(question, index) in quizQuestions"
-                  v-show="quizReviewing || index === quizIndex"
+                  v-show="isQuestionVisible(question, index)"
                   :key="question.id"
                   class="quiz-question"
                 >
@@ -745,6 +945,14 @@ function confirmImport() {
                         @change="selectQuizAnswer(question.id, option.id)"
                       />
                       <span>{{ option.label }}</span>
+                      <em
+                        v-if="showPickedChoice(question.id, option.id)"
+                        class="picked-mark"
+                      >{{ t('learningPicked') }}</em>
+                      <em
+                        v-if="showSaferChoice(question.id, option.id)"
+                        class="safer-mark"
+                      >{{ t('learningSaferChoice') }}</em>
                     </label>
                   </div>
                   <p
@@ -753,50 +961,90 @@ function confirmImport() {
                     :class="quizResultFor(question.id)?.passed ? 'passed' : 'failed'"
                     role="status"
                   >
-                    <strong>{{ quizResultFor(question.id)?.passed ? t('learningQuizRight') : t('learningQuizWrong') }}</strong>
-                    {{ quizResultFor(question.id)?.message }}
-                    <small>{{ quizResultFor(question.id)?.evidence }}</small>
+                    <strong>{{ changedChoiceLabel(question.id) ? t('learningAnswerPending') : (quizResultFor(question.id)?.passed ? t('learningQuizRight') : t('learningQuizWrong')) }}</strong>
+                    <span v-if="changedChoiceLabel(question.id)">{{ t('learningAnswerChanged', { choice: changedChoiceLabel(question.id) }) }}</span>
+                    <span v-else-if="quizResultFor(question.id) && !quizResultFor(question.id)?.passed" class="quiz-choice">{{ quizResultFor(question.id)?.evidence }}</span>
+                    <span>{{ quizResultFor(question.id)?.message }}</span>
                   </p>
                 </article>
               </div>
-              <div class="quiz-actions">
+              <button
+                v-if="quizReviewing && noticeTone === 'error' && passedQuestionCount"
+                class="show-passed"
+                type="button"
+                @click="showPassedQuestions = !showPassedQuestions"
+              >
+                {{ showPassedQuestions ? t('learningHidePassed') : t('learningShowPassed', { count: passedQuestionCount }) }}
+              </button>
+              <button
+                v-if="quizReviewing && noticeTone !== 'error'"
+                class="show-passed"
+                type="button"
+                @click="showPassedQuestions = !showPassedQuestions"
+              >
+                {{ showPassedQuestions ? t('learningHidePassedReview') : t('learningShowPassedReview') }}
+              </button>
+              <p v-if="completed.has(selectedTask.id) && selectedTask.tonightPrompt" class="tonight-ready">
+                <strong>{{ t('learningTonightUse') }}</strong>
+                {{ selectedTask.tonightPrompt }}
+              </p>
+              <div v-if="quizStarted || quizReviewing || completed.has(selectedTask.id)" class="quiz-actions" :class="{ ready: quizComplete && !results.length, docked: quizStarted && !quizReviewing && !completed.has(selectedTask.id) }">
+                <p v-if="quizStarted && !quizReviewing && !completed.has(selectedTask.id) && selectedTask.takeaway" class="dock-remember">
+                  <strong>{{ t('learningTakeaway') }}</strong>
+                  <span>{{ selectedTask.takeaway }}</span>
+                </p>
                 <p class="quiz-progress" :class="{ failed: results.length && noticeTone === 'error', passed: results.length && noticeTone === 'success' }">
                   <template v-if="results.length">
                     {{ notice }}
-                    <span>{{ t('learningAttemptSummary', { passed: quizCorrectCount, total: results.length }) }}</span>
+                    <span v-if="noticeTone === 'error'">{{ t('learningAttemptSummary', { passed: quizCorrectCount, total: results.length }) }}</span>
+                  </template>
+                  <template v-else-if="quizComplete">
+                    {{ t('learningQuizReady') }}
                   </template>
                   <template v-else>
                     {{ t('learningQuizProgress', { answered: quizAnsweredCount, total: quizQuestions.length }) }}
-                    <span v-if="!quizComplete">{{ t('learningQuizRemain', { remain: quizQuestions.length - quizAnsweredCount }) }}</span>
+                    <span>{{ t('learningQuizRemain', { remain: quizQuestions.length - quizAnsweredCount }) }}</span>
                   </template>
                 </p>
-                <UiButton variant="primary" size="sm" :disabled="!canRunChecks" @click="checkTask">
-                  {{ checking ? t('learningChecking') : t('learningRunChecks') }}
+                <UiButton
+                  v-if="quizStarted && !quizReviewing && !completed.has(selectedTask.id) && quizIndex < quizQuestions.length - 1"
+                  variant="primary"
+                  size="lg"
+                  :disabled="!currentQuestionAnswered || checking"
+                  @click="goQuiz(1)"
+                >
+                  {{ t('learningQuizNext') }}
                 </UiButton>
                 <UiButton
-                  v-if="nextAvailableTask && completed.has(selectedTask.id)"
-                  variant="accent"
-                  size="sm"
-                  :disabled="checking || publishing"
-                  :title="nextAvailableTask.title"
-                  @click="goToNextTask"
+                  v-if="!completed.has(selectedTask.id) && (quizComplete || quizReviewing)"
+                  :variant="results.length && noticeTone === 'error' ? 'accent' : 'accent'"
+                  size="lg"
+                  :disabled="!canRunChecks"
+                  @click="checkTask"
                 >
-                  {{ t('learningNextLesson') }}
-                  <span class="next-lesson-title">{{ nextAvailableTask.title }}</span>
+                  {{ checking ? t('learningChecking') : (results.length && noticeTone === 'error' ? t('learningResubmit') : t('learningRunChecks')) }}
                 </UiButton>
-                <p v-if="completed.has(selectedTask.id) && selectedTask.tonightPrompt" class="tonight-ready">
-                  <strong>{{ t('learningTonightUse') }}</strong>
-                  {{ selectedTask.tonightPrompt }}
-                </p>
-                <UiButton
-                  v-if="completed.has(selectedTask.id)"
-                  variant="secondary"
-                  size="sm"
-                  :disabled="checking || publishing"
-                  @click="emit('try-evening-plan', selectedTask.tonightPrompt)"
-                >
-                  {{ t('learningTryTonight') }}
-                </UiButton>
+                <div v-if="completed.has(selectedTask.id)" class="pass-next">
+                  <UiButton
+                    variant="accent"
+                    size="lg"
+                    :disabled="checking || publishing"
+                    @click="rememberLessonForReturn(); emit('try-evening-plan', selectedTask.tonightPrompt, selectedTask.takeaway)"
+                  >
+                    {{ t('learningTryTonight') }}
+                  </UiButton>
+                  <UiButton
+                    v-if="nextAvailableTask"
+                    variant="secondary"
+                    size="lg"
+                    :disabled="checking || publishing"
+                    :title="nextAvailableTask.title"
+                    @click="goToNextTask"
+                  >
+                    {{ t('learningNextLesson') }}
+                    <span class="next-lesson-title">{{ nextAvailableTask.title }}</span>
+                  </UiButton>
+                </div>
                 <UiButton
                   v-if="selectedTask.kind === 'agent-project' && attemptId && completed.has(selectedTask.id)"
                   variant="accent"
@@ -808,14 +1056,6 @@ function confirmImport() {
                 </UiButton>
                 <small v-if="publishedAgentName" class="publish-note">{{ publishedAgentName }}</small>
               </div>
-              <details v-if="results.length" class="mentor-box">
-                <summary>{{ t('learningMentor') }}</summary>
-                <textarea v-model="mentorQuestion" :placeholder="t('learningMentorPlaceholder')" rows="3" />
-                <UiButton variant="secondary" size="sm" :disabled="!attemptId || mentorChecking || checking" @click="askMentor">
-                  {{ mentorChecking ? t('learningRequesting') : t('learningRequestExplanation') }}
-                </UiButton>
-                <p v-if="mentorFeedback" class="mentor-feedback">{{ mentorFeedback }}</p>
-              </details>
             </template>
             <template v-else>
               <UiTabs
@@ -866,9 +1106,10 @@ function confirmImport() {
         <section class="task-brief panel task-appendix">
           <details>
             <summary>{{ t('learningReferences') }}</summary>
+            <p class="reference-note">{{ t('learningReferencesNote') }}</p>
             <div class="reference-list">
               <a v-for="reference in selectedTask.references" :key="reference.url" :href="reference.url" target="_blank" rel="noopener noreferrer">
-                {{ reference.title }} · {{ reference.publisher }} · {{ reference.version }}
+                {{ referencePlain(reference.title) || reference.title }}
               </a>
             </div>
             <div v-if="!isQuizTask" class="task-meta-grid">
@@ -929,10 +1170,16 @@ function confirmImport() {
 .eyebrow {
   margin: 0;
   color: var(--color-primary-strong);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 900;
   letter-spacing: .04em;
-  text-transform: uppercase;
+}
+.course-kicker {
+  margin: 0;
+  color: var(--color-primary-strong);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.4;
 }
 .learning-hero h2 {
   margin: 0;
@@ -940,6 +1187,13 @@ function confirmImport() {
   font-size: var(--text-xl);
   font-weight: var(--font-bold);
   line-height: 1.2;
+}
+.lesson-title {
+  margin: 3px 0 0;
+  color: var(--color-heading);
+  font-size: 20px;
+  font-weight: var(--font-bold);
+  line-height: 1.3;
 }
 .hero-copy,
 .summary,
@@ -1091,7 +1345,7 @@ function confirmImport() {
 }
 .module-heading small {
   color: var(--color-faint);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
 }
 .module-heading strong {
@@ -1113,7 +1367,7 @@ function confirmImport() {
 .module-block p {
   margin: 0;
   padding-left: 35px;
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1.5;
 }
 .task-button {
@@ -1150,7 +1404,11 @@ function confirmImport() {
   display: block;
   margin-top: 3px;
   color: var(--color-faint);
-  font-size: 11px;
+  font-size: 12px;
+}
+.task-button .doing-now {
+  color: var(--color-primary-strong);
+  font-weight: 700;
 }
 .task-button .lock-reason {
   color: var(--color-warning-text);
@@ -1278,15 +1536,14 @@ function confirmImport() {
 }
 .task-facts small {
   color: var(--color-faint);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 700;
 }
 .task-facts strong {
-  overflow: hidden;
   color: var(--color-heading);
   font-size: var(--text-xs);
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.4;
+  white-space: normal;
 }
 .objective,
 .scenario {
@@ -1305,11 +1562,26 @@ function confirmImport() {
 .scenario {
   border-left-color: var(--color-accent);
 }
-.tonight-note {
-  margin: 12px 0 0;
-  color: var(--color-muted);
-  font-size: var(--text-sm);
+.scenario-copy {
+  display: grid;
+  gap: 6px;
+}
+.scenario-copy p {
+  margin: 0;
+}
+.previous-takeaway {
+  display: grid;
+  gap: 2px;
+  margin: 0 0 12px;
+  font-size: 13px;
   line-height: 1.5;
+}
+.previous-takeaway strong {
+  color: var(--color-primary-strong);
+  font-size: 12px;
+}
+.previous-takeaway span {
+  color: var(--color-heading);
 }
 .takeaway {
   display: grid;
@@ -1321,7 +1593,7 @@ function confirmImport() {
 }
 .takeaway strong {
   color: var(--color-primary-strong);
-  font-size: 11px;
+  font-size: 12px;
 }
 .takeaway span {
   color: var(--color-heading);
@@ -1363,7 +1635,7 @@ function confirmImport() {
 }
 .objective strong,
 .scenario strong {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--color-primary-strong);
 }
 .skill-block {
@@ -1402,6 +1674,14 @@ function confirmImport() {
   display: grid;
   gap: 6px;
 }
+.lesson-section.is-example,
+.lesson-section.is-pit {
+  padding-left: 12px;
+  border-left: 2px solid var(--color-primary);
+}
+.lesson-section.is-pit {
+  border-left-color: var(--color-danger);
+}
 .lesson-section strong {
   color: var(--color-heading);
   font-size: var(--text-sm);
@@ -1409,6 +1689,17 @@ function confirmImport() {
 .lesson-section p {
   margin: 0;
   white-space: pre-line;
+}
+.boundary-gloss,
+.model-gloss {
+  margin: 0;
+  color: var(--color-heading);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+}
+.task-brief > .boundary-gloss,
+.task-brief > .model-gloss {
+  margin-bottom: 8px;
 }
 .task-meta-grid {
   display: grid;
@@ -1423,11 +1714,25 @@ function confirmImport() {
 .reference-list strong {
   display: block;
   color: var(--color-heading);
-  font-size: 11px;
+  font-size: 12px;
 }
 .task-meta-grid ul {
   margin: 6px 0 0;
   padding-left: 18px;
+}
+.reference-note {
+  margin: 8px 0 0;
+  color: var(--color-muted);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+.reference-list a {
+  display: grid;
+  gap: 2px;
+}
+.reference-list strong {
+  color: var(--color-heading);
+  font-size: var(--text-sm);
 }
 .reference-list {
   display: grid;
@@ -1435,7 +1740,7 @@ function confirmImport() {
   margin-top: 14px;
   padding-top: var(--space-3);
   border-top: 1px solid var(--color-border-soft);
-  font-size: 11px;
+  font-size: 12px;
 }
 .reference-list a {
   padding: 4px 0;
@@ -1508,7 +1813,7 @@ function confirmImport() {
 .quiz-progress {
   margin: 4px 0 0;
   color: var(--color-muted);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
 }
 .quiz-index {
@@ -1523,14 +1828,21 @@ function confirmImport() {
 .quiz-list {
   display: grid;
   gap: var(--space-4);
-  padding-bottom: 72px;
+  padding-bottom: 128px;
+}
+.quiz-question:focus {
+  outline: none;
+}
+.quiz-question:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 4px;
 }
 .quiz-question {
   display: grid;
   gap: 8px;
   padding-bottom: var(--space-3);
   border-bottom: 1px solid var(--color-border-soft);
-  scroll-margin-bottom: 80px;
+  scroll-margin-bottom: 128px;
 }
 .quiz-question:last-child {
   padding-bottom: 0;
@@ -1539,7 +1851,7 @@ function confirmImport() {
 .quiz-prompt {
   margin: 0;
   color: var(--color-heading);
-  font-size: var(--text-xs);
+  font-size: var(--text-md);
   font-weight: 700;
   line-height: 1.55;
 }
@@ -1552,13 +1864,13 @@ function confirmImport() {
   align-items: flex-start;
   gap: 8px;
   min-height: 44px;
-  padding: 9px 10px;
+  padding: 10px 12px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   background: var(--color-input);
   color: var(--color-text);
-  font-size: var(--text-xs);
-  line-height: 1.5;
+  font-size: var(--text-base);
+  line-height: 1.55;
   cursor: pointer;
 }
 .quiz-option input {
@@ -1575,6 +1887,21 @@ function confirmImport() {
 .quiz-option.failed {
   border-color: var(--color-danger);
 }
+.picked-mark {
+  margin-left: auto;
+  color: var(--color-primary-strong);
+  font-style: normal;
+  font-weight: 700;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.safer-mark {
+  margin-left: 8px;
+  color: var(--color-success, #1f7a4d);
+  font-style: normal;
+  font-weight: 700;
+  font-size: 12px;
+}
 .quiz-option.correct {
   border-color: var(--color-success);
 }
@@ -1582,14 +1909,20 @@ function confirmImport() {
   display: grid;
   gap: 4px;
   margin: 8px 0 0;
-  padding: 8px 10px;
-  scroll-margin-bottom: 80px;
+  padding: 10px 12px;
+  scroll-margin-bottom: 128px;
   border-left: 3px solid var(--color-border);
   border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
   background: var(--color-row);
   color: var(--color-text);
-  font-size: 12px;
-  line-height: 1.5;
+  font-size: var(--text-base);
+  line-height: 1.6;
+}
+.quiz-choice {
+  font-weight: 700;
+}
+.quiz-explanation strong {
+  font-size: var(--text-md);
 }
 .quiz-explanation.passed {
   border-left-color: var(--color-success);
@@ -1598,7 +1931,9 @@ function confirmImport() {
   border-left-color: var(--color-danger);
 }
 .quiz-explanation small {
-  color: var(--color-muted);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+  line-height: 1.55;
 }
 .course-track {
   display: grid;
@@ -1630,21 +1965,59 @@ function confirmImport() {
   color: var(--color-muted);
   font-size: 12px;
 }
-.start-quiz {
+.start-quiz,
+.start-quiz-action {
   margin: 10px 0 0;
+  justify-self: start;
 }
 .start-quiz a {
-  color: var(--color-primary);
-  font-size: 13px;
-  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: var(--radius-sm);
+  background: var(--color-primary);
+  color: #fff;
+  font-size: var(--text-base);
+  font-weight: 700;
   text-decoration: none;
 }
 .start-quiz a:hover {
-  text-decoration: underline;
+  text-decoration: none;
+  filter: brightness(1.06);
+}
+.start-quiz a:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
 }
 #lab-brief,
 #lab-quiz {
   scroll-margin-top: 16px;
+}
+.quiz-ask {
+  margin: 0;
+  color: var(--color-heading);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  line-height: 1.5;
+}
+.quiz-remember {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 10px 12px;
+  border-left: 4px solid var(--color-heading);
+  background: var(--color-surface-muted);
+}
+.quiz-remember strong {
+  color: var(--color-primary-strong);
+  font-size: 12px;
+}
+.quiz-remember span {
+  color: var(--color-heading);
+  font-size: var(--text-sm);
+  line-height: 1.5;
 }
 .quiz-steps {
   display: grid;
@@ -1655,10 +2028,37 @@ function confirmImport() {
   font-size: 12px;
   line-height: 1.5;
 }
+.show-passed {
+  justify-self: start;
+  margin: 8px 0 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--color-muted);
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.4;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.show-passed:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 3px;
+}
+.pass-next {
+  display: grid;
+  gap: 10px;
+  margin-top: 8px;
+}
+.quiz-actions.ready {
+  margin-top: 8px;
+  padding: 12px;
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-muted);
+}
 .quiz-actions {
-  position: sticky;
-  bottom: calc(8px + env(safe-area-inset-bottom, 0px));
-  z-index: 3;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -1669,12 +2069,28 @@ function confirmImport() {
   border-radius: var(--radius);
   background: var(--color-surface-panel);
 }
+.quiz-actions.docked {
+  position: sticky;
+  bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+  z-index: 3;
+}
+.dock-remember {
+  flex: 1 0 100%;
+  margin: 0;
+  color: var(--color-heading);
+  font-size: 13px;
+  line-height: 1.45;
+}
+.dock-remember strong {
+  margin-right: 6px;
+  color: var(--color-primary-strong);
+  font-size: 12px;
+}
 .quiz-actions .quiz-progress {
   margin: 0 auto 0 0;
 }
 .tonight-ready {
-  flex: 1 0 100%;
-  margin: 0;
+  margin: 12px 0 0;
   color: var(--color-muted);
   font-size: var(--text-sm);
   line-height: 1.5;
@@ -1682,7 +2098,7 @@ function confirmImport() {
 .tonight-ready strong {
   display: block;
   color: var(--color-heading);
-  font-size: 11px;
+  font-size: 12px;
 }
 .quiz-actions .quiz-progress.failed {
   color: var(--color-danger);
@@ -1709,13 +2125,11 @@ function confirmImport() {
 }
 .next-lesson-title {
   display: block;
-  max-width: min(16rem, 70vw);
-  overflow: hidden;
-  font-size: 11px;
+  max-width: min(18rem, 70vw);
+  font-size: 13px;
   font-weight: 600;
-  line-height: 1.3;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.35;
+  white-space: normal;
   opacity: .92;
 }
 .attempt-summary {
@@ -1867,7 +2281,6 @@ function confirmImport() {
     padding: 12px;
     font-size: 14px;
   }
-  .quiz-steps,
   .editor-hint,
   .skill-block {
     display: none;
