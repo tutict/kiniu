@@ -149,18 +149,27 @@ test('wrong answers show explanations and do not unlock the next lab', async ({ 
   await expect(page.locator('.quiz-actions.docked')).toContainText('先写清帮谁、做成什么样、不能做什么，再让它动手。')
   await expect(page.locator('.option-mark')).toHaveCount(0)
 
-  const wrongOrRight = [
-    '马上写更长的话，让它显得更懂林舟',
-    '所有希望被理解的人，只要他说想被理解，就算这回帮对了人',
-    '改全组日历，并通知同事',
-    '让助手更聪明、更懂林舟，回复也更有温度、更愿意再来',
-    '根据他这句给有限建议，并标明不确定的地方',
-    '只使用他这次贴上来的待办',
-    '改不回来的事先拒绝，没把握就停下来交给林舟',
-    '拒绝改日历和群发，说明这回只根据贴上来的文字给建议',
-    '标明缺了什么，或拒绝去做，不编造关键内容',
-    '林舟贴一句待办后，最多给出 3 条下一步；做不到就明确拒绝',
+  // Chosen by option id and resolved against the catalog, so a wording change in the
+  // curriculum cannot silently break this test the way hard-coded labels did.
+  const wrongOrRightIds = [
+    'write-prompt',
+    'all-users',
+    'team-coordinator',
+    'smarter',
+    'flag-and-bound',
+    'pasted-only',
+    'refuse-and-escalate',
+    'refuse-external-write',
+    'flag-or-refuse',
+    'given-when-then',
   ]
+  const firstLab = catalogTasks().find((task) => task.id === 'requirements-contract')
+  if (!firstLab) throw new Error('missing first lab')
+  const wrongOrRight = wrongOrRightIds.map((optionId, index) => {
+    const option = firstLab.quizQuestions[index]?.options.find((item) => item.id === optionId)
+    if (!option) throw new Error(`Missing option ${optionId} on question ${index}`)
+    return option.label
+  })
   await answerInOrder(page, wrongOrRight)
 
   const submit = page.getByRole('button', { name: '提交判断' })
