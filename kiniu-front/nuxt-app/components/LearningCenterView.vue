@@ -226,12 +226,9 @@ function learnerVisibleParts(task: { lesson: string; summary: string; objective:
   ]
 }
 
-const showBoundaryGloss = computed(() => {
-  const task = selectedTask.value
-  if (!task || task.lesson.includes('这里说的边界')) return false
-  if (task.boundaryGloss) return true
-  return learnerVisibleParts(task).some(part => part.includes('边界'))
-})
+// The backend decides this (LearningTaskDefinition.boundaryGloss) and emits it in the catalog.
+// The frontend must not re-derive the rule, or the two copies drift apart.
+const showBoundaryGloss = computed(() => selectedTask.value?.boundaryGloss === true)
 
 const showModelGloss = computed(() => {
   const task = selectedTask.value

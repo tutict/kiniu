@@ -43,6 +43,12 @@ public record LearningTaskDefinition(
         takeaway = takeaway == null ? "" : takeaway.trim();
     }
 
+    /**
+     * Whether the learner-facing view should show the boundary gloss. This is the single source of
+     * truth for that decision, emitted as {@code boundaryGloss} in the catalog response; the
+     * frontend reads the flag and must not re-derive it. Every field the learner can see is
+     * scanned, so the answer cannot drift from the content.
+     */
     @JsonProperty(value = "boundaryGloss", access = JsonProperty.Access.READ_ONLY)
     public boolean boundaryGloss() {
         if (lesson.contains("这里说的边界")) {
@@ -53,7 +59,8 @@ public record LearningTaskDefinition(
                 || mentionsBoundary(scenario)
                 || mentionsBoundary(lesson)
                 || mentionsBoundary(takeaway)
-                || deliverables.stream().anyMatch(this::mentionsBoundary)) {
+                || deliverables.stream().anyMatch(this::mentionsBoundary)
+                || checks.stream().anyMatch(check -> mentionsBoundary(check.message()))) {
             return true;
         }
         for (LearningQuizQuestion question : quizQuestions) {
