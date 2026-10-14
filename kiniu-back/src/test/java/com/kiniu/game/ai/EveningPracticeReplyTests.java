@@ -111,6 +111,32 @@ class EveningPracticeReplyTests {
     }
 
     @Test
+    void shouldFireAtTheLengthLimitAndStopJustPastIt() {
+        String atLimit = "今晚，不要改日历。" + "啊".repeat(240 - "今晚，不要改日历。".length());
+        String pastLimit = atLimit + "啊";
+
+        assertThat(atLimit.length()).isEqualTo(240);
+        assertThat(pastLimit.length()).isEqualTo(241);
+        assertThat(EveningPracticeReply.fromLearnerText(atLimit)).isPresent();
+        assertThat(EveningPracticeReply.fromLearnerText(pastLimit)).isEmpty();
+    }
+
+    @Test
+    void shouldIgnoreBlankAndNullText() {
+        assertThat(EveningPracticeReply.fromLearnerText(null)).isEmpty();
+        assertThat(EveningPracticeReply.fromLearnerText("   ")).isEmpty();
+    }
+
+    @Test
+    void shouldHonorEveryEscapeHatchMarker() {
+        for (String marker : java.util.List.of("正常回答", "别用预置", "不要用预置")) {
+            assertThat(EveningPracticeReply.fromLearnerText("今晚不要改日历。" + marker))
+                    .as(marker)
+                    .isEmpty();
+        }
+    }
+
+    @Test
     void shouldHonorAnExplicitRequestForANormalAnswer() {
         assertThat(EveningPracticeReply.fromLearnerText("今晚不要改日历，请正常回答。")).isEmpty();
         assertThat(EveningPracticeReply.fromLearnerText("今晚不要改日历。", true)).isEmpty();

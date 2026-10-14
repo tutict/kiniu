@@ -57,6 +57,17 @@ class LocalAccessGuardTests {
     }
 
     @Test
+    void shouldTreatAWhitespaceOnlyConfiguredTokenAsNoToken() {
+        assertTrue(guard("   ").allows(requestWithToken(null)));
+    }
+
+    @Test
+    void shouldRejectATokenWithADifferentLength() {
+        assertFalse(guard("secret").allows(requestWithToken("secret-and-more")));
+        assertFalse(guard("secret").allows(requestWithToken("sec")));
+    }
+
+    @Test
     void requireShouldThrowUnauthorizedForAWrongToken() {
         ResponseStatusException exception = assertThrows(
                 ResponseStatusException.class,

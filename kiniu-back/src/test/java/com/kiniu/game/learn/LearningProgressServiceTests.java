@@ -1,5 +1,6 @@
 package com.kiniu.game.learn;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -118,6 +119,90 @@ class LearningProgressServiceTests {
         LearningProgressService restarted = new LearningProgressService(objectMapper, catalogService, progressPath);
         assertFalse(restarted.getProgress().completedTaskIds().contains("first"));
         assertTrue(Files.list(tempDir).noneMatch(p -> p.getFileName().toString().contains(".corrupt-")));
+    }
+
+    @Test
+    void shouldRepairCurrentTaskWhenTheCatalogDropsIt() throws Exception {
+        Path catalogPath = tempDir.resolve("drop-current-catalog.json");
+        writeCatalog(catalogPath, List.of("first", "second", "third"));
+        LearningCatalogService catalogService = new LearningCatalogService(
+                objectMapper, catalogPath.toString(), TaskCheckRegistryTestFactory.standard(objectMapper));
+        Path progressPath = tempDir.resolve("drop-current-progress.json");
+        LearningProgressService service = new LearningProgressService(objectMapper, catalogService, progressPath);
+
+        service.recordAttempt("first", 100, List.of("requirements"));
+        assertEquals("second", service.getProgress().currentTaskId());
+
+        // Drop the very task the learner is currently on, then hot-reload.
+        writeCatalog(catalogPath, List.of("first", "third"));
+        Files.setLastModifiedTime(catalogPath, FileTime.fromMillis(
+                Files.getLastModifiedTime(catalogPath).toMillis() + 5_000));
+        catalogService.getCatalog();
+
+        LearningProgress repaired = service.getProgress();
+        assertEquals(List.of("first"), repaired.completedTaskIds());
+        assertEquals("third", repaired.currentTaskId());
+        assertTrue(Files.list(tempDir).noneMatch(p -> p.getFileName().toString().contains(".corrupt-")));
+    }
+
+    @Test
+    void shouldPruneBestScoresForRemovedTasksButKeepWeakSkills() throws Exception {
+        Path catalogPath = tempDir.resolve("prune-catalog.json");
+        writeCatalog(catalogPath, List.of("first", "second"));
+        LearningCatalogService catalogService = new LearningCatalogService(
+                objectMapper, catalogPath.toString(), TaskCheckRegistryTestFactory.standard(objectMapper));
+        Path progressPath = tempDir.resolve("prune-progress.json");
+        LearningProgressService service = new LearningProgressService(objectMapper, catalogService, progressPath);
+
+        service.recordAttempt("first", 40, List.of("requirements"));
+        assertTrue(service.getProgress().bestScores().containsKey("first"));
+        assertTrue(service.getProgress().weakSkills().contains("requirements"));
+
+        writeCatalog(catalogPath, List.of("second"));
+        Files.setLastModifiedTime(catalogPath, FileTime.fromMillis(
+                Files.getLastModifiedTime(catalogPath).toMillis() + 5_000));
+        catalogService.getCatalog();
+
+        LearningProgress pruned = service.getProgress();
+        assertTrue(pruned.completedTaskIds().isEmpty());
+        assertFalse(pruned.bestScores().containsKey("first"));
+        assertTrue(pruned.weakSkills().contains("requirements"));
+    }
+
+    @Test
+    void shouldNotRewriteTheProgressFileWhenReconciliationChangesNothing() throws Exception {
+        Path catalogPath = tempDir.resolve("noop-catalog.json");
+        writeCatalog(catalogPath, List.of("first", "second"));
+        LearningCatalogService catalogService = new LearningCatalogService(
+                objectMapper, catalogPath.toString(), TaskCheckRegistryTestFactory.standard(objectMapper));
+        Path progressPath = tempDir.resolve("noop-progress.json");
+        LearningProgressService service = new LearningProgressService(objectMapper, catalogService, progressPath);
+
+        service.recordAttempt("first", 100, List.of("requirements"));
+        byte[] before = Files.readAllBytes(progressPath);
+
+        // An unrelated catalog edit (same tasks, new mtime) must reload but not touch progress.
+        writeCatalog(catalogPath, List.of("first", "second"));
+        Files.setLastModifiedTime(catalogPath, FileTime.fromMillis(
+                Files.getLastModifiedTime(catalogPath).toMillis() + 5_000));
+        catalogService.getCatalog();
+
+        service.getProgress();
+        assertArrayEquals(before, Files.readAllBytes(progressPath));
+    }
+
+    @Test
+    void shouldQuarantineProgressWithAnUnsupportedSchemaVersion() throws Exception {
+        Path progressPath = tempDir.resolve("schema-progress.json");
+        Files.writeString(progressPath, """
+                {"schemaVersion":99,"currentTaskId":"first","completedTaskIds":[],"bestScores":{},"weakSkills":[]}
+                """);
+
+        LearningProgressService service = new LearningProgressService(objectMapper, catalogService(), progressPath);
+
+        assertEquals("first", service.getProgress().currentTaskId());
+        assertTrue(Files.list(tempDir)
+                .anyMatch(p -> p.getFileName().toString().startsWith("schema-progress.json.corrupt-")));
     }
 
     private void writeCatalog(Path path, List<String> ids) throws Exception {
