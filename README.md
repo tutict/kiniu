@@ -121,6 +121,8 @@ npm run dev
 
 只要请求包含本机令牌或 provider 密钥，前端就要求后端地址为 loopback。导师反馈只使用判分结果、任务目标和用户问题，不会把原始完整提交拼进模型请求。
 
+后端在同一个拦截器里统一校验 `X-Local-Token`，覆盖全部接口，新增接口不会漏掉；比对用常量时间比较，避免通过响应时间逐字节猜令牌。CORS 预检（`OPTIONS`）不带自定义头，因此不校验令牌。若没有配置令牌（例如 `-NoLocalToken`），接口对本机所有进程开放，后端启动时会打印警告。
+
 ### 官方工程参考
 
 - [OpenAI Structured Outputs](https://developers.openai.com/api/docs/guides/structured-outputs)、[Function Calling](https://developers.openai.com/api/docs/guides/function-calling)、[Retrieval](https://developers.openai.com/api/docs/guides/retrieval)、[Evaluation best practices](https://developers.openai.com/api/docs/guides/evaluation-best-practices)
