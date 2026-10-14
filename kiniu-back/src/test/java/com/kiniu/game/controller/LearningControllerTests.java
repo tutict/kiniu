@@ -40,6 +40,48 @@ class LearningControllerTests {
     }
 
     @Test
+    void shouldExposeAttemptHistoryAndReviewOfMissedQuestions() throws Exception {
+        mockMvc.perform(post("/learn/tasks/requirements-contract/check")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "answers": {
+                                    "first-move": "add-features",
+                                    "user-scope": "all-users",
+                                    "out-of-scope-user": "pasted-todo",
+                                    "business-outcome": "high-nps",
+                                    "input-ambiguity": "refuse-all",
+                                    "data-boundary": "read-mail",
+                                    "risk-boundary": "do-everything",
+                                    "irreversible-request": "do-it",
+                                    "missing-owner": "retry-until-sure",
+                                    "acceptance-criteria": "vibe"
+                                  }
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.passed").value(false));
+
+        mockMvc.perform(get("/learn/tasks/requirements-contract/attempts"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$[0].attemptId").exists())
+                .andExpect(jsonPath("$[0].createdAt").exists())
+                .andExpect(jsonPath("$[0].passed").exists())
+                .andExpect(jsonPath("$[0].score").exists())
+                .andExpect(jsonPath("$[0].correctCount").exists())
+                .andExpect(jsonPath("$[0].totalCount").exists())
+                .andExpect(jsonPath("$[?(@.passed == false)]").isNotEmpty());
+
+        mockMvc.perform(get("/learn/review"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$[?(@.questionId == 'first-move' && @.taskId == 'requirements-contract')]").isNotEmpty())
+                .andExpect(jsonPath("$[?(@.questionId == 'first-move')].prompt").isNotEmpty())
+                .andExpect(jsonPath("$[?(@.questionId == 'first-move')].message").isNotEmpty());
+    }
+
+    @Test
     void shouldEnforceUnlocksPersistAttemptsAndExplainEvidence() throws Exception {
         mockMvc.perform(get("/learn/catalog"))
                 .andExpect(status().isOk())

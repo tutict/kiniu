@@ -8,7 +8,7 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Comparator;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -83,10 +83,24 @@ public class LearningAttemptService {
     }
 
     public synchronized List<LearningAttempt> listForTask(String taskId) {
-        return attempts.stream()
+        return newestFirst().stream()
                 .filter(attempt -> attempt.taskId().equals(taskId))
-                .sorted(Comparator.comparing(LearningAttempt::createdAt).reversed())
                 .toList();
+    }
+
+    /** Every retained attempt, newest first. Bounded by {@link #MAX_ATTEMPTS} at load and record time. */
+    public synchronized List<LearningAttempt> listAll() {
+        return newestFirst();
+    }
+
+    /**
+     * Recording order is the source of truth, so "newest first" is the reverse of the stored list.
+     * Sorting by {@code createdAt} would misorder attempts recorded within the same instant.
+     */
+    private List<LearningAttempt> newestFirst() {
+        List<LearningAttempt> reversed = new ArrayList<>(attempts);
+        Collections.reverse(reversed);
+        return List.copyOf(reversed);
     }
 
     private List<LearningAttempt> load() {

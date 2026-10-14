@@ -44,6 +44,16 @@ class GameControllerSecurityTests {
     }
 
     @Test
+    void shouldRequireLocalTokenForAttemptHistoryAndReview() throws Exception {
+        mockMvc.perform(get("/learn/tasks/requirements-contract/attempts")
+                        .header("Origin", "http://localhost:3000"))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(get("/learn/review")
+                        .header("Origin", "http://localhost:3000"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
     void shouldRejectAWrongLocalToken() throws Exception {
         mockMvc.perform(get("/learn/catalog")
                         .header("Origin", "http://localhost:3000")

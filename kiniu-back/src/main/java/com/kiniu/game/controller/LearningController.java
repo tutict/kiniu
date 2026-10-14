@@ -4,6 +4,7 @@ import com.kiniu.game.ai.AIRequestConfig;
 import com.kiniu.game.ai.AIRuntimeContext;
 import com.kiniu.game.ai.AIService;
 import com.kiniu.game.ai.AITelemetryCollector;
+import com.kiniu.game.dto.LearningAttemptView;
 import com.kiniu.game.dto.LearningCatalogView;
 import com.kiniu.game.dto.LearningCheckRequest;
 import com.kiniu.game.dto.LearningCheckResponse;
@@ -11,6 +12,7 @@ import com.kiniu.game.dto.LearningFeedbackRequest;
 import com.kiniu.game.dto.LearningFeedbackResponse;
 import com.kiniu.game.dto.LearningPublishRequest;
 import com.kiniu.game.dto.LearningPublishResponse;
+import com.kiniu.game.dto.LearningReviewItemView;
 import com.kiniu.game.dto.LearningTaskView;
 import com.kiniu.game.learn.LearningAgentPublisher;
 import com.kiniu.game.learn.LearningAttempt;
@@ -18,6 +20,7 @@ import com.kiniu.game.learn.LearningAttemptService;
 import com.kiniu.game.learn.LearningCatalogService;
 import com.kiniu.game.learn.LearningProgress;
 import com.kiniu.game.learn.LearningProgressService;
+import com.kiniu.game.learn.LearningReviewService;
 import com.kiniu.game.learn.LearningTaskDefinition;
 import com.kiniu.game.learn.QuizCheckService;
 import com.kiniu.game.learn.TaskCheckResult;
@@ -39,9 +42,12 @@ import org.springframework.web.server.ResponseStatusException;
 @RequestMapping("/learn")
 public class LearningController {
 
+    private static final int MAX_ATTEMPT_HISTORY = 20;
+
     private final LearningCatalogService catalogService;
     private final LearningProgressService progressService;
     private final LearningAttemptService attemptService;
+    private final LearningReviewService reviewService;
     private final LearningAgentPublisher agentPublisher;
     private final TaskCheckService checkService;
     private final QuizCheckService quizCheckService;
@@ -54,6 +60,7 @@ public class LearningController {
             LearningCatalogService catalogService,
             LearningProgressService progressService,
             LearningAttemptService attemptService,
+            LearningReviewService reviewService,
             LearningAgentPublisher agentPublisher,
             TaskCheckService checkService,
             QuizCheckService quizCheckService,
@@ -64,6 +71,7 @@ public class LearningController {
         this.catalogService = catalogService;
         this.progressService = progressService;
         this.attemptService = attemptService;
+        this.reviewService = reviewService;
         this.agentPublisher = agentPublisher;
         this.checkService = checkService;
         this.quizCheckService = quizCheckService;
@@ -96,6 +104,17 @@ public class LearningController {
     @GetMapping("/tasks/{taskId}")
     public LearningTaskView task(@PathVariable String taskId) {
         return LearningTaskView.from(catalogService.getTask(taskId));
+    }
+
+    @GetMapping("/tasks/{taskId}/attempts")
+    public List<LearningAttemptView> attempts(@PathVariable String taskId) {
+        catalogService.getTask(taskId);
+        return reviewService.attemptsForTask(taskId, MAX_ATTEMPT_HISTORY);
+    }
+
+    @GetMapping("/review")
+    public List<LearningReviewItemView> review() {
+        return reviewService.review();
     }
 
     @PostMapping("/tasks/{taskId}/check")
