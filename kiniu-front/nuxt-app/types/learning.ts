@@ -27,6 +27,7 @@ export type LearningTask = {
   tonightPrompt?: string
   takeaway?: string
   boundaryGloss?: boolean
+  modelGloss?: boolean
 }
 export type LearningModule = { id: string; title: string; summary: string; level: string; tasks: LearningTask[] }
 export type LearningCatalog = { version: number; modules: LearningModule[] }

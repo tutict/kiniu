@@ -5,6 +5,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.kiniu.game.dto.LearningTaskGloss;
+import com.kiniu.game.dto.LearningTaskView;
 import tools.jackson.databind.ObjectMapper;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -239,9 +241,28 @@ class LearningCatalogServiceTests {
                 "genai-red-team",
                 "mcp-integration",
                 "architecture-collaboration");
-        assertTrue(tasks.stream().allMatch(task -> task.boundaryGloss() == boundaryGlossIds.contains(task.id())));
-        assertTrue(objectMapper.writeValueAsString(taskById(tasks, "data-lifecycle")).contains("\"boundaryGloss\":true"));
-        assertTrue(objectMapper.writeValueAsString(taskById(tasks, "requirements-contract")).contains("\"boundaryGloss\":false"));
+        assertTrue(tasks.stream().allMatch(task -> LearningTaskGloss.boundary(task) == boundaryGlossIds.contains(task.id())));
+        assertTrue(objectMapper.writeValueAsString(LearningTaskView.from(taskById(tasks, "data-lifecycle")))
+                .contains("\"boundaryGloss\":true"));
+        assertTrue(objectMapper.writeValueAsString(LearningTaskView.from(taskById(tasks, "requirements-contract")))
+                .contains("\"boundaryGloss\":false"));
+        Set<String> modelGlossIds = Set.of(
+                "http-json-basics",
+                "model-response-contract",
+                "data-lifecycle",
+                "workflow-agent-decision",
+                "tool-contract",
+                "agent-skill-authoring",
+                "agent-trace-recovery",
+                "genai-red-team",
+                "access-concurrency",
+                "mcp-integration",
+                "a2a-collaboration");
+        assertTrue(tasks.stream().allMatch(task -> LearningTaskGloss.model(task) == modelGlossIds.contains(task.id())));
+        assertTrue(objectMapper.writeValueAsString(LearningTaskView.from(taskById(tasks, "http-json-basics")))
+                .contains("\"modelGloss\":true"));
+        assertTrue(objectMapper.writeValueAsString(LearningTaskView.from(taskById(tasks, "requirements-contract")))
+                .contains("\"modelGloss\":false"));
         assertTrue(tasks.stream().allMatch(task ->
                 task.quizQuestions().stream().allMatch(question -> {
                     int correctLength = question.options().stream()

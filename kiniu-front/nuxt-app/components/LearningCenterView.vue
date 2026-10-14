@@ -213,28 +213,10 @@ const lessonSections = computed(() => {
   return sections.filter(section => section.title || section.body)
 })
 
-function learnerVisibleParts(task: { lesson: string; summary: string; objective: string; scenario: string; takeaway?: string; deliverables: string[] }) {
-  return [
-    task.lesson,
-    task.summary,
-    task.objective,
-    task.scenario,
-    task.takeaway ?? '',
-    ...task.deliverables,
-    ...quizQuestions.value.flatMap(question => [question.prompt, ...question.options.map(option => option.label)]),
-    ...results.value.map(result => result.message)
-  ]
-}
-
-// The backend decides this (LearningTaskDefinition.boundaryGloss) and emits it in the catalog.
-// The frontend must not re-derive the rule, or the two copies drift apart.
+// The backend decides both gloss flags (LearningTaskGloss) and emits them in the catalog.
+// The frontend must not re-derive the rules, or the two copies drift apart.
 const showBoundaryGloss = computed(() => selectedTask.value?.boundaryGloss === true)
-
-const showModelGloss = computed(() => {
-  const task = selectedTask.value
-  if (!task || task.lesson.includes('模型就是')) return false
-  return learnerVisibleParts(task).some(part => part.includes('模型'))
-})
+const showModelGloss = computed(() => selectedTask.value?.modelGloss === true)
 
 function learningHeaders(kind: LearningRequestKind) {
   return buildLearningRequestHeaders(kind, {

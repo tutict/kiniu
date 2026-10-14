@@ -4,16 +4,17 @@ import com.kiniu.game.ai.AIRequestConfig;
 import com.kiniu.game.ai.AIRuntimeContext;
 import com.kiniu.game.ai.AIService;
 import com.kiniu.game.ai.AITelemetryCollector;
+import com.kiniu.game.dto.LearningCatalogView;
 import com.kiniu.game.dto.LearningCheckRequest;
 import com.kiniu.game.dto.LearningCheckResponse;
 import com.kiniu.game.dto.LearningFeedbackRequest;
 import com.kiniu.game.dto.LearningFeedbackResponse;
 import com.kiniu.game.dto.LearningPublishRequest;
 import com.kiniu.game.dto.LearningPublishResponse;
+import com.kiniu.game.dto.LearningTaskView;
 import com.kiniu.game.learn.LearningAgentPublisher;
 import com.kiniu.game.learn.LearningAttempt;
 import com.kiniu.game.learn.LearningAttemptService;
-import com.kiniu.game.learn.LearningCatalogDefinition;
 import com.kiniu.game.learn.LearningCatalogService;
 import com.kiniu.game.learn.LearningProgress;
 import com.kiniu.game.learn.LearningProgressService;
@@ -73,13 +74,13 @@ public class LearningController {
     }
 
     @GetMapping("/catalog")
-    public LearningCatalogDefinition catalog() {
-        return catalogService.getCatalog();
+    public LearningCatalogView catalog() {
+        return LearningCatalogView.from(catalogService.getCatalog());
     }
 
     @PostMapping("/catalog/reload")
-    public LearningCatalogDefinition reloadCatalog() {
-        return catalogService.reload();
+    public LearningCatalogView reloadCatalog() {
+        return LearningCatalogView.from(catalogService.reload());
     }
 
     @GetMapping("/progress")
@@ -93,8 +94,8 @@ public class LearningController {
     }
 
     @GetMapping("/tasks/{taskId}")
-    public LearningTaskDefinition task(@PathVariable String taskId) {
-        return catalogService.getTask(taskId);
+    public LearningTaskView task(@PathVariable String taskId) {
+        return LearningTaskView.from(catalogService.getTask(taskId));
     }
 
     @PostMapping("/tasks/{taskId}/check")
