@@ -6,7 +6,7 @@
       "sceneId": "interview-java-rag",
       "title": "追问练习",
       "speakerId": "java-rag-interviewer",
-      "narrative": "一次只问一件事。答完再追问边界：能不能改日历、找不到资料能不能编。",
+      "narrative": "一次只问一件事。答完再问边界：能不能改日历，找不到能不能编。",
       "tags": [
         "interview",
         "java",
@@ -17,8 +17,8 @@
       "choices": [
         {
           "id": "ask-java-core",
-          "label": "先问 Java 基础",
-          "description": "从集合、异常、泛型、反射、I/O 等基础知识开始。",
+          "label": "先问一件具体的事",
+          "description": "一次只问一件事，不把好几件混在一起。",
           "targetNodeId": "interview.java-core",
           "requiredFlags": [],
           "blockedFlags": [],
@@ -37,8 +37,8 @@
         },
         {
           "id": "ask-jvm-concurrency",
-          "label": "追问 JVM/并发",
-          "description": "切到 JVM、内存模型、锁、线程池和并发容器。",
+          "label": "再问能不能改日历",
+          "description": "答完再问：能不能改日历、发消息或下单。",
           "targetNodeId": "interview.java-core",
           "requiredFlags": [],
           "blockedFlags": [],
@@ -57,8 +57,8 @@
         },
         {
           "id": "ask-rag-architecture",
-          "label": "切到 RAG 架构",
-          "description": "围绕切分、Embedding、召回、重排、上下文压缩和评估追问。",
+          "label": "再问找不到能不能编",
+          "description": "找不到资料时要明说，不能编。",
           "targetNodeId": "interview.rag-architecture",
           "requiredFlags": [],
           "blockedFlags": [],
@@ -77,8 +77,8 @@
         },
         {
           "id": "review-interview",
-          "label": "总结薄弱点",
-          "description": "把当前回答整理成薄弱点、复习顺序和下一轮问题。",
+          "label": "收成下一句该问什么",
+          "description": "把刚才没说清的收成下一句问题。",
           "targetNodeId": "learning.review",
           "requiredFlags": [],
           "blockedFlags": [],
@@ -227,7 +227,7 @@
       "sceneId": "interview-java-core",
       "title": "继续追问",
       "speakerId": "java-rag-interviewer",
-      "narrative": "继续问清楚：这次调用会留下什么、超时了能不能再点一次。",
+      "narrative": "继续问清楚：这次有没有做成，等太久了能不能再点一次。",
       "tags": [
         "interview",
         "java-core"
@@ -237,8 +237,8 @@
       "choices": [
         {
           "id": "continue-java-follow-up",
-          "label": "继续追问 Java",
-          "description": "围绕上一题追问实现细节、反例和工程场景。",
+          "label": "再问这一次做成了没有",
+          "description": "等了还没回来，要说没做成，不要假装已经安排好。",
           "targetNodeId": "interview.java-core",
           "requiredFlags": [],
           "blockedFlags": [],
@@ -254,8 +254,8 @@
         },
         {
           "id": "switch-to-rag-from-java",
-          "label": "转到 RAG",
-          "description": "从 Java 后端工程视角切到 RAG 系统设计。",
+          "label": "换到有没有资料",
+          "description": "有资料才回答。找不到就明说，不编。",
           "targetNodeId": "interview.rag-architecture",
           "requiredFlags": [],
           "blockedFlags": [],
@@ -271,8 +271,8 @@
         },
         {
           "id": "java-review",
-          "label": "生成复习卡片",
-          "description": "把 Java 回答沉淀成可复习的知识卡和错题。",
+          "label": "收成还能用的一句",
+          "description": "把刚才的边界收成一句下次还能用的话。",
           "targetNodeId": "learning.review",
           "requiredFlags": [],
           "blockedFlags": [],
@@ -488,8 +488,8 @@
       "choices": [
         {
           "id": "continue-rag-follow-up",
-          "label": "继续追问 RAG",
-          "description": "追问一个 RAG 系统在真实业务里的失效模式和优化方案。",
+          "label": "再问找不到怎么办",
+          "description": "找不到就说不知道，不要用别的公司的资料来答。",
           "targetNodeId": "interview.rag-architecture",
           "requiredFlags": [],
           "blockedFlags": [],
@@ -506,8 +506,8 @@
         },
         {
           "id": "switch-to-knowledge-qa",
-          "label": "转成知识库问答",
-          "description": "把面试问题切换成基于知识包的 grounded QA。",
+          "label": "只用找得到的资料来答",
+          "description": "先看来源是不是这家的、新不新，再回答。",
           "targetNodeId": "knowledge.qa",
           "requiredFlags": [],
           "blockedFlags": [],
@@ -525,8 +525,8 @@
         },
         {
           "id": "rag-review",
-          "label": "生成 RAG 复盘",
-          "description": "整理 RAG 薄弱点、术语表和下一轮追问。",
+          "label": "收成这次哪一句不能编",
+          "description": "把「找不到就不能编」收成一句。",
           "targetNodeId": "learning.review",
           "requiredFlags": [],
           "blockedFlags": [],

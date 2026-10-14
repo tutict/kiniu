@@ -262,35 +262,35 @@ public class StoryEngine {
                         "interview-java-rag",
                         "追问练习",
                         "java-rag-interviewer")
-                .narrative("面试官会一次只问一个问题，根据你的回答追问，并在必要时给出评分、漏洞和参考答案。")
+                .narrative("一次只问一件事。答完再问边界：能不能改日历，找不到能不能编。")
                 .tag("interview")
                 .tag("java")
                 .tag("rag")
                 .choice(StoryChoice.of(
                                 "ask-java-core",
-                                "先问 Java 基础",
-                                "从集合、异常、泛型、反射、I/O 等基础知识开始。",
+                                "先问一件具体的事",
+                                "一次只问一件事，不把好几件混在一起。",
                                 "interview.java-core")
                         .whenKeywords("java", "基础", "集合", "hashmap", "core")
                         .changeAffinity("java-rag-interviewer", 1))
                 .choice(StoryChoice.of(
                                 "ask-jvm-concurrency",
-                                "追问 JVM/并发",
-                                "切到 JVM、内存模型、锁、线程池和并发容器。",
+                                "再问能不能改日历",
+                                "答完再问：能不能改日历、发消息或下单。",
                                 "interview.java-core")
                         .whenKeywords("jvm", "并发", "线程", "锁", "concurrency")
                         .addFlag("interview-deep-dive"))
                 .choice(StoryChoice.of(
                                 "ask-rag-architecture",
-                                "切到 RAG 架构",
-                                "围绕切分、Embedding、召回、重排、上下文压缩和评估追问。",
+                                "再问找不到能不能编",
+                                "找不到资料时要明说，不能编。",
                                 "interview.rag-architecture")
                         .whenKeywords("rag", "向量", "召回", "embedding", "rerank")
                         .changeAffinity("knowledge-curator", 1))
                 .choice(StoryChoice.of(
                                 "review-interview",
-                                "总结薄弱点",
-                                "把当前回答整理成薄弱点、复习顺序和下一轮问题。",
+                                "收成下一句该问什么",
+                                "把刚才没说清的收成下一句问题。",
                                 "learning.review")
                         .whenKeywords("总结", "薄弱", "复习", "score", "review"))
                 .build();
@@ -300,25 +300,25 @@ public class StoryEngine {
                         "interview-java-core",
                         "继续追问",
                         "java-rag-interviewer")
-                .narrative("这一轮聚焦 Java 基础和 JVM/并发。先让用户回答，再根据答案追问边界条件、底层机制和实际工程取舍。")
+                .narrative("继续问清楚：这次有没有做成，等太久了能不能再点一次。")
                 .tag("interview")
                 .tag("java-core")
                 .choice(StoryChoice.of(
                                 "continue-java-follow-up",
-                                "继续追问 Java",
-                                "围绕上一题追问实现细节、反例和工程场景。",
+                                "再问这一次做成了没有",
+                                "等了还没回来，要说没做成，不要假装已经安排好。",
                                 "interview.java-core")
                         .whenKeywords("继续", "追问", "java", "jvm"))
                 .choice(StoryChoice.of(
                                 "switch-to-rag-from-java",
-                                "转到 RAG",
-                                "从 Java 后端工程视角切到 RAG 系统设计。",
+                                "换到有没有资料",
+                                "有资料才回答。找不到就明说，不编。",
                                 "interview.rag-architecture")
                         .whenKeywords("rag", "向量", "检索", "系统设计"))
                 .choice(StoryChoice.of(
                                 "java-review",
-                                "生成复习卡片",
-                                "把 Java 回答沉淀成可复习的知识卡和错题。",
+                                "收成还能用的一句",
+                                "把刚才的边界收成一句下次还能用的话。",
                                 "learning.review")
                         .whenKeywords("卡片", "错题", "复习", "总结"))
                 .build();
@@ -328,26 +328,26 @@ public class StoryEngine {
                         "interview-rag-architecture",
                         "按资料追问",
                         "java-rag-interviewer")
-                .narrative("这一轮聚焦 RAG：文档切分、Embedding、向量库、召回、重排、上下文装配、评估和线上观测。")
+                .narrative("有资料才回答。找不到就明说，不拿别人的公告来答你。")
                 .tag("interview")
                 .tag("rag")
                 .choice(StoryChoice.of(
                                 "continue-rag-follow-up",
-                                "继续追问 RAG",
-                                "追问一个 RAG 系统在真实业务里的失效模式和优化方案。",
+                                "再问找不到怎么办",
+                                "找不到就说不知道，不要用别的公司的资料来答。",
                                 "interview.rag-architecture")
                         .whenKeywords("继续", "追问", "rag", "评估", "召回"))
                 .choice(StoryChoice.of(
                                 "switch-to-knowledge-qa",
-                                "转成知识库问答",
-                                "把面试问题切换成基于知识包的 grounded QA。",
+                                "只用找得到的资料来答",
+                                "先看来源是不是这家的、新不新，再回答。",
                                 "knowledge.qa")
                         .whenKeywords("知识库", "文档", "问答", "grounded")
                         .addFlag("rag-to-knowledge"))
                 .choice(StoryChoice.of(
                                 "rag-review",
-                                "生成 RAG 复盘",
-                                "整理 RAG 薄弱点、术语表和下一轮追问。",
+                                "收成这次哪一句不能编",
+                                "把「找不到就不能编」收成一句。",
                                 "learning.review")
                         .whenKeywords("复盘", "总结", "薄弱", "术语"))
                 .build();

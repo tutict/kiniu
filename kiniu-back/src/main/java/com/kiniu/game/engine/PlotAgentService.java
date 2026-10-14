@@ -179,8 +179,6 @@ public class PlotAgentService {
 
     private List<String> buildGeneratedChoices(String beatType, Agent spotlightAgent, WorldState worldState) {
         Set<String> choices = new LinkedHashSet<>();
-        String agentName = spotlightAgent.name();
-
         switch (beatType) {
             case "interview" -> {
                 choices.add("一次只问一件事");
@@ -193,19 +191,19 @@ public class PlotAgentService {
                 choices.add("找不到就拒绝编造");
             }
             case "planning" -> {
-                choices.add("让 " + agentName + " 拆解下一步");
-                choices.add("先检查风险和依赖");
-                choices.add("把结果整理成任务清单");
+                choices.add("把这件事拆成今晚能做的小步");
+                choices.add("先标出不确定的地方");
+                choices.add("写清怎样算做完");
             }
             case "writing" -> {
-                choices.add("让 " + agentName + " 梳理提纲");
-                choices.add("让它修改一段草稿");
-                choices.add("要求它保留原有表达风格");
+                choices.add("先问写给谁");
+                choices.add("帮我列一个提纲");
+                choices.add("只改这一段，别换口气");
             }
             case "discovery" -> {
-                choices.add("让 " + agentName + " 解释背后的上下文");
-                choices.add("追问一个关键假设");
-                choices.add("把发现记录到会话记忆");
+                choices.add("用一句说清我现在要什么");
+                choices.add("先问我做不到哪些事");
+                choices.add("先说今晚最想搞定的一件事");
             }
             case "companion" -> {
                 choices.add("把今晚最乱的一件说清楚");
@@ -218,20 +216,15 @@ public class PlotAgentService {
                 choices.add("记下下次还能用的做法");
             }
             default -> {
-                choices.add("换一种帮法");
                 choices.add("先说今晚最想搞定的一件事");
+                choices.add("贴几条待办，帮我排出下一步");
                 choices.add("先问清楚做不到什么");
             }
         }
-
-        if (worldState.hasFlag("mode-interview")) {
-            choices.add("生成一次面试评分和参考答案");
+        if (spotlightAgent == null || worldState == null) {
+            return List.copyOf(choices);
         }
-        if (worldState.hasFlag("mode-knowledge")) {
-            choices.add("标注回答中的证据与假设");
-        }
-
-        return choices.stream().limit(4).toList();
+        return choices.stream().limit(3).toList();
     }
 
     private String titleFor(String beatType, Agent spotlightAgent) {

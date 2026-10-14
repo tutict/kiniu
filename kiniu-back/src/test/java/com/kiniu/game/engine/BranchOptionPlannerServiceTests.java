@@ -61,11 +61,36 @@ class BranchOptionPlannerServiceTests {
                         "medium",
                         "cautious",
                         "rowan",
-                        "This branch should lower immediate pressure while preserving later options.",
+                        "先停一下，不把事情做死。",
                         -1,
                         List.of(),
                         List.of("tension-raised"),
                         "ai"));
+    }
+
+    @Test
+    void shouldDescribeEveningChoicesInPlainChinese() {
+        AIService aiService = mock(AIService.class);
+        when(aiService.generateBranchOptions(
+                any(StoryEvent.class),
+                anyList(),
+                anyString(),
+                anyString(),
+                anyList(),
+                anyList()))
+                .thenReturn(List.of());
+        BranchOptionPlannerService service = new BranchOptionPlannerService(aiService);
+
+        List<BranchOption> result = service.annotateChoices(
+                sampleStoryEvent(),
+                List.of(sampleAgent("rowan", "Rowan")),
+                "今晚帮我看看",
+                "",
+                List.of("帮我排出下一步", "换一件别的事"));
+
+        assertThat(result).extracting(BranchOption::consequenceSummary).containsExactly(
+                "按你写的边界，给今晚的下一步。不会改日历。",
+                "先停一下，换一件今晚的事。");
     }
 
     private StoryEvent sampleStoryEvent() {
