@@ -1,11 +1,13 @@
 package com.kiniu.game.learn;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import tools.jackson.databind.ObjectMapper;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.FileTime;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
@@ -87,6 +89,43 @@ class LearningProgressServiceTests {
 
         assertEquals("", completed.currentTaskId());
         assertEquals(List.of("first", "second", "third"), completed.completedTaskIds());
+    }
+
+    @Test
+    void shouldKeepProgressWhenACatalogEditDropsACompletedTask() throws Exception {
+        Path catalogPath = tempDir.resolve("editable-catalog.json");
+        writeCatalog(catalogPath, List.of("first", "second", "third"));
+        LearningCatalogService catalogService = new LearningCatalogService(
+                objectMapper, catalogPath.toString(), TaskCheckRegistryTestFactory.standard(objectMapper));
+        Path progressPath = tempDir.resolve("editable-progress.json");
+        LearningProgressService service = new LearningProgressService(objectMapper, catalogService, progressPath);
+
+        service.recordAttempt("first", 100, List.of("requirements"));
+        assertTrue(service.getProgress().completedTaskIds().contains("first"));
+
+        // Edit the catalog to drop the completed task, then hot-reload.
+        writeCatalog(catalogPath, List.of("second", "third"));
+        Files.setLastModifiedTime(catalogPath, FileTime.fromMillis(
+                Files.getLastModifiedTime(catalogPath).toMillis() + 5_000));
+        catalogService.getCatalog();
+
+        // The in-memory progress is reconciled instead of being discarded.
+        LearningProgress reconciled = service.getProgress();
+        assertFalse(reconciled.completedTaskIds().contains("first"));
+        assertEquals("second", reconciled.currentTaskId());
+
+        // A restart must not quarantine the file.
+        LearningProgressService restarted = new LearningProgressService(objectMapper, catalogService, progressPath);
+        assertFalse(restarted.getProgress().completedTaskIds().contains("first"));
+        assertTrue(Files.list(tempDir).noneMatch(p -> p.getFileName().toString().contains(".corrupt-")));
+    }
+
+    private void writeCatalog(Path path, List<String> ids) throws Exception {
+        List<LearningTaskDefinition> tasks = ids.stream().map(this::task).toList();
+        LearningCatalogDefinition catalog = new LearningCatalogDefinition(
+                1,
+                List.of(new LearningModuleDefinition("module", "Module", "Summary", "beginner", tasks)));
+        objectMapper.writeValue(path.toFile(), catalog);
     }
 
     private LearningCatalogService catalogService() throws Exception {

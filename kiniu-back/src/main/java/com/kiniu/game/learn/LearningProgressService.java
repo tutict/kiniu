@@ -8,7 +8,9 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.Instant;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,6 +28,7 @@ public class LearningProgressService {
     private final LearningCatalogService catalogService;
     private final Path progressPath;
     private LearningProgress progress;
+    private long reconciledRevision = -1L;
 
     @Autowired
     public LearningProgressService(
@@ -40,13 +43,16 @@ public class LearningProgressService {
         this.catalogService = catalogService;
         this.progressPath = progressPath.toAbsolutePath().normalize();
         this.progress = loadProgress();
+        this.reconciledRevision = catalogService.revision();
     }
 
     public synchronized LearningProgress getProgress() {
+        reconcileWithCatalogIfChanged();
         return progress;
     }
 
     public synchronized LearningProgress recordAttempt(String taskId, int score, List<String> skills) {
+        reconcileWithCatalogIfChanged();
         LearningProgress recorded = progress.record(taskId, score, skills, taskId);
         progress = recorded.withCurrentTaskId(catalogService.nextTaskId(taskId, recorded));
         persist();
@@ -55,6 +61,7 @@ public class LearningProgressService {
 
     public synchronized LearningProgress reset() {
         progress = initialProgress();
+        reconciledRevision = catalogService.revision();
         persist();
         return progress;
     }
@@ -65,8 +72,8 @@ public class LearningProgressService {
         }
         try {
             LearningProgress loaded = objectMapper.readValue(progressPath.toFile(), LearningProgress.class);
-            validateLoadedProgress(loaded);
-            return normalizeCurrentTask(loaded);
+            validateSchema(loaded);
+            return reconcile(loaded);
         } catch (RuntimeException exception) {
             log.error("Learning progress at {} is invalid and will be quarantined.", progressPath, exception);
             quarantineCorruptFile();
@@ -78,20 +85,54 @@ public class LearningProgressService {
         return LearningProgress.empty(catalogService.firstTaskId());
     }
 
-    private void validateLoadedProgress(LearningProgress loaded) {
+    private void validateSchema(LearningProgress loaded) {
         if (loaded == null || loaded.schemaVersion() != SCHEMA_VERSION) {
             throw new IllegalStateException("Unsupported learning progress schema.");
         }
-        Set<String> catalogTaskIds = new HashSet<>();
+    }
+
+    /**
+     * Drops references to tasks that no longer exist in the catalog and repairs the current task,
+     * instead of discarding the whole file. A catalog edit must never wipe a learner's progress.
+     */
+    private LearningProgress reconcile(LearningProgress loaded) {
+        Set<String> knownTaskIds = new HashSet<>();
         catalogService.getCatalog().modules().forEach(module ->
-                module.tasks().forEach(task -> catalogTaskIds.add(task.id())));
-        if (!loaded.currentTaskId().isBlank() && !catalogTaskIds.contains(loaded.currentTaskId())) {
-            throw new IllegalStateException("Learning progress references an unknown current task.");
+                module.tasks().forEach(task -> knownTaskIds.add(task.id())));
+
+        List<String> completed = loaded.completedTaskIds().stream()
+                .filter(knownTaskIds::contains)
+                .toList();
+        Map<String, Integer> scores = new LinkedHashMap<>();
+        loaded.bestScores().forEach((taskId, score) -> {
+            if (knownTaskIds.contains(taskId)) {
+                scores.put(taskId, score);
+            }
+        });
+        LearningProgress pruned = new LearningProgress(
+                loaded.schemaVersion(),
+                loaded.currentTaskId(),
+                completed,
+                scores,
+                loaded.weakSkills());
+        return normalizeCurrentTask(pruned);
+    }
+
+    private void reconcileWithCatalogIfChanged() {
+        // Force a lazy reload check so the revision reflects the file on disk before we compare.
+        catalogService.getCatalog();
+        long revision = catalogService.revision();
+        if (revision == reconciledRevision) {
+            return;
         }
-        if (!catalogTaskIds.containsAll(loaded.completedTaskIds())
-                || !catalogTaskIds.containsAll(loaded.bestScores().keySet())) {
-            throw new IllegalStateException("Learning progress references unknown completed tasks.");
+        LearningProgress reconciled = reconcile(progress);
+        reconciledRevision = revision;
+        if (reconciled.equals(progress)) {
+            return;
         }
+        progress = reconciled;
+        persist();
+        log.info("Reconciled learning progress with reloaded catalog (revision {}).", revision);
     }
 
     private LearningProgress normalizeCurrentTask(LearningProgress loaded) {
