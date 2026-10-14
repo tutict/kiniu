@@ -117,6 +117,50 @@ class LearningCatalogServiceTests {
     }
 
     @Test
+    void productionCatalogShouldPreserveEveryVersionThreeTaskId() throws Exception {
+        LearningCatalogService service = new LearningCatalogService(
+                objectMapper,
+                Path.of("data", "learning-catalog.json").toString(),
+                TaskCheckRegistryTestFactory.standard(objectMapper));
+        Set<String> taskIds = Set.copyOf(service.getCatalog().modules().stream()
+                .flatMap(module -> module.tasks().stream())
+                .map(LearningTaskDefinition::id)
+                .toList());
+
+        // README promises that upgrading the catalog never resets progress. That only holds if every
+        // version 3 task id still exists, so historical completedTaskIds and bestScores keep
+        // resolving instead of being pruned by reconciliation.
+        Set<String> versionThreeTaskIds = Set.of(
+                "requirements-contract",
+                "http-json-basics",
+                "model-response-contract",
+                "prompt-context-design",
+                "data-lifecycle",
+                "context-memory-budget",
+                "workflow-agent-decision",
+                "tool-contract",
+                "agent-trace-recovery",
+                "evaluation-suite",
+                "companion-agent",
+                "rag-pipeline",
+                "rag-evaluation",
+                "genai-red-team",
+                "access-concurrency",
+                "mcp-integration",
+                "a2a-collaboration",
+                "observability-runbook",
+                "release-safety",
+                "architecture-collaboration");
+        assertEquals(20, versionThreeTaskIds.size());
+        assertTrue(
+                taskIds.containsAll(versionThreeTaskIds),
+                () -> "Catalog dropped version 3 task ids: " + versionThreeTaskIds.stream()
+                        .filter(id -> !taskIds.contains(id))
+                        .sorted()
+                        .toList());
+    }
+
+    @Test
     void productionCatalogShouldExposeVersionFourCurriculum() throws Exception {
         LearningCatalogService service = new LearningCatalogService(
                 objectMapper,
