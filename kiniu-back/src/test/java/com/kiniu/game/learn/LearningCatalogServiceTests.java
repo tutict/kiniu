@@ -1469,6 +1469,20 @@ class LearningCatalogServiceTests {
         assertEquals("First title", service.getTask("first").title());
     }
 
+    @Test
+    void shouldIncrementRevisionWhenTheCatalogReloads() throws Exception {
+        Path path = tempDir.resolve("revision-catalog-" + System.nanoTime() + ".json");
+        writeCatalog(path, "first", "First title");
+        LearningCatalogService service = new LearningCatalogService(
+                objectMapper, path.toString(), TaskCheckRegistryTestFactory.standard(objectMapper));
+
+        long initial = service.revision();
+        writeCatalog(path, "first", "Updated title");
+
+        assertEquals("Updated title", service.reload().modules().get(0).tasks().get(0).title());
+        assertTrue(service.revision() > initial);
+    }
+
     private void writeCatalog(Path path, String taskId, String title) throws Exception {
         LearningTaskDefinition task = new LearningTaskDefinition(
                 taskId,

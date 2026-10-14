@@ -14,6 +14,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,9 +30,10 @@ public class LearningCatalogService {
     private final ObjectMapper objectMapper;
     private final Path catalogPath;
     private final TaskCheckRegistry taskCheckRegistry;
+    private final Object reloadLock = new Object();
+    private final AtomicLong revision = new AtomicLong(1L);
     private volatile LearningCatalogDefinition catalog;
-    private volatile long loadedModifiedMillis = Long.MIN_VALUE;
-    private volatile long loadedSize = -1L;
+    private volatile FileStamp loadedStamp = FileStamp.MISSING;
 
     @Autowired
     public LearningCatalogService(
@@ -43,11 +45,16 @@ public class LearningCatalogService {
         this.taskCheckRegistry = taskCheckRegistry;
         this.catalog = loadCatalog();
         validateCatalog(this.catalog);
-        recordFileStamp();
+        this.loadedStamp = currentStamp();
     }
 
     public LearningCatalogDefinition getCatalog() {
         return catalog();
+    }
+
+    /** Monotonic counter bumped on every successful (re)load, so dependents can detect changes. */
+    public long revision() {
+        return revision.get();
     }
 
     /**
@@ -55,12 +62,13 @@ public class LearningCatalogService {
      * missing or invalid, leaving the previously loaded catalog in place.
      */
     public LearningCatalogDefinition reload() {
-        LearningCatalogDefinition reloaded = loadCatalog();
-        validateCatalog(reloaded);
-        this.catalog = reloaded;
-        recordFileStamp();
-        log.info("Reloaded learning catalog from {}.", catalogPath);
-        return reloaded;
+        synchronized (reloadLock) {
+            FileStamp observed = currentStamp();
+            LearningCatalogDefinition reloaded = loadCatalog();
+            validateCatalog(reloaded);
+            commit(reloaded, observed);
+            return reloaded;
+        }
     }
 
     private LearningCatalogDefinition catalog() {
@@ -69,42 +77,45 @@ public class LearningCatalogService {
     }
 
     private void refreshIfChanged() {
-        long modified = lastModifiedMillis();
-        long size = fileSize();
-        if (modified < 0 || size < 0 || (modified == loadedModifiedMillis && size == loadedSize)) {
+        FileStamp current = currentStamp();
+        if (current.equals(FileStamp.MISSING) || current.equals(loadedStamp)) {
             return;
         }
-        try {
-            LearningCatalogDefinition reloaded = loadCatalog();
-            validateCatalog(reloaded);
-            this.catalog = reloaded;
-            recordFileStamp();
-            log.info("Reloaded learning catalog from {}.", catalogPath);
-        } catch (RuntimeException exception) {
-            // Keep serving the last valid catalog and retry on the next request.
-            log.warn("Ignoring invalid learning catalog at {}: {}", catalogPath, exception.getMessage());
+        synchronized (reloadLock) {
+            current = currentStamp();
+            if (current.equals(FileStamp.MISSING) || current.equals(loadedStamp)) {
+                return;
+            }
+            try {
+                LearningCatalogDefinition reloaded = loadCatalog();
+                validateCatalog(reloaded);
+                // Record the stamp observed before reading: if the file changed mid-read, the next
+                // request sees a different stamp and reloads again, so a change is never missed.
+                commit(reloaded, current);
+            } catch (RuntimeException exception) {
+                // Keep serving the last valid catalog and retry on the next request.
+                log.warn("Ignoring invalid learning catalog at {}: {}", catalogPath, exception.getMessage());
+            }
         }
     }
 
-    private void recordFileStamp() {
-        this.loadedModifiedMillis = lastModifiedMillis();
-        this.loadedSize = fileSize();
+    private void commit(LearningCatalogDefinition reloaded, FileStamp stamp) {
+        this.catalog = reloaded;
+        this.loadedStamp = stamp;
+        revision.incrementAndGet();
+        log.info("Reloaded learning catalog from {}.", catalogPath);
     }
 
-    private long lastModifiedMillis() {
+    private FileStamp currentStamp() {
         try {
-            return Files.getLastModifiedTime(catalogPath).toMillis();
+            return new FileStamp(Files.getLastModifiedTime(catalogPath).toMillis(), Files.size(catalogPath));
         } catch (IOException exception) {
-            return -1L;
+            return FileStamp.MISSING;
         }
     }
 
-    private long fileSize() {
-        try {
-            return Files.size(catalogPath);
-        } catch (IOException exception) {
-            return -1L;
-        }
+    private record FileStamp(long modifiedMillis, long size) {
+        private static final FileStamp MISSING = new FileStamp(-1L, -1L);
     }
 
     public LearningTaskDefinition getTask(String taskId) {
